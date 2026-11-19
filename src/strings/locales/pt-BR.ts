@@ -90,6 +90,10 @@ const ptBR: Translation = {
     faceGallery: "Uma foto da galeria",
     faceGalleryCaption: "Enviar",
     facePhotoCaption: "Sua foto",
+    faceRemovePhoto: "Remover sua foto",
+    facePhotoRemoved: "Foto removida",
+    facePhotoGone: "Tarde demais para trazer a foto de volta.",
+    faceUndo: "Desfazer",
     faceNote:
       "As pessoas veem sua imagem ao lado do seu nome nas listas que você publica. O cartão ou a foto que você escolher é verificado e fica com sua conta.",
     faceNotMade: "Essa imagem não pode ser sua foto. Escolha outra.",

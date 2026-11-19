@@ -88,6 +88,10 @@ const tr: Translation = {
     faceGallery: "Galeriden bir fotoğraf",
     faceGalleryCaption: "Yükle",
     facePhotoCaption: "Fotoğrafınız",
+    faceRemovePhoto: "Fotoğrafınızı kaldırın",
+    facePhotoRemoved: "Fotoğraf kaldırıldı",
+    facePhotoGone: "Fotoğrafı geri getirmek için çok geç.",
+    faceUndo: "Geri al",
     faceNote:
       "Yayımladığınız listelerde profil resminiz adınızın yanında görünür. Seçtiğiniz kart ya da fotoğraf kontrol edilir ve hesabınızla saklanır.",
     faceNotMade: "Bu görsel profil resminiz olamaz. Başka birini seçin.",

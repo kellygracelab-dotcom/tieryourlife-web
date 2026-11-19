@@ -89,6 +89,10 @@ const es: Translation = {
     faceGallery: "Una foto de la galería",
     faceGalleryCaption: "Subir",
     facePhotoCaption: "Tu foto",
+    faceRemovePhoto: "Quitar tu foto",
+    facePhotoRemoved: "Foto quitada",
+    facePhotoGone: "Ya es tarde para recuperar la foto.",
+    faceUndo: "Deshacer",
     faceNote:
       "La gente ve tu imagen junto a tu nombre en las listas que publicas. La tarjeta o la foto que elijas se revisa y se guarda con tu cuenta.",
     faceNotMade: "Esa imagen no puede ser tu foto. Elige otra.",

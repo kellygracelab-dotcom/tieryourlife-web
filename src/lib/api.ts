@@ -255,8 +255,14 @@ export const likeListRanking = (
 
 export const loadFollowing = (): Promise<Following> => community.loadFollowing(api);
 
-export const makeFace = (pictureId: string): Promise<{ url: string }> =>
-  community.makeFace(api, pictureId);
+export const makeFace = (pictureId: string, upload: boolean): Promise<community.MadeFace> =>
+  community.makeFace(api, pictureId, upload);
+export const loadPhotoSlot = (): Promise<community.PhotoSlot | null> =>
+  community.loadPhotoSlot(api);
+export const removePhotoSlot = (): Promise<community.RemovedPhoto> =>
+  community.removePhotoSlot(api);
+export const restorePhotoSlot = (): Promise<community.RestoredPhoto> =>
+  community.restorePhotoSlot(api);
 
 export const suggestedAuthors = (): Promise<{ authors: SuggestedAuthor[] }> =>
   community.suggestedAuthors(api);

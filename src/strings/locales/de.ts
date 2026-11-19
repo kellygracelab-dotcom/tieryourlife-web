@@ -86,6 +86,10 @@ const de: Translation = {
     faceGallery: "Ein Foto aus der Galerie",
     faceGalleryCaption: "Hochladen",
     facePhotoCaption: "Dein Foto",
+    faceRemovePhoto: "Dein Foto entfernen",
+    facePhotoRemoved: "Foto entfernt",
+    facePhotoGone: "Zu spät, um das Foto zurückzuholen.",
+    faceUndo: "Rückgängig",
     faceNote:
       "Andere sehen dein Bild neben deinem Namen auf den Listen, die du veröffentlichst. Eine gewählte Karte oder ein Foto wird geprüft und bei deinem Konto gespeichert.",
     faceNotMade: "Dieses Bild kann nicht dein Profilbild sein. Wähle ein anderes.",

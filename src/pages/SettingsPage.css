@@ -456,3 +456,10 @@
 .settings__choice--photo .ms {
   font-size: 26px;
 }
+
+/* Under the faces, while the account keeps a photo: the quiet way to let it go. */
+.settings__remove-photo {
+  align-self: flex-start;
+  margin-block-start: 4px;
+  margin-inline-start: -12px;
+}
