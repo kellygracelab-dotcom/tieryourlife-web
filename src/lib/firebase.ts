@@ -25,7 +25,7 @@ import {
   storageEmulatorPort,
 } from "./emulators";
 import { readEnv, type Env } from "./env";
-import { firebaseConfig } from "./firebaseConfig";
+import { authDomainFor, firebaseConfig } from "./firebaseConfig";
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
@@ -34,9 +34,13 @@ let storageOnEmulator = false;
 
 // The smokes give a key Google refuses, so a request no fixture answers fails
 // instead of making a real guest in the live project.
-const projectConfig = import.meta.env.VITE_FIREBASE_API_KEY
-  ? { ...firebaseConfig, apiKey: import.meta.env.VITE_FIREBASE_API_KEY }
-  : firebaseConfig;
+const projectConfig = {
+  ...firebaseConfig,
+  ...(import.meta.env.VITE_FIREBASE_API_KEY
+    ? { apiKey: import.meta.env.VITE_FIREBASE_API_KEY }
+    : {}),
+  authDomain: authDomainFor(typeof location === "undefined" ? "" : location.hostname),
+};
 
 export function getFirebaseApp(): FirebaseApp {
   app ??=

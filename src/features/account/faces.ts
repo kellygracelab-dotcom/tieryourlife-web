@@ -29,7 +29,11 @@ export function faceChoicesOf(lists: readonly ListSummary[]): FaceChoice[] {
 }
 
 /** The site's hosts, each serving the bucket's public pictures under /img/original/. */
-const SITE_HOSTS = new Set(["tieryourlife.web.app", "tieryourlife.firebaseapp.com"]);
+const SITE_HOSTS = new Set([
+  "tieryourlife.com",
+  "tieryourlife.web.app",
+  "tieryourlife.firebaseapp.com",
+]);
 
 /**
  * The bucket path a picture's address shows, however it is written: Storage's

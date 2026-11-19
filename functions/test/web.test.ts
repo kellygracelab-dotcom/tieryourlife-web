@@ -185,7 +185,13 @@ function call(
     },
   };
   const lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]));
-  const request = { method, path, body, header: (name: string) => lower[name.toLowerCase()] };
+  const request = {
+    method,
+    path,
+    originalUrl: path,
+    body,
+    header: (name: string) => lower[name.toLowerCase()],
+  };
   return route(request as unknown as Request, response as unknown as Response, deps).then(
     () => answer,
   );
@@ -1424,5 +1430,31 @@ describe("the token checks", () => {
     const deployed = { GCLOUD_PROJECT: "tieryourlife" };
     assert.equal(await requireAppCheck(request({}), out.writer, refuse, deployed), false);
     assert.equal(out.seen.status, 401);
+  });
+});
+
+// tieryourlife.com is the one address (Danylo, 20.11.2026): a page on
+// Firebase's hosts moves there; pictures and the API answer where asked.
+describe("Firebase's hosts", () => {
+  const old = { "x-forwarded-host": "tieryourlife.web.app" };
+
+  it("move a page for good to the same address on tieryourlife.com", async () => {
+    const { deps } = setup();
+    for (const path of [`/l/${LIST_ID}?hl=de`, "/r/abcdefgh", "/l/x/y"]) {
+      const answer = await call(deps, "GET", path, undefined, old);
+      assert.equal(answer.status, 301);
+      assert.equal(answer.headers.Location, `https://tieryourlife.com${path}`);
+      assert.equal(answer.headers["Cache-Control"], "no-store");
+    }
+  });
+
+  it("still answer the API and the pictures there, and the site's own host draws the page", async () => {
+    const { deps } = setup();
+    const api = await call(deps, "GET", "/api/rank", undefined, old);
+    assert.equal(api.status, 405);
+    const own = await call(deps, "GET", "/og/l/unknown.png", undefined, old);
+    assert.notEqual(own.status, 301);
+    const post = await call(deps, "POST", `/l/${LIST_ID}`, undefined, old);
+    assert.notEqual(post.status, 301);
   });
 });

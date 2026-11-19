@@ -5,7 +5,7 @@ import path from "node:path";
 import { cache, markerFile, readJson } from "./release-artifact.mjs";
 import { repo } from "./release-checks.mjs";
 
-export const site = "https://tieryourlife.web.app";
+export const site = "https://tieryourlife.com";
 export const hosting = "hosting:web",
   full = "functions:web,hosting:web";
 

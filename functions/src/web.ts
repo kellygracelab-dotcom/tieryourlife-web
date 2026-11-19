@@ -11,7 +11,9 @@ import { getStorage } from "firebase-admin/storage";
 import {
   listPage,
   listShareImage,
+  movedPage,
   rankingPage,
+  sendMoved,
   rankingShareImage,
   shellPage,
   standingOf,
@@ -161,6 +163,9 @@ export async function route(
   // A page somebody follows a link to, not the API.
   const page = segments[0] === "l" || segments[0] === "r";
   try {
+    // A page on one of Firebase's hosts moves to the site's own address.
+    const moved = reading && page ? movedPage(request) : null;
+    if (moved !== null) return sendMoved(response, moved);
     // The picture a chat shows for a page: /og/l/{id}.png and /og/r/{code}.png.
     if (reading && segments.length === 3 && segments[0] === "og") {
       const id = (segments[2] ?? "").replace(/\.png$/, "");
