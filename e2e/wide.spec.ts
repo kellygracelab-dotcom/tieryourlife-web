@@ -1,5 +1,6 @@
 import { devices, expect, test } from "@playwright/test";
 import { LIST_ID, list, mockBackend } from "./fixtures";
+import { signIn } from "./signedIn";
 
 // From 840 px the pool is a card in a column beside the board; the count and
 // the buttons stand in the page's header, which stays in view while a long
@@ -266,5 +267,124 @@ test.describe("a wide screen", () => {
     expect(Math.round(empty.height)).toBe(100);
     await expect(page.getByRole("button", { name: "Copy link" })).toBeHidden();
     await tablet.close();
+  });
+  // Your lists stands in Community's grid (the Designer's rule, 19.11): the
+  // same column from the same edge, a list's tile and a begun list's card as
+  // wide as a feed card, New list a tile in the row, Trash at the column's end.
+  test("lays Your lists out in Community's grid", async ({ page }) => {
+    const tiers = [
+      {
+        uid: "t1",
+        position: 0,
+        label: "S",
+        caption: null,
+        colorLight: "#B03A32",
+        colorDark: "#F1948C",
+        isPool: false,
+      },
+      {
+        uid: "tp",
+        position: 1,
+        label: "Unranked",
+        caption: null,
+        colorLight: "#000000",
+        colorDark: "#FFFFFF",
+        isPool: true,
+      },
+    ];
+    const body = (title: string) => ({
+      title,
+      displayMode: "WRAP",
+      category: "music",
+      coverImageUrl: null,
+      coverImageUrls: [],
+      authorName: null,
+      publishedId: null,
+      deletedAt: null,
+      tiers,
+      items: [],
+    });
+    await signIn(page, {
+      boards: new Map(
+        [1, 2].map((n) => [
+          `k${n}`,
+          {
+            uid: `k${n}`,
+            revision: 1,
+            title: `List ${n}`,
+            deleted: false,
+            body: body(`List ${n}`),
+          },
+        ]),
+      ),
+      started: new Map([
+        [
+          "got",
+          {
+            listId: "got",
+            updatedAt: 5,
+            changedAt: Date.now() - 60_000,
+            listVersion: 7,
+            itemCount: 45,
+            tierCount: 5,
+            title: "Game of Thrones characters",
+            picture: null,
+            pictures: [],
+            category: "film_tv",
+            rows: [[3, 7], [1], [], [12], []],
+            placed: 4,
+          },
+        ],
+      ]),
+    });
+    const feed = Array.from({ length: 8 }, (_, n) => ({
+      id: `wide${n}`,
+      title: `List ${n + 1}`,
+      authorUid: list.authorUid,
+      authorName: list.authorName,
+      authorPhotoUrl: null,
+      category: list.category,
+      itemCount: list.itemCount,
+      coverImageUrl: null,
+      previewImages: [],
+      tierColors: list.tierColors,
+      updatedAt: list.updatedAt,
+      takeCount: list.takeCount,
+    }));
+    await page.route("**/lists?**", (route) =>
+      route.fulfill({ json: { lists: feed, nextCursor: null } }),
+    );
+    for (const width of [1280, 2000]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.goto("/");
+      const card = page.locator(".home .feed > li").first();
+      await expect(card).toBeVisible();
+      const home = (await page.locator(".home").boundingBox())!;
+      const feedCard = (await card.boundingBox())!;
+
+      await page.goto("/b");
+      const tiles = page.locator(".boards__grid > li");
+      await expect(tiles).toHaveCount(3);
+      const column = (await page.locator(".boards").boundingBox())!;
+      expect(Math.round(column.x)).toBe(Math.round(home.x));
+      expect(Math.round(column.width)).toBe(Math.round(home.width));
+      const boxes = await tiles.evaluateAll((all) =>
+        all.map((one) => {
+          const r = one.getBoundingClientRect();
+          return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width) };
+        }),
+      );
+      const first = boxes[0]!;
+      // Two lists and New list in one row from the column's start, as wide as the feed's cards.
+      expect(first.x).toBe(Math.round(home.x));
+      for (const one of boxes) {
+        expect(Math.abs(one.w - feedCard.width)).toBeLessThanOrEqual(1);
+        expect(one.y).toBe(first.y);
+      }
+      const begun = (await page.locator(".started__list > li").first().boundingBox())!;
+      expect(Math.abs(begun.width - feedCard.width)).toBeLessThanOrEqual(1);
+      const trash = (await page.locator(".boards__actions").boundingBox())!;
+      expect(Math.round(trash.x + trash.width)).toBe(Math.round(home.x + home.width));
+    }
   });
 });

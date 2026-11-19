@@ -477,7 +477,13 @@ export function Shell() {
       )}
       <main
         id="main"
-        className={ownList ? "shell__main shell__main--own-list" : "shell__main"}
+        className={
+          ownList
+            ? "shell__main shell__main--own-list"
+            : location.pathname === "/b"
+              ? "shell__main shell__main--lists"
+              : "shell__main"
+        }
         ref={main}
       >
         <PageTitleContext.Provider value={setPage}>

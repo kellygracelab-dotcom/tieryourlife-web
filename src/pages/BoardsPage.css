@@ -1,10 +1,52 @@
+/* As wide as Community's column, from the same left edge (the shell sets it). */
 .boards {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   width: 100%;
-  max-width: 1080px;
   margin: 0 auto;
+}
+
+/*
+ * From 840 px Your lists stands in Community's grid (the Designer's rule,
+ * 19.11, by Danylo's "yes"): the lists' tiles, New list and Continue's cards
+ * are as wide as the feed's cards, four across, and from 1400 as many as fit
+ * at 250 px; a few lists keep to the left, as a short row does there. The
+ * phone's and the tablet's grids stay as they are.
+ */
+@media (min-width: 840px) {
+  .boards .boards__grid,
+  .boards .started__list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  /* The feed card's cover height (feed.css, from 600 px). */
+  .boards .board-tile .art {
+    height: 132px;
+  }
+
+  /*
+   * A begun list in a column that narrow: its pictures and ⋮ on the first
+   * line, its name and how far along under them across the card, so the
+   * count stays whole beside three pictures.
+   */
+  .boards .started__top {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .boards .started__text {
+    flex-basis: 100%;
+    order: 1;
+  }
+}
+
+@media (min-width: 1400px) {
+  .boards .boards__grid,
+  .boards .started__list {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
 }
 
 .boards__head {
