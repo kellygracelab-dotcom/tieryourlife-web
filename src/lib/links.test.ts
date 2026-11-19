@@ -36,11 +36,15 @@ describe("the way to the Android app", () => {
 describe("the address a shared link points to", () => {
   const at = (origin: string) => ({ origin, hostname: new URL(origin).hostname });
 
-  it("is the public one on any of Firebase's hosts", () => {
+  // tieryourlife.com is the one address (Danylo, 20.11.2026).
+  it("is the public one on it, on www and on any of Firebase's hosts", () => {
+    expect(SITE_ORIGIN).toBe("https://tieryourlife.com");
+    expect(siteOrigin(at("https://tieryourlife.com"))).toBe(SITE_ORIGIN);
+    expect(siteOrigin(at("https://www.tieryourlife.com"))).toBe(SITE_ORIGIN);
     expect(siteOrigin(at("https://tieryourlife.firebaseapp.com"))).toBe(SITE_ORIGIN);
-    expect(siteOrigin(at("https://tieryourlife.web.app"))).toBe("https://tieryourlife.web.app");
+    expect(siteOrigin(at("https://tieryourlife.web.app"))).toBe(SITE_ORIGIN);
     expect(siteOrigin(at("https://tieryourlife--pr-12-abc.web.app"))).toBe(SITE_ORIGIN);
-    expect(siteHost(at("https://tieryourlife.firebaseapp.com"))).toBe("tieryourlife.web.app");
+    expect(siteHost(at("https://tieryourlife.firebaseapp.com"))).toBe("tieryourlife.com");
   });
 
   it("is the page's own on a copy of the site elsewhere", () => {

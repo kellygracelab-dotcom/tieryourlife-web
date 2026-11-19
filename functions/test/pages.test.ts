@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import {
   hiddenForGood,
-  hostOf,
+  movedPage,
+  sendMoved,
   listCard,
   listLocale,
   listMeta,
@@ -19,20 +20,55 @@ import {
 } from "../src/pages";
 import type { StoredRanking } from "../src/ranking";
 
-const requestWith = (forwarded?: string) =>
-  ({ header: (name: string) => (name === "x-forwarded-host" ? forwarded : undefined) }) as never;
+const asked = (forwarded: string | undefined, originalUrl: string) =>
+  ({
+    originalUrl,
+    header: (name: string) => (name === "x-forwarded-host" ? forwarded : undefined),
+  }) as never;
 
-describe("hostOf", () => {
-  it("takes a known forwarded host and falls back for strangers", () => {
+// tieryourlife.com is the one address (Danylo, 20.11.2026).
+describe("movedPage", () => {
+  it("moves a page on Firebase's hosts and www to the same address on the site's own", () => {
     assert.equal(
-      hostOf(requestWith("tieryourlife.firebaseapp.com")),
-      "tieryourlife.firebaseapp.com",
+      movedPage(asked("tieryourlife.web.app", "/l/abc12345?hl=de&x=1")),
+      "https://tieryourlife.com/l/abc12345?hl=de&x=1",
     );
-    // The first address is gone: a page asked for under it is drawn for the one address.
-    assert.equal(hostOf(requestWith("tieryourlife-web.web.app")), "tieryourlife.web.app");
-    assert.equal(hostOf(requestWith("tieryourlife.web.app, other")), "tieryourlife.web.app");
-    assert.equal(hostOf(requestWith("evil.example")), "tieryourlife.web.app");
-    assert.equal(hostOf(requestWith(undefined)), "tieryourlife.web.app");
+    assert.equal(
+      movedPage(asked("tieryourlife.firebaseapp.com", "/r/abcdefgh")),
+      "https://tieryourlife.com/r/abcdefgh",
+    );
+    assert.equal(
+      movedPage(asked("WWW.tieryourlife.com, proxy", "/l/x")),
+      "https://tieryourlife.com/l/x",
+    );
+    // Whatever follows stays on the site's own host.
+    assert.equal(
+      movedPage(asked("tieryourlife.web.app", "//evil.example/l")),
+      "https://tieryourlife.com//evil.example/l",
+    );
+  });
+
+  it("leaves the site's own address, the emulators and strangers where they are", () => {
+    assert.equal(movedPage(asked("tieryourlife.com", "/l/abc")), null);
+    assert.equal(movedPage(asked("127.0.0.1:5000", "/l/abc")), null);
+    assert.equal(movedPage(asked("tieryourlife-web.web.app", "/l/abc")), null);
+    assert.equal(movedPage(asked(undefined, "/l/abc")), null);
+  });
+
+  it("answers 301, kept by no cache", () => {
+    const headers: Record<string, string> = {};
+    let status = 0;
+    const response = {
+      setHeader: (name: string, value: string) => (headers[name] = value),
+      status: (code: number) => {
+        status = code;
+        return { send: () => undefined };
+      },
+    } as never;
+    sendMoved(response, "https://tieryourlife.com/l/abc");
+    assert.equal(status, 301);
+    assert.equal(headers.Location, "https://tieryourlife.com/l/abc");
+    assert.equal(headers["Cache-Control"], "no-store");
   });
 });
 

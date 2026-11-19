@@ -53,7 +53,10 @@ checks production after cloud success, or deploys the artifact if cloud identity
 It never substitutes a local rebuild after a failed cloud job or for missing CI evidence.
 
 For an already checked main, `npm run deploy` runs the main part of this process.
-The target is `tieryourlife.web.app`, the address the app shares. The GitHub deployment job
+The target is the hosting site `tieryourlife`, served at `tieryourlife.com`, the site's one
+address (20.11.2026). On `tieryourlife.web.app` and `tieryourlife.firebaseapp.com` a page moves
+there, path and query kept: `/l` and `/r` by a 301 from the `web` function, the pages hosting
+serves itself by their first script; the API and the pictures still answer there. The GitHub deployment job
 needs the workload identity and deployment account described in [AGENTS.md](AGENTS.md).
 
 `/lists` and `/3/search` are rewritten to the backend's Cloud Functions, so the browser talks to its own

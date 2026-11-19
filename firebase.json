@@ -109,7 +109,7 @@
             },
             {
               "key": "Content-Security-Policy-Report-Only",
-              "value": "script-src 'self' 'sha256-rSuw0Fpr9WkBmI3iqxdZRaKh7i09S36l6YIOKNYxzZs=' 'sha256-+kCeN/AEG4YvC/FOI4+Jljhnm0kzKulQ4DK+woXX+1c=' https://apis.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; report-uri /api/csp-report"
+              "value": "script-src 'self' 'sha256-qY47l79qOWFRjRdzOrmvFnYMVtpJ+Cl4LeDVxzAMv3k=' 'sha256-rSuw0Fpr9WkBmI3iqxdZRaKh7i09S36l6YIOKNYxzZs=' 'sha256-+kCeN/AEG4YvC/FOI4+Jljhnm0kzKulQ4DK+woXX+1c=' https://apis.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; report-uri /api/csp-report"
             },
             {
               "key": "X-Frame-Options",

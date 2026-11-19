@@ -37,9 +37,23 @@ const RANKINGS = "rankings";
 /** The proxy's log of what moderators did; read here, never written. */
 const AUDIT_LOG = "auditLog";
 
-/** The sites this function may be asked to render; anything else is a stranger. */
-const HOSTS = new Set(["tieryourlife.web.app", "tieryourlife.firebaseapp.com"]);
-const DEFAULT_HOST = "tieryourlife.web.app";
+/** The site's one address (Danylo, 20.11.2026): every page's links and pictures name it. */
+export const SITE_HOST = "tieryourlife.com";
+
+/**
+ * Firebase's own hosts for the same site, and the domain's www: a page asked
+ * there moves for good to the same address on the site's own (the shell's
+ * script does it for the pages hosting serves itself). Pictures and the API
+ * answer on every host, as links already sent and older apps still ask there.
+ */
+export const MOVED_HOSTS = new Set([
+  "tieryourlife.web.app",
+  "tieryourlife.firebaseapp.com",
+  "www.tieryourlife.com",
+]);
+
+const forwardedHost = (request: Request): string =>
+  request.header("x-forwarded-host")?.split(",")[0]?.trim().toLowerCase() ?? "";
 
 /** A hosting answer slower than this would hold the page toward the function's own timeout. */
 export const SHELL_TIMEOUT_MS = 5_000;
@@ -53,9 +67,25 @@ interface CachedShell {
 
 let shell: CachedShell | null = null;
 
-export function hostOf(request: Request): string {
-  const forwarded = request.header("x-forwarded-host")?.split(",")[0]?.trim() ?? "";
-  return HOSTS.has(forwarded) ? forwarded : DEFAULT_HOST;
+/**
+ * Where a page asked on one of Firebase's hosts has moved, path and query
+ * kept: "https://tieryourlife.com/l/abc?hl=de". Null on the site's own
+ * address, in the emulators and anywhere else.
+ */
+export function movedPage(request: Request): string | null {
+  if (!MOVED_HOSTS.has(forwardedHost(request))) return null;
+  const asked = request.originalUrl ?? request.url ?? "/";
+  return `https://${SITE_HOST}${asked.startsWith("/") ? asked : "/" + asked}`;
+}
+
+/**
+ * For good, so a chat or a search engine keeps the new address. Kept by no
+ * cache at the edge: the edge must never hand this to the site's own host.
+ */
+export function sendMoved(response: Response, to: string): void {
+  response.setHeader("Location", to);
+  response.setHeader("Cache-Control", "no-store");
+  response.status(301).send("");
 }
 
 /**
@@ -121,7 +151,7 @@ export const PAGE_POLICY = "frame-ancestors 'self'; object-src 'none'; base-uri 
  * live check shows nothing it would block.
  */
 export const PAGE_SCRIPT_POLICY =
-  "script-src 'self' 'sha256-rSuw0Fpr9WkBmI3iqxdZRaKh7i09S36l6YIOKNYxzZs=' 'sha256-+kCeN/AEG4YvC/FOI4+Jljhnm0kzKulQ4DK+woXX+1c=' " +
+  "script-src 'self' 'sha256-qY47l79qOWFRjRdzOrmvFnYMVtpJ+Cl4LeDVxzAMv3k=' 'sha256-rSuw0Fpr9WkBmI3iqxdZRaKh7i09S36l6YIOKNYxzZs=' 'sha256-+kCeN/AEG4YvC/FOI4+Jljhnm0kzKulQ4DK+woXX+1c=' " +
   "https://apis.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; " +
   // Where a browser says what this policy would have blocked (QA S27).
   "report-uri /api/csp-report";
@@ -164,7 +194,7 @@ function sendBare(response: Response, html: string, error: unknown): void {
 
 /** Any other address under /l/ or /r/: the site's own page, which says it is not found. */
 export async function shellPage(request: Request, response: Response): Promise<void> {
-  send(response, await loadShell(hostOf(request)));
+  send(response, await loadShell(SITE_HOST));
 }
 
 /**
@@ -361,7 +391,7 @@ const varyByLanguage = (response: Response, offered: readonly string[]): void =>
 };
 
 export async function listPage(request: Request, response: Response, id: string): Promise<void> {
-  const host = hostOf(request);
+  const host = SITE_HOST;
   const html = await loadShell(host);
   let data: StoredList | null;
   try {
@@ -618,7 +648,7 @@ export async function rankingPage(
   code: string,
   database: () => Firestore = getFirestore,
 ): Promise<void> {
-  const host = hostOf(request);
+  const host = SITE_HOST;
   const html = await loadShell(host);
   let found: { stored: StoredRanking; list: FirebaseFirestore.DocumentSnapshot } | null;
   try {

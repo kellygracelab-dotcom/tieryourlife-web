@@ -15,22 +15,25 @@ export type PlaySlot = "home" | "boards" | "result" | "footer" | "about" | "menu
 /** The developer's public address, as the privacy policy gives it: where Send feedback writes. */
 export const FEEDBACK_EMAIL = "kellygracelab@gmail.com";
 
-/** The site's one public address: links people send go here, whichever of Firebase's hosts they are on. */
-export const SITE_ORIGIN = "https://tieryourlife.web.app";
+/** The site's one public address (Danylo, 20.11.2026): links people send go here. */
+export const SITE_ORIGIN = "https://tieryourlife.com";
 
 /**
- * Where a shared link points (QA 19.11): the public address on any of
- * Firebase's hosts (tieryourlife.firebaseapp.com, a preview channel), and the
- * page's own elsewhere, so a local copy shares links to itself.
+ * Where a shared link points (QA 19.11): the public address on it, on www and
+ * on any of Firebase's hosts (tieryourlife.web.app, a preview channel), and
+ * the page's own elsewhere, so a local copy shares links to itself.
  */
 export function siteOrigin(at: Pick<Location, "hostname" | "origin"> = window.location): string {
   const { hostname } = at;
-  return hostname.endsWith(".web.app") || hostname.endsWith(".firebaseapp.com")
+  return hostname === "tieryourlife.com" ||
+    hostname === "www.tieryourlife.com" ||
+    hostname.endsWith(".web.app") ||
+    hostname.endsWith(".firebaseapp.com")
     ? SITE_ORIGIN
     : at.origin;
 }
 
-/** The address without its scheme, as a ranking's code is read out: "tieryourlife.web.app". */
+/** The address without its scheme, as a ranking's code is read out: "tieryourlife.com". */
 export const siteHost = (at?: Pick<Location, "hostname" | "origin">): string =>
   new URL(siteOrigin(at)).host;
 
