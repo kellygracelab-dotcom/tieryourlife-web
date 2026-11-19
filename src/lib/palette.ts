@@ -121,3 +121,12 @@ export function paletteCss(hue: number): string {
     block(':root:root[data-theme="dark"]', dark),
   ].join("");
 }
+
+/**
+ * The own colour's slider (artboard 59): a rainbow of soft tones, one stop
+ * every 30° of hue, so the colour under the thumb is the hue it gives.
+ */
+export const hueRamp = (): string[] =>
+  Array.from({ length: 13 }, (_, at) =>
+    hexFromArgb(Hct.from((at * 30) % 360, 40, 70).toInt()).toUpperCase(),
+  );

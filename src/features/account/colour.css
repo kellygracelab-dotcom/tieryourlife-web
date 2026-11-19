@@ -25,7 +25,7 @@
   gap: 12px;
 }
 
-/* A circle of the colour's main button; 44 px to press, the ring shows the chosen one. */
+/* 44 px to press; the circle inside is 40. */
 .colour__swatch {
   display: inline-flex;
   align-items: center;
@@ -35,42 +35,78 @@
   padding: 0;
   border: none;
   border-radius: 50%;
-  color: #ffffff;
+  background: none;
   cursor: pointer;
-}
-
-.colour__swatch[aria-checked="true"] {
-  box-shadow:
-    0 0 0 3px var(--surface),
-    0 0 0 5px var(--ink);
 }
 
 .colour__swatch:focus-visible {
   outline: 2px solid var(--focus);
-  outline-offset: 6px;
+  outline-offset: 4px;
 }
 
-/* One's own: every hue round the circle. */
-.colour__swatch--custom {
+/*
+ * Two tones, the same in the light and the dark: the light scheme's
+ * container, and a dot of the main button in it. A ring of that button
+ * shows the chosen one.
+ */
+.colour__disc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--swatch-container, var(--chip));
+}
+
+.colour__swatch[aria-checked="true"] .colour__disc {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--swatch-primary, var(--ink));
+}
+
+.colour__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--swatch-primary, transparent);
+  color: #ffffff;
+}
+
+.colour__mark {
+  font-size: 14px;
+}
+
+/* One's own before it is chosen: every hue round the circle, a pencil in the middle. */
+.colour__swatch--wheel .colour__disc {
   background: conic-gradient(
-    from 0deg,
-    #c75a7a,
-    #c9763c,
-    #9a9a2c,
-    #4f9a4a,
-    #2f9a9a,
-    #4a6fc0,
-    #8a5ac0,
-    #c75a7a
+    #d98a8a,
+    #d9b77e,
+    #c9cf85,
+    #8fcb9b,
+    #86c2cf,
+    #8fa3db,
+    #b79bd9,
+    #d98ab4,
+    #d98a8a
   );
 }
 
-.colour__check {
-  font-size: 22px;
-  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+.colour__swatch--wheel .colour__dot {
+  width: 22px;
+  height: 22px;
+  background: var(--surface);
+  color: var(--ink);
 }
 
-/* Your colour: the hue's own little list, drawn in its palette. */
+.colour__swatch--wheel .colour__mark {
+  font-size: 13px;
+}
+
+/* Your colour: a little sheet drawn in the hue's palette, in the scheme the site shows. */
 .own-colour__text {
   margin: 0 0 12px;
   font: var(--text-body);
@@ -80,52 +116,135 @@
 
 .own-colour__preview {
   display: grid;
-  gap: 6px;
-  padding: 12px;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--own-line, var(--line));
   border-radius: var(--radius-card);
-  background: var(--own-paper, var(--surface-container-high));
+  background: var(--own-paper, var(--paper));
+}
+
+.own-colour__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 18px;
+  margin-bottom: 2px;
+}
+
+.own-colour__heading {
+  width: 40%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--own-ink, var(--ink));
+}
+
+.own-colour__play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background: var(--own-button, var(--accent));
+  color: var(--own-on-button, var(--on-accent));
+  font-size: 12px;
 }
 
 .own-colour__row {
   display: flex;
-  height: 28px;
-  border-radius: 6px;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  border-radius: 5px;
   overflow: hidden;
-  background: var(--own-row, var(--surface));
+  background: color-mix(
+    in oklab,
+    var(--band-base) var(--band-tint),
+    var(--own-band-paper, var(--band-paper))
+  );
 }
 
 .own-colour__letter {
   display: inline-flex;
+  align-self: stretch;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  color: #ffffff;
+  width: 18px;
+  margin-inline-end: 3px;
+  background: var(--band);
+  color: var(--on-band);
   font: var(--text-label);
+  font-size: 11px;
 }
 
-.own-colour__row--s .own-colour__letter {
-  background: var(--tier-s);
+.own-colour__card {
+  width: 13px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--own-card, var(--tile-placeholder));
 }
 
-.own-colour__row--a .own-colour__letter {
-  background: var(--tier-a);
-}
-
-.own-colour__row--b .own-colour__letter {
-  background: var(--tier-b);
-}
-
-.own-colour__button {
-  justify-self: end;
-  width: 72px;
-  height: 28px;
-  border-radius: var(--radius-pill);
-  background: var(--own-button, var(--accent));
-}
-
+/*
+ * The hue: a rainbow track 28 px high and a 36 px thumb of the main button
+ * it gives. The whole 44 px is pressable, and the arrows still move it.
+ */
 .own-colour__hue {
+  display: block;
   width: 100%;
   height: 44px;
   margin: 12px 0 4px;
-  accent-color: var(--own-button, var(--accent));
+  background: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.own-colour__hue:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 16px;
+}
+
+.own-colour__hue::-webkit-slider-runnable-track {
+  height: 28px;
+  border-radius: 14px;
+  background: var(--own-ramp);
+}
+
+.own-colour__hue::-moz-range-track {
+  height: 28px;
+  border-radius: 14px;
+  background: var(--own-ramp);
+}
+
+.own-colour__hue::-webkit-slider-thumb {
+  width: 36px;
+  height: 36px;
+  margin-top: -4px;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  background: var(--own-button, var(--accent));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.own-colour__hue::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  background: var(--own-button, var(--accent));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* Done is the main button of the colour being made. */
+.own-colour .own-colour__done {
+  background: var(--own-button, var(--accent));
+  color: var(--own-on-button, var(--on-accent));
+}
+
+.own-colour .own-colour__done:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--own-button, var(--accent)) 88%, var(--own-ink, #000000));
 }
