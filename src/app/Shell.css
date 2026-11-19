@@ -499,13 +499,21 @@
   max-width: none;
 }
 
-/* The home page's feed is four across; a wide window's column grows with it, to about 2200 (artboard 20). */
-.shell__main:has(.home) {
+/*
+ * The home page's feed is four across; a wide window's column grows with it,
+ * to about 2200 (artboard 20). Your lists stands in the same column, so the
+ * page does not jump between the two (the Designer's rule, 19.11). The
+ * address, not the page, gives Your lists its width: its page comes later,
+ * and the column must not widen under it as it arrives.
+ */
+.shell__main:has(.home),
+.shell__main--lists {
   max-width: 1160px;
 }
 
 @media (min-width: 1400px) {
-  .shell__main:has(.home) {
+  .shell__main:has(.home),
+  .shell__main--lists {
     max-width: calc(2200px + 2 * var(--space-8));
   }
 }
