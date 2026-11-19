@@ -354,7 +354,7 @@ test("takes a photo as the face, names a refused one, and switches the back-up o
   expect(account.photoUrl).toBeNull();
 
   await choosePhoto();
-  await expect(page.getByRole("button", { name: "Your photo" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Your photo", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
