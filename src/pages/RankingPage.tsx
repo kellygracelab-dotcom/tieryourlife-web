@@ -34,6 +34,7 @@ import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
+import { siteHost } from "../lib/links";
 
 export type Rearrange = (
   code: string,
@@ -126,7 +127,7 @@ function AddressChip({
 }) {
   const [copied, setCopied] = useState(false);
   const chip = useRef<HTMLButtonElement>(null);
-  const address = `${window.location.host}/r/${code}`;
+  const address = `${siteHost()}/r/${code}`;
 
   useEffect(() => {
     if (!copied) return;
@@ -171,7 +172,7 @@ function AddressChip({
  */
 function Handout({ ranking, share }: { ranking: Ranking; share: Share }) {
   const [image, setImage] = useState<"idle" | "busy" | "failed">("idle");
-  const address = `${window.location.host}/r/${ranking.code}`;
+  const address = `${siteHost()}/r/${ranking.code}`;
 
   const onDownload = () => {
     setImage("busy");
@@ -296,7 +297,7 @@ function Body({
       {copyRefused && (
         <p className="list-page__status" role="alert">
           {fillNodes(strings.list.copyFailed, {
-            link: <span dir="ltr">{`https://${window.location.host}/r/${ranking.code}`}</span>,
+            link: <span dir="ltr">{`https://${siteHost()}/r/${ranking.code}`}</span>,
           })}
         </p>
       )}

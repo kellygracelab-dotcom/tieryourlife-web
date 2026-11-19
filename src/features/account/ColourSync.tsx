@@ -17,9 +17,13 @@ function adopt(choice: ColourChoice): void {
   void showColour(choice);
 }
 
+/** The least time between two readings of the account on coming back to the tab. */
+export const RECHECK_GAP_MS = 30_000;
+
 /**
  * The colour follows the account (artboard 59, contract of 18.11.2026): at
- * the start and on sign-in the account's choice is read; the later one wins,
+ * the start, on sign-in and on coming back to the tab (no oftener than
+ * RECHECK_GAP_MS) the account's choice is read; the later one wins,
  * the account's taken here or this device's written there. Each choice made
  * here goes up at once; an earlier one than the account's is answered with
  * what the account keeps, which is then drawn. A guest's stays on the device.
@@ -45,20 +49,34 @@ export function ColourSync({ api = siteApi }: { api?: ColourApi }) {
         // Offline or refused: the device keeps its choice, and the next sign-in tries again.
         () => undefined,
       );
-    void api.load().then(
-      (theirs) => {
-        if (!alive) return;
-        const ours = readColour();
-        if (theirs !== null && (ours === null || theirs.changedAt > ours.changedAt)) adopt(theirs);
-        else if (ours !== null && (theirs === null || ours.changedAt > theirs.changedAt)) {
-          void write(ours);
-        }
-      },
-      () => undefined,
-    );
+    let readAt = 0;
+    const read = () => {
+      readAt = Date.now();
+      void api.load().then(
+        (theirs) => {
+          if (!alive) return;
+          const ours = readColour();
+          if (theirs !== null && (ours === null || theirs.changedAt > ours.changedAt)) {
+            adopt(theirs);
+          } else if (ours !== null && (theirs === null || ours.changedAt > theirs.changedAt)) {
+            void write(ours);
+          }
+        },
+        () => undefined,
+      );
+    };
+    read();
+    // A colour chosen on the phone meanwhile shows when the person comes back (QA 19.11, D4).
+    const again = () => {
+      if (document.visibilityState === "visible" && Date.now() - readAt >= RECHECK_GAP_MS) read();
+    };
+    document.addEventListener("visibilitychange", again);
+    window.addEventListener("focus", again);
     const stop = subscribeToChoices((choice) => void write(choice));
     return () => {
       alive = false;
+      document.removeEventListener("visibilitychange", again);
+      window.removeEventListener("focus", again);
       stop();
     };
   }, [uid, api]);

@@ -257,6 +257,8 @@ export function AddCardBox({
   // The last upload's pictures that came without a name, waiting for one.
   const [unnamed, setUnnamed] = useState<readonly Unnamed[]>([]);
   const [note, setNote] = useState<string | null>(null);
+  // A guest pressed a picture from the web: it needs an account, said in the answers at once.
+  const [webSignIn, setWebSignIn] = useState(false);
   const [pasted, setPasted] = useState<PasteOutcome | null>(null);
   const own = scopeFor(category);
   const [scope, setScope] = useState<PictureScope>(own);
@@ -559,6 +561,12 @@ export function AddCardBox({
       });
       return;
     }
+    // A copy from the web lives in the person's own pictures: a guest has none,
+    // so nothing goes to the backend and the answers say so (QA 19.11, D5).
+    if (!signedIn) {
+      setWebSignIn(true);
+      return;
+    }
     setNote(null);
     setKeeping((now) => new Set(now).add(picture.id));
     keep(picture.imageUrl)
@@ -767,6 +775,15 @@ export function AddCardBox({
                     {strings.new.lookEverywhere}
                   </Button>
                 )}
+              </div>
+            )}
+            {found.status === "ready" && webSignIn && !signedIn && (
+              <div className="cards__notice cards__notice--sign-in" role="status">
+                <Icon name="info" />
+                <span>{strings.new.pictureSignIn}</span>
+                <Button variant="text" onClick={() => void signIn()}>
+                  {strings.nav.signIn}
+                </Button>
               </div>
             )}
             {found.status === "ready" && found.items.length > 0 && (
