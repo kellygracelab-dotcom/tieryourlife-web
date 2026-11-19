@@ -1,3 +1,4 @@
+import { readableFaceSrc } from "./faces";
 import { MediaImage } from "../../ui/MediaImage";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
@@ -250,7 +251,7 @@ export function PlaceFaceDialog({
               className={
                 drawn === null ? "placing__picture placing__picture--waiting" : "placing__picture"
               }
-              src={source.url}
+              src={readableFaceSrc(source.url)}
               crossOrigin={shown.plain ? undefined : "anonymous"}
               alt=""
               draggable={false}

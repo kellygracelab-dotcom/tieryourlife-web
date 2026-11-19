@@ -680,6 +680,24 @@ describe("SettingsPage", () => {
     expect(photo.querySelector("img")).toHaveAttribute("src", PHOTO);
   });
 
+  // QA 19.11, D15: worn where it lived, the feed's copy went with an unpublish and broke the face.
+  it("cuts a card of our own pictures left in the middle, by the site's address too", async () => {
+    const COPY = "https://tieryourlife.web.app/img/original/published/l1/c1";
+    loadPhoto.mockResolvedValue(null);
+    load.mockResolvedValue({ lists: [published("A24 films", [COPY])] });
+    upload.mockResolvedValue({ pictureId: "p4", previewUrl: "blob:p4" });
+    makeFace.mockResolvedValue({ url: "https://faces/p4.jpg", photo: null });
+    face.mockResolvedValue(undefined);
+    open({ ...member, photoUrl: null });
+    await userEvent.click(await within(faces()).findByRole("button", { name: /Card from/ }));
+    placeLoaded();
+    await pressUseThis();
+    expect(cut).toHaveBeenCalled();
+    await waitFor(() => expect(face).toHaveBeenCalledWith("https://faces/p4.jpg"));
+    expect(makeFace).toHaveBeenCalledWith("p4", false);
+    expect(face).not.toHaveBeenCalledWith(COPY);
+  });
+
   it("removes the photo at once, the letter worn if it was, and Undo brings it back worn", async () => {
     const PHOTO = "https://faces/p1.jpg";
     const SLOT = { pictureId: "p1", url: PHOTO, setAt: 1 };

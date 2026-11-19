@@ -12,7 +12,7 @@ import { useResource } from "../../lib/useResource";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { Skeleton } from "../../ui/Skeleton";
-import { faceChoicesOf, samePicture } from "./faces";
+import { faceChoicesOf, ownMediaPath, samePicture } from "./faces";
 import { type FaceSource, PlaceFaceDialog, type Placed } from "./PlaceFaceDialog";
 import { SavedLine } from "./SavedLine";
 import { type Publish, useSaving } from "./useSaving";
@@ -20,7 +20,6 @@ import { initialOf } from "../../lib/initial";
 import { keepCardFace, readCardFace } from "../../lib/cardFace";
 import type { MadeFace, PhotoSlot, RemovedPhoto, RestoredPhoto } from "../../api/community";
 import { sayOnTheSite } from "../../ui/siteNotice";
-import { storedPublicMedia } from "../../../functions/src/publicMedia";
 
 export type LoadLists = () => Promise<{ lists: ListSummary[] }>;
 export type Face = (photoUrl: string | null) => Promise<void>;
@@ -214,12 +213,13 @@ export function FaceSection({
   };
 
   // A catalogue's card left in the middle is worn where it lives; a photo, a
-  // card moved or zoomed, or one of the feed's copies (gone with a republish)
+  // card moved or zoomed, or a picture of our own bucket by any of its
+  // addresses (a feed copy goes with an unpublish, QA 19.11 D15)
   // is cut first. The cut is drawn before the dialog goes.
   const use = (placed: Placed | null) => {
     if (placing === null) return;
     const card = placing.kind === "card" ? placing.url : null;
-    if (placed !== null && (card === null || placed.moved || storedPublicMedia(card) !== null)) {
+    if (placed !== null && (card === null || placed.moved || ownMediaPath(card) !== null)) {
       void cutAndSend(placed, placing.kind === "photo" ? placing.name : null, card);
     } else if (placing.kind === "card") {
       wearAtOnce(placing.url);
