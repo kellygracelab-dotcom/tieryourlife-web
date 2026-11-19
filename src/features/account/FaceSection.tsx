@@ -51,8 +51,15 @@ function faceFailureText(name: string | null, reason: unknown): string {
     if (reason.reason === "signIn") return strings.new.pictureSignIn;
     return name === null ? strings.settings.faceFailed : fill(strings.new.pictureFailed, { name });
   }
-  return errorOf(reason).kind === "pictureRefused"
-    ? strings.settings.faceNotMade
+  const error = errorOf(reason);
+  // An animation, or one SafeSearch could not judge (since 19.11.2026): a still photo will do.
+  if (error.kind === "pictureRefused") {
+    return error.because === "unchecked"
+      ? strings.settings.faceUnchecked
+      : strings.settings.faceNotMade;
+  }
+  return error.kind === "tooManyRequests" && error.code === "VISION_DAILY_LIMIT"
+    ? strings.new.failedVisionToday
     : strings.settings.faceFailed;
 }
 

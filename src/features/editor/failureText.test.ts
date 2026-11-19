@@ -78,11 +78,29 @@ describe("failureText", () => {
     expect(failureText({ kind: "tooManyRequests", code: "WEB_PICTURES_DAILY_LIMIT" }, "new")).toBe(
       "This list has more pictures from other sites than this account can publish today. Try again tomorrow, or use fewer of them.",
     );
+    expect(failureText({ kind: "tooManyRequests", code: "VISION_DAILY_LIMIT" }, "new")).toBe(
+      "Too many photos were checked today. Try again later.",
+    );
     expect(failureText({ kind: "tooManyRequests", code: null }, "new")).toBe(
       "Could not publish. Nothing was lost. Try again.",
     );
     expect(failureText({ kind: "tooLarge", detail: WEB_PICTURES_TOO_MANY }, "new")).toBe(
       "This list has too many pictures from other sites to publish. Remove some of them.",
+    );
+  });
+
+  // Proxy #173: an animation, or a photo SafeSearch could not judge.
+  it("asks for a still photo when a picture could not be checked", () => {
+    const unchecked = {
+      kind: "pictureRefused",
+      because: "unchecked",
+      imageUrl: "https://x.test/a.gif",
+    } as const;
+    expect(failureText(unchecked, "new", () => "Dance")).toBe(
+      "The picture on “Dance” can’t be checked. Use a still photo, or keep this list private.",
+    );
+    expect(failureText(unchecked, "new")).toBe(
+      "One of your photos can’t be checked. Use a still photo, or keep this list private.",
     );
   });
 });

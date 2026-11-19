@@ -92,6 +92,7 @@ const ja: Translation = {
     faceUndo: "元に戻す",
     faceNote:
       "公開したリストでは、名前の横にアイコンが表示されます。選んだカードや写真は確認され、アカウントに保存されます。",
+    faceUnchecked: "この画像は確認できません。静止画の写真を試してください。",
     faceNotMade: "この画像はプロフィールに使えません。別のものを選んでください。",
     title: "設定",
     guestTitle: "設定を変えるにはログインしてください。",
@@ -368,6 +369,11 @@ const ja: Translation = {
     failedTooLarge: "リストが大きすぎて公開できません。",
     failedPictureRefusedCard:
       "「{title}」の画像は公開フィードに掲載できません。変更するか、リストを非公開のままにしてください。",
+    failedPictureUnchecked:
+      "写真の1枚を確認できません。静止画の写真を使うか、リストを非公開のままにしてください。",
+    failedPictureUncheckedCard:
+      "「{title}」の画像を確認できません。静止画の写真を使うか、リストを非公開のままにしてください。",
+    failedVisionToday: "今日は確認した写真が多すぎます。しばらくしてからもう一度お試しください。",
     failedWebPicturesToday:
       "このリストには、このアカウントが今日公開できる数より多くの他サイトの画像があります。明日もう一度試すか、数を減らしてください。",
     failedWebPicturesTooMany:
@@ -537,6 +543,7 @@ const ja: Translation = {
     cancel: "キャンセル",
     failed:
       "通報を送信できませんでした。何も送られていません。1分ほど待ってからもう一度お試しください。",
+    dailyLimit: "今日は多くの通報を送信しました。しばらくしてからもう一度お試しください。",
     staffList: "これはスタッフのリストです。通報できるのはオーナーだけです。",
     sentTitle: "通報しました。あなたには非表示になります",
     sentBody: "通報は人が確認します。それまでは他の人には表示されたままのことがあります。",

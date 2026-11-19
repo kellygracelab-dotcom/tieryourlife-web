@@ -9,7 +9,7 @@ import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { createSectionsStore } from "../features/sections/useSections";
 import { localStorageStore, memoryStore } from "../lib/storage";
-import { SEARCH_DEBOUNCE_MS, SearchPage } from "./SearchPage";
+import { MAX_SEARCH_QUERY, SEARCH_DEBOUNCE_MS, SearchPage } from "./SearchPage";
 
 const mocks = vi.hoisted(() => ({
   loadFeed: vi.fn<(query: FeedQuery) => Promise<FeedPage>>(),
@@ -101,6 +101,16 @@ beforeEach(() => {
 });
 
 describe("SearchPage", () => {
+  // Proxy #173: a `q` over 500 characters is 400 QUERY_TOO_LONG; a pasted wall of text still searches.
+  it("sends at most its own length of words, however long the address", async () => {
+    open(`/search?q=${"a".repeat(600)}`);
+    await waitFor(() => expect(mocks.loadFeed).toHaveBeenCalled());
+    const asked = mocks.loadFeed.mock.calls.map(([query]) => (query as FeedQuery).q ?? "");
+    expect(asked.every((q) => q.length === MAX_SEARCH_QUERY)).toBe(true);
+    const topics = mocks.findTopics.mock.calls.map(([q]) => q as string);
+    expect(topics.every((q) => q.length <= MAX_SEARCH_QUERY)).toBe(true);
+  });
+
   it("searches the feed for the words in the address, most ranked first", async () => {
     mocks.loadFeed.mockResolvedValue({
       lists: [summary("a1", "Ghibli, ranked"), summary("b2", "Anime openings")],

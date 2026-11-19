@@ -46,13 +46,20 @@ interface Filters {
   topic: string | undefined;
 }
 
+/**
+ * The words a search sends, at most: the backend refuses a `q` over 500
+ * characters (400 QUERY_TOO_LONG, since 19.11.2026), and a pasted wall of
+ * text in the address finds nothing more for being longer.
+ */
+export const MAX_SEARCH_QUERY = 200;
+
 /** A topic's id as the backend makes them; anything else in the address is not one. */
 const TOPIC_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 const read = (params: URLSearchParams): Filters => {
   const category = params.get("category") ?? "";
   return {
-    q: (params.get("q") ?? "").trim(),
+    q: (params.get("q") ?? "").trim().slice(0, MAX_SEARCH_QUERY).trim(),
     sort: params.get("sort") === "recent" ? "recent" : "popular",
     category: isSectionId(category) ? category : undefined,
     topic: TOPIC_ID.test(params.get("topic") ?? "")

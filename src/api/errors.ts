@@ -80,7 +80,12 @@ export type ApiError =
       quota?: LinkQuota;
     }
   /** Too much of something in too short a time: TOO_MANY_PROPOSALS, ten sections a day. */
-  | { kind: "tooManyRequests"; code: string | null }
+  /**
+   * Any other 429, by its code: WEB_PICTURES_DAILY_LIMIT, and since 19.11.2026
+   * VISION_DAILY_LIMIT (the day's photographs checked) and REPORT_DAILY_LIMIT
+   * (the day's new reports), none until `retryAt`.
+   */
+  | { kind: "tooManyRequests"; code: string | null; retryAt?: number }
   /** Too many picture searches this hour or day (429 SEARCH_LIMIT): none until `retryAt`. */
   | { kind: "searchLimit"; retryAt?: number }
   /** Too many pictures from links this hour or day (429 LINK_LIMIT): none until `retryAt`. */
@@ -325,7 +330,10 @@ export function parseApiError(
           ...(quota === null ? {} : { quota }),
         };
       }
-      return { kind: "tooManyRequests", code };
+      const retryAt = publicationRetryAt(body.retryAt, retryAfter);
+      return retryAt === undefined
+        ? { kind: "tooManyRequests", code }
+        : { kind: "tooManyRequests", code, retryAt };
     }
     case 503: {
       if (code === "PICTURES_NOT_COPIED") {

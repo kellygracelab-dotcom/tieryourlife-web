@@ -107,6 +107,7 @@ const pl: Translation = {
     faceUndo: "Cofnij",
     faceNote:
       "Inni widzą twoje zdjęcie obok twojej nazwy na listach, które publikujesz. Wybrana karta lub zdjęcie są sprawdzane i przechowywane przy twoim koncie.",
+    faceUnchecked: "Tego obrazka nie da się sprawdzić. Spróbuj zwykłego, nieruchomego zdjęcia.",
     faceNotMade: "To zdjęcie nie może być Twoim awatarem. Wybierz inne.",
     title: "Ustawienia",
     guestTitle: "Zaloguj się, aby zmieniać ustawienia.",
@@ -384,6 +385,11 @@ const pl: Translation = {
     failedTooLarge: "Lista jest za duża, by ją opublikować.",
     failedPictureRefusedCard:
       "Obrazek przy „{title}” nie może trafić do publicznego kanału. Zmień go albo zostaw listę prywatną.",
+    failedPictureUnchecked:
+      "Jednego z Twoich zdjęć nie da się sprawdzić. Użyj nieruchomego zdjęcia albo zostaw listę prywatną.",
+    failedPictureUncheckedCard:
+      "Obrazka przy „{title}” nie da się sprawdzić. Użyj nieruchomego zdjęcia albo zostaw listę prywatną.",
+    failedVisionToday: "Dziś sprawdzono zbyt wiele zdjęć. Spróbuj ponownie później.",
     failedWebPicturesToday:
       "Lista ma więcej obrazków z innych stron, niż to konto może dziś opublikować. Spróbuj jutro albo użyj ich mniej.",
     failedWebPicturesTooMany:
@@ -558,6 +564,7 @@ const pl: Translation = {
     cancel: "Anuluj",
     failed:
       "Nie udało się wysłać zgłoszenia – nic nie zostało wysłane. Spróbuj ponownie za minutę.",
+    dailyLimit: "Wysłano dziś wiele zgłoszeń. Spróbuj ponownie później.",
     staffList: "To lista członka zespołu: zgłosić ją może tylko właściciel.",
     sentTitle: "Zgłoszono i ukryto u ciebie",
     sentBody: "Zgłoszenia rozpatruje człowiek. Do tego czasu inni mogą wciąż ją widzieć.",
