@@ -51,12 +51,14 @@ export const PANES = [
   "topics",
   "lists",
   "house",
-  "searches",
+  "statistics",
   "moderators",
 ] as const;
 export type Pane = (typeof PANES)[number];
 
-const OWNER_ONLY: readonly Pane[] = ["moderators"];
+// Statistics is the owner's alone (Marketing's proposal, section 3); the
+// empty searches it took in went with it, out of moderators' reach.
+const OWNER_ONLY: readonly Pane[] = ["statistics", "moderators"];
 
 export const panesFor = (role: AdminRole): Pane[] =>
   PANES.filter((pane) => role === "owner" || !OWNER_ONLY.includes(pane));

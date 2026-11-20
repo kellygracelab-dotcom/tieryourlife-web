@@ -1,11 +1,11 @@
-import { Link, useParams } from "react-router";
+import { Link, Navigate, useParams } from "react-router";
 import type { AdminRole } from "../api/admin";
 import { HousePane } from "../features/admin/HousePane";
 import { ListsPane } from "../features/admin/ListsPane";
 import { ModeratorsPane } from "../features/admin/ModeratorsPane";
 import { ProposalsPane } from "../features/admin/ProposalsPane";
-import { SearchesPane } from "../features/admin/SearchesPane";
 import { SectionsPane } from "../features/admin/SectionsPane";
+import { StatisticsPane } from "../features/admin/StatisticsPane";
 import { TopicsPane } from "../features/admin/TopicsPane";
 import { isPane, panesFor, useAdminRole, type Pane } from "../features/admin/useAdminRole";
 import { useWidthClass } from "../lib/useWidthClass";
@@ -26,7 +26,7 @@ const PANE_LOOK: Record<Pane, { icon: IconName; label: string }> = {
   topics: { icon: "label", label: strings.admin.topics },
   lists: { icon: "view_list", label: strings.admin.lists },
   house: { icon: "public", label: strings.admin.house },
-  searches: { icon: "search", label: strings.admin.searches },
+  statistics: { icon: "leaderboard", label: strings.admin.statistics.title },
   moderators: { icon: "shield", label: strings.admin.moderators },
 };
 
@@ -69,8 +69,8 @@ function PaneBody({ pane, adminRole: role }: { pane: Pane; adminRole: AdminRole 
       return <ModeratorsPane />;
     case "house":
       return <HousePane />;
-    case "searches":
-      return <SearchesPane />;
+    case "statistics":
+      return <StatisticsPane />;
   }
 }
 
@@ -100,6 +100,8 @@ export function AdminPage() {
     );
   }
 
+  // Searches became a block of Statistics: an old link opens it there.
+  if (asked === "searches") return <Navigate to={`${ADMIN_PATH}/statistics`} replace />;
   const panes = panesFor(role.role);
   const wide = width === "expanded";
   const current: Pane | null =

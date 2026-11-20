@@ -1,4 +1,5 @@
 import type { CoverFocus } from "./coverFocus";
+import { errorOf } from "./errors";
 import type { ApiClient } from "./client";
 import type { EditorCredit } from "./pictureAttribution";
 import { summaryOf, withRevision, type PublishRequest } from "./lists";
@@ -480,4 +481,310 @@ export interface SearchMiss {
 export async function loadSearchMisses(client: ApiClient): Promise<SearchMiss[]> {
   const answer = await client.request<{ misses?: SearchMiss[] }>("GET", "/lists/search-misses");
   return answer.misses ?? [];
+}
+
+/** Which devices the statistics count: both, or one of them. */
+export type StatsPlatform = "all" | "android" | "web";
+
+/** The days asked for, both ends included, in UTC (YYYY-MM-DD). */
+export interface StatsQuery {
+  from: string;
+  to: string;
+  platform: StatsPlatform;
+}
+
+/** A number the backend counts; null while it cannot say (no days, no sessions). */
+export type Counted = number | null;
+
+export const TILE_NAMES = [
+  "mau",
+  "dauAverage",
+  "newcomers",
+  "d7",
+  "published",
+  "crashFreeUsers",
+  "crashFreeSessions",
+] as const;
+export type TileName = (typeof TILE_NAMES)[number];
+
+/** A figure on top: the period's, the one before's (with compare), and the change, a fraction. */
+export interface StatsTile {
+  value: Counted;
+  previous: Counted;
+  change: Counted;
+}
+
+/** A day of the period, by the event names of CONTRACT.md (Usage statistics). */
+export interface StatsDay {
+  day: string;
+  active: number;
+  /** Present when both platforms are asked for. */
+  activeAndroid: number | null;
+  activeWeb: number | null;
+  newcomers: number;
+  sessions: number;
+  crashedSessions: number;
+}
+
+/** The newcomers' steps, each once per install, in their order. */
+export const FUNNEL_STEPS = [
+  "first_launch",
+  "open_list",
+  "first_board",
+  "first_card",
+  "full_list",
+  "first_game",
+  "shared",
+  "signed_in",
+  "published",
+] as const;
+export type FunnelStep = (typeof FUNNEL_STEPS)[number];
+
+export interface StatsCohort {
+  /** The ISO week of the first launch, "2026-W47". */
+  week: string;
+  size: number;
+  d1: Counted;
+  d7: Counted;
+  d30: Counted;
+}
+
+export interface StatsSearch {
+  q: string;
+  section: string | null;
+  n: number;
+  miss: number;
+}
+
+export interface StatsCut {
+  value: string;
+  n: number;
+}
+
+/** Firebase Auth's accounts of one kind, as counted the night before. */
+export interface AccountCount {
+  total: number;
+  new1: number;
+  active1: number;
+  active7: number;
+  active30: number;
+}
+
+export interface StatsCrash {
+  type: string;
+  place: string;
+  version: string | null;
+  n: number;
+  /** The first and last UTC day it was counted on. */
+  first: string | null;
+  last: string | null;
+}
+
+/**
+ * The owner's Statistics for a period (CONTRACT.md, `GET /lists/admin/stats`):
+ * anonymous daily sums the backend keeps, no uid, device or address in them.
+ * Read leniently: anything missing is empty, so an older or newer backend
+ * still draws a screen.
+ */
+export interface Statistics {
+  period: { from: string; to: string; todayIsPartial: boolean };
+  compared: boolean;
+  tiles: Record<TileName, StatsTile>;
+  daily: StatsDay[];
+  /** Every event and client feature (`f.<name>`) summed over the period. */
+  totals: Record<string, number>;
+  funnel: { step: FunnelStep; n: number }[];
+  retention: StatsCohort[];
+  rolling: { dau: Counted; wau: Counted; mau: Counted };
+  audience: {
+    versions: StatsCut[];
+    languages: StatsCut[];
+    regions: StatsCut[];
+    accounts: {
+      asOf: string | null;
+      complete: boolean;
+      guests: AccountCount;
+      google: AccountCount;
+    } | null;
+  };
+  top: {
+    lists: { id: string; title: string | null; views: number; takes: number }[];
+    topics: { id: string; name: string | null; opens: number; follows: number }[];
+    sections: { id: string; opens: number }[];
+    pictureSearch: StatsSearch[];
+    pictureMisses: StatsSearch[];
+    listSearch: StatsSearch[];
+    listMisses: StatsSearch[];
+    crashes: StatsCrash[];
+    referrers: { domain: string; utm: string | null; n: number }[];
+  };
+  links: { crashlytics: string | null; playConsole: string | null; searchConsole: string | null };
+}
+
+type Loose = Record<string, unknown>;
+
+const numberOf = (value: unknown): number =>
+  typeof value === "number" && Number.isFinite(value) ? value : 0;
+const countedOf = (value: unknown): Counted =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+const textOf = (value: unknown): string | null =>
+  typeof value === "string" && value !== "" ? value : null;
+const objectOf = (value: unknown): Loose =>
+  value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Loose) : {};
+const rowsOf = (value: unknown): Loose[] => (Array.isArray(value) ? value.map(objectOf) : []);
+
+const accountOf = (value: unknown): AccountCount => {
+  const one = objectOf(value);
+  return {
+    total: numberOf(one.total),
+    new1: numberOf(one.new1),
+    active1: numberOf(one.active1),
+    active7: numberOf(one.active7),
+    active30: numberOf(one.active30),
+  };
+};
+
+const searchOf = (row: Loose): StatsSearch => ({
+  q: String(row.q ?? ""),
+  section: textOf(row.section),
+  n: numberOf(row.n),
+  miss: numberOf(row.miss),
+});
+
+const cutOf = (row: Loose): StatsCut => ({ value: String(row.value ?? ""), n: numberOf(row.n) });
+
+/** The admin answer as the screen reads it; `{}` stands for a backend that counts nothing yet. */
+export function statisticsOf(raw: unknown, query: StatsQuery): Statistics {
+  const answer = objectOf(raw);
+  const period = objectOf(answer.period);
+  const tiles = objectOf(answer.tiles);
+  const audience = objectOf(answer.audience);
+  const accounts = audience.accounts;
+  const top = objectOf(answer.top);
+  const links = objectOf(answer.links);
+  const rolling = objectOf(answer.rolling);
+  const totals: Record<string, number> = {};
+  for (const [event, n] of Object.entries(objectOf(answer.totals))) {
+    if (typeof n === "number" && Number.isFinite(n)) totals[event] = n;
+  }
+  return {
+    period: {
+      from: textOf(period.from) ?? query.from,
+      to: textOf(period.to) ?? query.to,
+      todayIsPartial: period.todayIsPartial === true,
+    },
+    compared: answer.previous !== null && answer.previous !== undefined,
+    tiles: Object.fromEntries(
+      TILE_NAMES.map((name) => {
+        const tile = objectOf(tiles[name]);
+        return [
+          name,
+          {
+            value: countedOf(tile.value),
+            previous: countedOf(tile.previous),
+            change: countedOf(tile.change),
+          },
+        ];
+      }),
+    ) as Record<TileName, StatsTile>,
+    daily: rowsOf(answer.daily).map((row) => ({
+      day: String(row.day ?? ""),
+      active: numberOf(row.active),
+      activeAndroid: countedOf(row["active.android"]),
+      activeWeb: countedOf(row["active.web"]),
+      newcomers: numberOf(row["step.first_launch"]),
+      sessions: numberOf(row.sessions),
+      crashedSessions: numberOf(row["sessions.crashed"]),
+    })),
+    totals,
+    funnel: rowsOf(answer.funnel)
+      .filter((row) => (FUNNEL_STEPS as readonly unknown[]).includes(row.step))
+      .map((row) => ({ step: row.step as FunnelStep, n: numberOf(row.n) })),
+    retention: rowsOf(answer.retention).map((row) => ({
+      week: String(row.week ?? ""),
+      size: numberOf(row.size),
+      d1: countedOf(row.d1),
+      d7: countedOf(row.d7),
+      d30: countedOf(row.d30),
+    })),
+    rolling: {
+      dau: countedOf(rolling.dau),
+      wau: countedOf(rolling.wau),
+      mau: countedOf(rolling.mau),
+    },
+    audience: {
+      versions: rowsOf(audience.versions).map(cutOf),
+      languages: rowsOf(audience.languages).map(cutOf),
+      regions: rowsOf(audience.regions).map(cutOf),
+      accounts:
+        accounts === null || typeof accounts !== "object"
+          ? null
+          : {
+              asOf: textOf(objectOf(accounts).asOf),
+              complete: objectOf(accounts).complete !== false,
+              guests: accountOf(objectOf(accounts).guests),
+              google: accountOf(objectOf(accounts).google),
+            },
+    },
+    top: {
+      lists: rowsOf(top.lists).map((row) => ({
+        id: String(row.id ?? ""),
+        title: textOf(row.title),
+        views: numberOf(row.views),
+        takes: numberOf(row.takes),
+      })),
+      topics: rowsOf(top.topics).map((row) => ({
+        id: String(row.id ?? ""),
+        name: textOf(row.name),
+        opens: numberOf(row.opens),
+        follows: numberOf(row.follows),
+      })),
+      sections: rowsOf(top.sections).map((row) => ({
+        id: String(row.id ?? ""),
+        opens: numberOf(row.opens),
+      })),
+      pictureSearch: rowsOf(top.pictureSearch).map(searchOf),
+      pictureMisses: rowsOf(top.pictureMisses).map(searchOf),
+      listSearch: rowsOf(top.listSearch).map(searchOf),
+      listMisses: rowsOf(top.listMisses).map(searchOf),
+      crashes: rowsOf(top.crashes).map((row) => ({
+        type: String(row.type ?? ""),
+        place: String(row.place ?? ""),
+        version: textOf(row.version),
+        n: numberOf(row.n),
+        first: textOf(row.first),
+        last: textOf(row.last),
+      })),
+      referrers: rowsOf(top.referrers).map((row) => ({
+        domain: String(row.domain ?? ""),
+        utm: textOf(row.utm),
+        n: numberOf(row.n),
+      })),
+    },
+    links: {
+      crashlytics: textOf(links.crashlytics),
+      playConsole: textOf(links.playConsole),
+      searchConsole: textOf(links.searchConsole),
+    },
+  };
+}
+
+/** Statistics with nothing counted: what a backend without the route stands for. */
+export const emptyStatistics = (query: StatsQuery): Statistics => statisticsOf({}, query);
+
+/**
+ * The owner's Statistics for the days asked, with the period before to
+ * compare. A backend without the route answers 404, read as nothing counted
+ * rather than as a failure.
+ */
+export async function loadStatistics(client: ApiClient, query: StatsQuery): Promise<Statistics> {
+  try {
+    const answer = await client.request<unknown>("GET", "/lists/admin/stats", {
+      query: { from: query.from, to: query.to, platform: query.platform, compare: "1" },
+    });
+    return statisticsOf(answer, query);
+  } catch (reason) {
+    if (errorOf(reason).kind === "notFound") return emptyStatistics(query);
+    throw reason;
+  }
 }

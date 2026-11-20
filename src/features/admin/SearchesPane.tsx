@@ -14,17 +14,27 @@ import { PaneLoading } from "./PaneLoading";
 export function SearchesPane({
   load = loadSearchMisses,
   now = Date.now,
+  embedded = false,
 }: {
   load?: () => Promise<SearchMiss[]>;
   now?: () => number;
+  /** A block of Statistics, under its Searches, rather than a pane of its own. */
+  embedded?: boolean;
 }) {
   const { state, retry } = useResource("search-misses", load);
+  const Heading = embedded ? "h4" : "h2";
   return (
-    <section className="admin-pane" aria-labelledby="admin-searches">
+    <section
+      className={embedded ? "admin-pane stats-misses" : "admin-pane"}
+      aria-labelledby="admin-searches"
+    >
       <header className="admin-pane__head">
-        <h2 id="admin-searches" className="admin-pane__title">
+        <Heading
+          id="admin-searches"
+          className={embedded ? "stats-table__caption" : "admin-pane__title"}
+        >
           {strings.admin.searches}
-        </h2>
+        </Heading>
         <p className="admin-pane__count">{strings.admin.searchesBody}</p>
       </header>
       {state.status === "loading" ? (
