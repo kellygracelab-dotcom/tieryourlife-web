@@ -1,4 +1,5 @@
 import type { CoverFocus } from "./coverFocus";
+import { errorOf } from "./errors";
 import type { ApiClient } from "./client";
 import type { EditorCredit } from "./pictureAttribution";
 import { summaryOf, withRevision, type PublishRequest } from "./lists";
@@ -480,4 +481,230 @@ export interface SearchMiss {
 export async function loadSearchMisses(client: ApiClient): Promise<SearchMiss[]> {
   const answer = await client.request<{ misses?: SearchMiss[] }>("GET", "/lists/search-misses");
   return answer.misses ?? [];
+}
+
+/** Which devices the statistics count: both, or one of them. */
+export type StatsPlatform = "all" | "android" | "web";
+
+/** The days asked for, both ends included, in UTC (YYYY-MM-DD). */
+export interface StatsQuery {
+  from: string;
+  to: string;
+  platform: StatsPlatform;
+}
+
+/** A number the backend counts; null while nothing counts it yet. */
+export type Counted = number | null;
+
+/** The six figures at the top of Statistics; d7 and crashFreeUsers are shares, 0 to 1. */
+export interface StatsTiles {
+  mau: Counted;
+  dauAverage: Counted;
+  newUsers: Counted;
+  d7: Counted;
+  published: Counted;
+  crashFreeUsers: Counted;
+}
+
+export interface ByPlatform {
+  android: number;
+  web: number;
+}
+
+export interface StatsDay {
+  date: string;
+  active: ByPlatform;
+  newUsers: ByPlatform;
+  crashes: ByPlatform;
+}
+
+export const FUNNEL_STEPS = [
+  "firstOpen",
+  "openedList",
+  "firstBoard",
+  "firstCard",
+  "rankedFive",
+  "finishedGame",
+  "sharedImage",
+  "signedIn",
+  "published",
+] as const;
+export type FunnelStep = (typeof FUNNEL_STEPS)[number];
+
+export interface StatsCohort {
+  /** The ISO week of the first open, "2026-W47". */
+  week: string;
+  size: number;
+  d1: Counted;
+  d7: Counted;
+  d30: Counted;
+}
+
+export interface StatsSearch {
+  q: string;
+  section?: string | null;
+  count: number;
+}
+
+export interface StatsList {
+  id: string;
+  title: string;
+  opens: number;
+  copies: number;
+  finished: number;
+  shared: number;
+}
+
+export interface StatsTopic {
+  id: string;
+  name: string;
+  section: string | null;
+  opens: number;
+  follows: number;
+}
+
+export interface StatsShare {
+  code: string;
+  count: number;
+}
+
+export interface StatsVersion {
+  platform: "android" | "web";
+  version: string;
+  count: number;
+}
+
+export interface StatsCrash {
+  platform: "android" | "web";
+  type: string;
+  place: string;
+  version: string;
+  count: number;
+  people: number;
+  firstAt: number;
+  lastAt: number;
+}
+
+/**
+ * The admin's Statistics for a period: anonymous daily totals the backend
+ * keeps (no uid, device or address in them), summed for the days asked. A
+ * figure nothing counts yet comes as null, a table as empty.
+ */
+export interface Statistics {
+  period: { from: string; to: string; partialToday: boolean };
+  updatedAt: number | null;
+  tiles: StatsTiles;
+  /** The same figures for the period of the same length just before. */
+  previous: StatsTiles | null;
+  daily: StatsDay[];
+  funnel: { step: FunnelStep; count: number }[];
+  retention: StatsCohort[];
+  pictureSearches: { top: StatsSearch[]; empty: StatsSearch[] };
+  listSearches: { top: StatsSearch[] };
+  lists: StatsList[];
+  topics: StatsTopic[];
+  audience: {
+    guests: Counted;
+    google: Counted;
+    languages: StatsShare[];
+    regions: StatsShare[];
+    versions: StatsVersion[];
+  };
+  referrers: { domain: string; count: number }[];
+  crashes: { freeUsers: Counted; freeSessions: Counted; top: StatsCrash[] };
+  server: {
+    errors5xx: Counted;
+    appCheckRefused: Counted;
+    catalogueBusy: Counted;
+    searchLimit: Counted;
+  };
+  costs: { serper: Counted; vision: Counted };
+}
+
+const NO_TILES: StatsTiles = {
+  mau: null,
+  dauAverage: null,
+  newUsers: null,
+  d7: null,
+  published: null,
+  crashFreeUsers: null,
+};
+
+const countedOf = (value: unknown): Counted =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const tilesOf = (value: Partial<StatsTiles> | null | undefined): StatsTiles => ({
+  mau: countedOf(value?.mau),
+  dauAverage: countedOf(value?.dauAverage),
+  newUsers: countedOf(value?.newUsers),
+  d7: countedOf(value?.d7),
+  published: countedOf(value?.published),
+  crashFreeUsers: countedOf(value?.crashFreeUsers),
+});
+
+/** Statistics with nothing counted: what a backend without the route stands for. */
+export const emptyStatistics = (query: StatsQuery): Statistics => statisticsOf({}, query);
+
+type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> | null : T[K] };
+
+function statisticsOf(answer: DeepPartial<Statistics>, query: StatsQuery): Statistics {
+  const list = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+  return {
+    period: {
+      from: answer.period?.from ?? query.from,
+      to: answer.period?.to ?? query.to,
+      partialToday: answer.period?.partialToday === true,
+    },
+    updatedAt: countedOf(answer.updatedAt),
+    tiles: tilesOf(answer.tiles ?? NO_TILES),
+    previous: answer.previous ? tilesOf(answer.previous) : null,
+    daily: list(answer.daily),
+    funnel: list<{ step: FunnelStep; count: number }>(answer.funnel).filter((row) =>
+      (FUNNEL_STEPS as readonly string[]).includes(row.step),
+    ),
+    retention: list(answer.retention),
+    pictureSearches: {
+      top: list(answer.pictureSearches?.top),
+      empty: list(answer.pictureSearches?.empty),
+    },
+    listSearches: { top: list(answer.listSearches?.top) },
+    lists: list(answer.lists),
+    topics: list(answer.topics),
+    audience: {
+      guests: countedOf(answer.audience?.guests),
+      google: countedOf(answer.audience?.google),
+      languages: list(answer.audience?.languages),
+      regions: list(answer.audience?.regions),
+      versions: list(answer.audience?.versions),
+    },
+    referrers: list(answer.referrers),
+    crashes: {
+      freeUsers: countedOf(answer.crashes?.freeUsers),
+      freeSessions: countedOf(answer.crashes?.freeSessions),
+      top: list(answer.crashes?.top),
+    },
+    server: {
+      errors5xx: countedOf(answer.server?.errors5xx),
+      appCheckRefused: countedOf(answer.server?.appCheckRefused),
+      catalogueBusy: countedOf(answer.server?.catalogueBusy),
+      searchLimit: countedOf(answer.server?.searchLimit),
+    },
+    costs: { serper: countedOf(answer.costs?.serper), vision: countedOf(answer.costs?.vision) },
+  };
+}
+
+/**
+ * The owner's Statistics for the days asked. A backend that does not count
+ * them yet answers 404, read as nothing counted rather than as a failure.
+ */
+export async function loadStatistics(client: ApiClient, query: StatsQuery): Promise<Statistics> {
+  try {
+    const answer = await client.request<DeepPartial<Statistics>>("GET", "/lists/admin/statistics", {
+      query: { from: query.from, to: query.to, platform: query.platform },
+    });
+    return statisticsOf(answer ?? {}, query);
+  } catch (reason) {
+    if (errorOf(reason).kind === "notFound") return emptyStatistics(query);
+    throw reason;
+  }
 }

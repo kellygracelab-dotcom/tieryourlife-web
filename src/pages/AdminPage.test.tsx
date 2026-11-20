@@ -72,7 +72,7 @@ describe("AdminPage", () => {
       "/admin/topics",
       "/admin/lists",
       "/admin/house",
-      "/admin/searches",
+      "/admin/statistics",
       "/admin/moderators",
     ]);
     expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
@@ -140,8 +140,27 @@ describe("AdminPage", () => {
       "/admin/topics",
       "/admin/lists",
       "/admin/house",
-      "/admin/searches",
     ]);
+    expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("opens Statistics to the owner, and an old Searches link there", async () => {
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
+    open("/admin/searches");
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Statistics" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Statistics" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("keeps Statistics from a moderator, even at its address", async () => {
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "moderator", version: 1 });
+    open("/admin/statistics");
+    await screen.findByRole("heading", { name: "Admin" });
+    expect(screen.queryByRole("heading", { name: "Statistics" })).toBeNull();
     expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
   });
 
@@ -188,7 +207,6 @@ describe("AdminPage", () => {
       "/admin/topics",
       "/admin/lists",
       "/admin/house",
-      "/admin/searches",
     ]);
   });
 

@@ -15,6 +15,8 @@ import type {
   FinishCall,
   HouseAnswer,
   SearchMiss,
+  Statistics,
+  StatsQuery,
   TopicApproval,
   TopicChanges,
   TopicDecision,
@@ -486,5 +488,8 @@ export const saveHouseTranslations = (
 ): Promise<void> => admin.saveHouseTranslations(api, id, translations);
 
 export const loadSearchMisses = (): Promise<SearchMiss[]> => admin.loadSearchMisses(api);
+
+export const loadStatistics = (query: StatsQuery): Promise<Statistics> =>
+  admin.loadStatistics(api, query);
 
 export const noteSearchMiss = (q: string): Promise<void> => community.noteSearchMiss(api, q);
