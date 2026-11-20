@@ -236,12 +236,12 @@ describe("sendBatch", () => {
         throw new ApiFailure(error);
       }),
     });
-    expect(await sendBatch(failing({ kind: "invalid", detail: null, code: "INVALID" }), batch, false)).toBe(
-      "refused",
-    );
-    expect(await sendBatch(failing({ kind: "tooManyRequests", code: "TOO_MANY" }), batch, false)).toBe(
-      "tooMany",
-    );
+    expect(
+      await sendBatch(failing({ kind: "invalid", detail: null, code: "INVALID" }), batch, false),
+    ).toBe("refused");
+    expect(
+      await sendBatch(failing({ kind: "tooManyRequests", code: "TOO_MANY" }), batch, false),
+    ).toBe("tooMany");
     expect(await sendBatch(failing({ kind: "offline" }), batch, false)).toBe("failed");
   });
 });

@@ -103,7 +103,8 @@ describe("the usage ledger", () => {
 
   it("counts a session as crashed once, keeps the newest five errors, and never more crashed than sessions", () => {
     let ledger = sessionBegun(freshLedger(DAY, true, true), null);
-    for (let i = 0; i < 7; i++) ledger = crashedIn(ledger, { type: "E", place: `a.js:${i}` }, i === 0);
+    for (let i = 0; i < 7; i++)
+      ledger = crashedIn(ledger, { type: "E", place: `a.js:${i}` }, i === 0);
     expect(ledger.crashedSessions).toBe(1);
     expect(ledger.crashes.map((crash) => crash.place)).toEqual([
       "a.js:2",
