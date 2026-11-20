@@ -528,6 +528,8 @@ const fr: Translation = {
     title: "Classements",
     body: "Les mêmes cartes, placées à la manière de quelqu’un. Choisissez les rangées à afficher.",
     author: "Auteur",
+    // The author of a list published without a name, in the first row.
+    anonymous: "Anonyme",
     you: "Vous",
     withdraw: "Retirer",
     withdrawTitle: "Retirer votre classement ?",

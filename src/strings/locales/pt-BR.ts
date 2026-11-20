@@ -518,6 +518,8 @@ const ptBR: Translation = {
     title: "Classificações",
     body: "Os mesmos cartões, colocadas do jeito de alguém. Escolha de quem mostrar as fileiras.",
     author: "Autor",
+    // The author of a list published without a name, in the first row.
+    anonymous: "Anônimo",
     you: "Você",
     withdraw: "Retirar",
     withdrawTitle: "Retirar seu ranking?",

@@ -525,6 +525,8 @@ const pl: Translation = {
     title: "Rankingi",
     body: "Te same karty ułożone po czyjemuś. Wybierz, czyje rzędy pokazać.",
     author: "Autor",
+    // The author of a list published without a name, in the first row.
+    anonymous: "Anonim",
     you: "Ty",
     withdraw: "Wycofaj",
     withdrawTitle: "Wycofać twój ranking?",

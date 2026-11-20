@@ -487,7 +487,8 @@ describe("ListPage rankings", () => {
     expect(boards.all()).toHaveLength(1);
   });
 
-  it("names nobody in the first row of an editorial list", async () => {
+  // As the app names it (20.11.2026): the house's, with the app's mark, never its editor.
+  it("names TierYourLife, with the app's mark, in the first row of a house list", async () => {
     mocks.loadList.mockResolvedValue({
       ...list,
       authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
@@ -496,8 +497,9 @@ describe("ListPage rankings", () => {
     openAs();
     const sheet = await openSheet();
     await within(sheet).findByRole("button", { name: /^olena/ });
-    expect(rowsOf(sheet)[0]).toBe("Author");
+    expect(rowsOf(sheet)[0]).toBe("TierYourLife Author");
     expect(sheet).not.toHaveTextContent("Danylo");
+    expect(sheet.querySelector(".rankings__face--mark")).toHaveAttribute("src", "/favicon.svg");
   });
 
   it("lets the author look at a reader's placing of their list, with no Mine to switch to", async () => {
@@ -1121,11 +1123,24 @@ describe("ListPage: showing one's ranking to others", () => {
     expect(document.body).toHaveTextContent("Tenet");
   });
 
-  it("names the author of an anonymous list just Author", async () => {
+  it("names the author of an anonymous list Anonymous", async () => {
     mocks.loadList.mockResolvedValue({ ...list, authorName: "", authorUid: "" });
     openAs();
     const sheet = await openSheet();
     await within(sheet).findByRole("button", { name: /^olena/ });
-    expect(rowsOf(sheet)[0]).toBe("Author");
+    expect(rowsOf(sheet)[0]).toBe("Anonymous Author");
+  });
+
+  // Any list its author placed nothing on, as in the app: no row with an empty board.
+  it("has no author's row on a list its author placed nothing on", async () => {
+    mocks.loadList.mockResolvedValue({
+      ...list,
+      items: list.items.map((item) => ({ ...item, tierIndex: null })),
+    });
+    openAs();
+    const sheet = await openSheet();
+    await within(sheet).findByRole("button", { name: /^olena/ });
+    expect(rowsOf(sheet).some((row) => row.includes("Author"))).toBe(false);
+    expect(rowsOf(sheet)).toContain("olena");
   });
 });

@@ -515,6 +515,8 @@ const de: Translation = {
     title: "Ranglisten",
     body: "Dieselben Karten, von jemandem anders gesetzt. Wähle, wessen Reihen gezeigt werden.",
     author: "Autor",
+    // The author of a list published without a name, in the first row.
+    anonymous: "Anonym",
     you: "Du",
     withdraw: "Zurückziehen",
     withdrawTitle: "Deine Rangliste zurückziehen?",

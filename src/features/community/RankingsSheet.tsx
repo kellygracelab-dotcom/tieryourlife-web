@@ -3,7 +3,7 @@ import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from "re
 import { createPortal } from "react-dom";
 import type { ReaderRanking } from "../../api/community";
 import type { PublishedList } from "../../api/types";
-import { isEditorial } from "../../lib/editorial";
+import { isEditorial, isEditorialAuthor } from "../../lib/editorial";
 import { currentLocale, fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -53,6 +53,8 @@ interface RowProps {
   /** Null for a reader with no name, who is "Someone" in the reader's language. */
   name: string | null;
   photoUrl: string | null;
+  /** In place of a face: the house's lists have the app's mark. */
+  mark?: boolean;
   /** The day it was placed; nothing for a date the backend never wrote. */
   when: number;
   selected: boolean;
@@ -62,7 +64,7 @@ interface RowProps {
   trailing?: ReactNode;
 }
 
-function Row({ name, photoUrl, when, selected, onClick, pill, trailing }: RowProps) {
+function Row({ name, photoUrl, mark = false, when, selected, onClick, pill, trailing }: RowProps) {
   return (
     <li className="rankings__item">
       <button
@@ -71,7 +73,11 @@ function Row({ name, photoUrl, when, selected, onClick, pill, trailing }: RowPro
         aria-current={selected ? "true" : undefined}
         onClick={onClick}
       >
-        <Face name={name} photoUrl={photoUrl} />
+        {mark ? (
+          <img className="rankings__face rankings__face--mark" src="/favicon.svg" alt="" />
+        ) : (
+          <Face name={name} photoUrl={photoUrl} />
+        )}
         <span className="rankings__text">
           <span className="rankings__name">
             <bdi className="rankings__name-text">{name ?? strings.profile.someone}</bdi>
@@ -226,12 +232,13 @@ export function RankingsSheet({
   const { state, open, more, like, askSignIn, dismissTrouble } = rankings;
   const { account } = useSession();
   const signedIn = account?.kind === "signedIn";
-  // A list without an author has nobody to name in the first row.
-  const editorial = isEditorial(list);
-  const authorName = list.authorName.trim();
-  // A house list placed by nobody is nobody's ranking: its row would show an
-  // empty board under no name (the Designer's rule, 20.11.2026).
-  const authorRow = !editorial || list.items.some((item) => item.tierIndex != null);
+  // The first row's name, as the app gives it (20.11.2026): the house's lists
+  // are TierYourLife's, with the app's mark; one with no name is Anonymous.
+  const house = isEditorialAuthor(list.authorUid);
+  const unnamed = !house && (isEditorial(list) || list.authorName.trim() === "");
+  // A list its author placed nothing on is nobody's ranking: its row would
+  // show an empty board (the Designer's rule, 20.11.2026; the app's too).
+  const authorRow = list.items.some((item) => item.tierIndex != null);
   const trouble = state.likeTrouble;
 
   useModal(box, onClose);
@@ -291,15 +298,15 @@ export function RankingsSheet({
         </div>
         <p className="rankings__body">{strings.rankings.body}</p>
         <ul className="rankings__rows">
-          {/* The author's arrangement is the list's own, drawn from it; one
-              without a name (an anonymous or editorial list) is just Author. */}
+          {/* The author's arrangement is the list's own, drawn from it. */}
           {authorRow && (
             <Row
-              name={editorial || authorName === "" ? strings.rankings.author : list.authorName}
-              photoUrl={editorial ? null : list.authorPhotoUrl}
+              name={house ? "TierYourLife" : unnamed ? strings.rankings.anonymous : list.authorName}
+              photoUrl={house || unnamed ? null : list.authorPhotoUrl}
+              mark={house}
               when={list.updatedAt}
               selected={!showingMine && chosen === null}
-              pill={editorial || authorName === "" ? undefined : strings.rankings.author}
+              pill={strings.rankings.author}
               onClick={() => onChoose(null)}
             />
           )}

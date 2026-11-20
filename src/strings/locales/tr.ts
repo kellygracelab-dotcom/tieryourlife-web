@@ -502,6 +502,8 @@ const tr: Translation = {
     title: "Sıralamalar",
     body: "Aynı kartlar, birinin kendi usulünce dizilmiş. Kimin sıralarının gösterileceğini seçin.",
     author: "Yazar",
+    // The author of a list published without a name, in the first row.
+    anonymous: "Anonim",
     you: "Siz",
     withdraw: "Geri çek",
     withdrawTitle: "Sıralamanız geri çekilsin mi?",

@@ -508,6 +508,8 @@ export const en = {
     title: "Rankings",
     body: "The same cards, placed somebody’s way. Choose whose rows to show.",
     author: "Author",
+    // The author of a list published without a name, in the first row.
+    anonymous: "Anonymous",
     you: "You",
     withdraw: "Withdraw",
     withdrawTitle: "Withdraw your ranking?",

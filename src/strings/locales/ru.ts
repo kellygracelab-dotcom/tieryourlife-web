@@ -529,6 +529,8 @@ const ru: Translation = {
     title: "Рейтинги",
     body: "Те же карточки, расставленные по-своему. Выберите, чьи ряды показать.",
     author: "Автор",
+    // The author of a list published without a name, in the first row.
+    anonymous: "Аноним",
     you: "Вы",
     withdraw: "Снять",
     withdrawTitle: "Снять ваш рейтинг?",
