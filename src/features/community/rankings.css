@@ -279,3 +279,11 @@
   margin: 4px 16px;
   background: var(--line);
 }
+
+/* Nobody's ranking yet: one line where the rows would be. */
+.rankings__empty {
+  margin: 0;
+  padding: 8px 24px 24px;
+  font: var(--text-body);
+  color: var(--ink-dim);
+}

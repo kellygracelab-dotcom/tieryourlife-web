@@ -569,6 +569,8 @@ const ar: Translation = {
     showBanned: "أزال مشرف إحدى قوائمك، لذا لا يمكنك عرض الترتيبات حاليًا.",
     cancel: "إلغاء",
     withdrawFailed: "تعذّر سحب ترتيبك. حاول مرة أخرى.",
+    // Nobody's ranking yet, not even the list's own (a house list placed by nobody).
+    empty: "لا توجد ترتيبات بعد. احفظ ترتيبك وسيكون الأول هنا.",
     failed: "تعذّر تحميل الترتيبات.",
     close: "إغلاق",
     today: "اليوم",

@@ -515,6 +515,8 @@ const ja: Translation = {
       "モデレーターがあなたのリストの1つを取り下げたため、今はランキングを見せられません。",
     cancel: "キャンセル",
     withdrawFailed: "ランキングを取り下げられませんでした。もう一度お試しください。",
+    // Nobody's ranking yet, not even the list's own (a house list placed by nobody).
+    empty: "まだランキングはありません。あなたのランキングを保存すると、ここに最初に表示されます。",
     failed: "ランキングを読み込めませんでした。",
     close: "閉じる",
     today: "今日",

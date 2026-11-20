@@ -529,6 +529,8 @@ const ptBR: Translation = {
       "Um moderador removeu uma das suas listas, então por enquanto você não pode mostrar rankings.",
     cancel: "Cancelar",
     withdrawFailed: "Não foi possível retirar seu ranking. Tente de novo.",
+    // Nobody's ranking yet, not even the list's own (a house list placed by nobody).
+    empty: "Ainda não há rankings. Salve o seu e ele será o primeiro aqui.",
     failed: "Não foi possível carregar os rankings.",
     close: "Fechar",
     today: "Hoje",

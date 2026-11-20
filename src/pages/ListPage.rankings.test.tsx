@@ -152,6 +152,49 @@ beforeEach(() => {
 });
 
 describe("ListPage rankings", () => {
+  // A house list placed by nobody is nobody's ranking (the Designer's rule, 20.11.2026).
+  describe("a house list nobody placed", () => {
+    const house: PublishedList = {
+      ...list,
+      authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+      authorName: "",
+      rankingCount: 0,
+      items: list.items.map((item) => ({ ...item, tierIndex: null })),
+    };
+    const openHouse = async (count: number) => {
+      mocks.loadList.mockResolvedValue({ ...house, rankingCount: count });
+      openAs();
+      await userEvent.click(await screen.findByLabelText("More about this list"));
+      await userEvent.click(screen.getByRole("button", { name: `Rankings · ${count}` }));
+      return screen.getByRole("dialog", { name: "Rankings" });
+    };
+
+    it("has no author's row, and says so when nobody has shown one either", async () => {
+      mocks.loadListRankings.mockResolvedValue({ rankings: [], nextCursor: null });
+      const sheet = await openHouse(0);
+      expect(
+        await within(sheet).findByText(
+          "No rankings yet. Save yours and it’ll be the first one here.",
+        ),
+      ).toBeInTheDocument();
+      expect(within(sheet).queryByRole("button", { name: /^Author/ })).toBeNull();
+      expect(within(sheet).queryByRole("separator")).toBeNull();
+      // Nothing to count in the head either.
+      expect(screen.queryByText(/see how others placed them/)).toBeNull();
+    });
+
+    it("lists the readers' rankings alone, and the head counts only them", async () => {
+      const sheet = await openHouse(1);
+      expect(await within(sheet).findByRole("button", { name: /^olena/ })).toBeInTheDocument();
+      expect(rowsOf(sheet)).toEqual(["Reader You Withdraw", "olena"]);
+      expect(within(sheet).queryByRole("separator")).toBeNull();
+      expect(within(sheet).queryByText(/No rankings yet/)).toBeNull();
+      expect(
+        screen.getByRole("button", { name: /1 ranking — see how others placed them/ }),
+      ).toBeInTheDocument();
+    });
+  });
+
   it("lists the author with a pill, then everyone in the server's order, one's own with You and Withdraw, under a title without a number", async () => {
     openAs();
     const sheet = await openSheet();

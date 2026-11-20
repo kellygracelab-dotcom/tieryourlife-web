@@ -539,6 +539,8 @@ const fr: Translation = {
       "Un modérateur a retiré l’une de vos listes ; vous ne pouvez pas montrer de classement pour l’instant.",
     cancel: "Annuler",
     withdrawFailed: "Impossible de retirer votre classement. Réessayez.",
+    // Nobody's ranking yet, not even the list's own (a house list placed by nobody).
+    empty: "Pas encore de classement. Enregistrez le vôtre et il sera le premier ici.",
     failed: "Impossible de charger les classements.",
     close: "Fermer",
     today: "Aujourd’hui",

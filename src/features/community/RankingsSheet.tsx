@@ -229,6 +229,9 @@ export function RankingsSheet({
   // A list without an author has nobody to name in the first row.
   const editorial = isEditorial(list);
   const authorName = list.authorName.trim();
+  // A house list placed by nobody is nobody's ranking: its row would show an
+  // empty board under no name (the Designer's rule, 20.11.2026).
+  const authorRow = !editorial || list.items.some((item) => item.tierIndex != null);
   const trouble = state.likeTrouble;
 
   useModal(box, onClose);
@@ -290,17 +293,21 @@ export function RankingsSheet({
         <ul className="rankings__rows">
           {/* The author's arrangement is the list's own, drawn from it; one
               without a name (an anonymous or editorial list) is just Author. */}
-          <Row
-            name={editorial || authorName === "" ? strings.rankings.author : list.authorName}
-            photoUrl={editorial ? null : list.authorPhotoUrl}
-            when={list.updatedAt}
-            selected={!showingMine && chosen === null}
-            pill={editorial || authorName === "" ? undefined : strings.rankings.author}
-            onClick={() => onChoose(null)}
-          />
+          {authorRow && (
+            <Row
+              name={editorial || authorName === "" ? strings.rankings.author : list.authorName}
+              photoUrl={editorial ? null : list.authorPhotoUrl}
+              when={list.updatedAt}
+              selected={!showingMine && chosen === null}
+              pill={editorial || authorName === "" ? undefined : strings.rankings.author}
+              onClick={() => onChoose(null)}
+            />
+          )}
           {/* The list's own arrangement apart from its readers', whom the menu's
               "Rankings · N" and the head's link count (artboard 36). */}
-          {state.rankings.length > 0 && <li className="rankings__divider" role="separator" />}
+          {authorRow && state.rankings.length > 0 && (
+            <li className="rankings__divider" role="separator" />
+          )}
           {state.rankings.map((ranking) => {
             const name = readerName(ranking.authorName);
             const gone = state.gone.includes(ranking.uid);
@@ -365,6 +372,9 @@ export function RankingsSheet({
             );
           })}
         </ul>
+        {!authorRow && state.status === "ready" && state.rankings.length === 0 && (
+          <p className="rankings__empty">{strings.rankings.empty}</p>
+        )}
         {state.status === "loading" && (
           <div className="rankings__waiting" aria-busy="true">
             {[0, 1, 2].map((row) => (
