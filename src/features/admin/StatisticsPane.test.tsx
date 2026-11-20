@@ -297,6 +297,79 @@ describe("StatisticsPane", () => {
   });
 });
 
+describe("StatisticsPane: Crashlytics", () => {
+  const withCrashlytics =
+    (state: string, extra: object = {}) =>
+    (query: StatsQuery) =>
+      Promise.resolve(statisticsOf({ ...answer(query), crashlytics: { state, ...extra } }, query));
+  const numbers = {
+    lastDay: "2026-11-19",
+    totals: {
+      FATAL: { events: 12, installDays: 9 },
+      ANR: { events: 4, installDays: 3 },
+      NON_FATAL: { events: 30, installDays: 20 },
+    },
+    daily: [
+      { day: "2026-11-18", crashes: 5, crashInstalls: 4, anrs: 1, anrInstalls: 1, nonFatal: 10 },
+      { day: "2026-11-19", crashes: 7, crashInstalls: 5, anrs: 3, anrInstalls: 2, nonFatal: 20 },
+    ],
+    issues: [
+      {
+        id: "abc",
+        title: "BoardViewModel.save",
+        subtitle: "IllegalStateException",
+        kind: "FATAL",
+        version: "1.4.2",
+        events: 12,
+        installDays: 9,
+        first: "2026-11-18",
+        last: "2026-11-19",
+      },
+    ],
+  };
+
+  it("waits for the first export, and reads an answer without the block the same way", async () => {
+    open(withCrashlytics("waiting_for_access"));
+    expect(await screen.findByText("Crashes appear after the first export.")).toBeInTheDocument();
+  });
+
+  it("shows Google's numbers up to their day, by day and by issue", async () => {
+    open(withCrashlytics("ready", numbers));
+    expect(
+      await screen.findByText("Google’s numbers up to 2026-11-19, read each night."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("12 on 9 install-days")).toBeInTheDocument();
+    expect(screen.getByText("4 on 3 install-days")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Crashes and ANRs by day: 16 in all" }),
+    ).toBeInTheDocument();
+    const issues = screen.getByRole("table", { name: "Issues" });
+    expect(within(issues).getByText("BoardViewModel.save")).toBeInTheDocument();
+    expect(within(issues).getByText("IllegalStateException")).toBeInTheDocument();
+  });
+
+  it("keeps the numbers it had when last night's read failed, and says up to when", async () => {
+    open(withCrashlytics("failed", numbers));
+    expect(
+      await screen.findByText("Last night’s read failed: these are the numbers up to 2026-11-19."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Issues" })).toBeInTheDocument();
+  });
+
+  it("reads an unknown state as waiting", () => {
+    const query: StatsQuery = { from: "2026-11-01", to: "2026-11-05", platform: "all" };
+    expect(statisticsOf({ crashlytics: { state: "later" } }, query).crashlytics.state).toBe(
+      "waiting_for_dataset",
+    );
+    expect(emptyStatistics(query).crashlytics).toMatchObject({
+      state: "waiting_for_dataset",
+      lastDay: null,
+      daily: [],
+      issues: [],
+    });
+  });
+});
+
 describe("loadStatistics", () => {
   const query: StatsQuery = { from: "2026-11-01", to: "2026-11-05", platform: "web" };
 
