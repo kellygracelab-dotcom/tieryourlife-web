@@ -518,6 +518,8 @@ export const en = {
     showBanned: "A moderator took down one of your lists, so you cannot show rankings for now.",
     cancel: "Cancel",
     withdrawFailed: "Couldn’t withdraw your ranking. Try again.",
+    // Nobody's ranking yet, not even the list's own (a house list placed by nobody).
+    empty: "No rankings yet. Save yours and it’ll be the first one here.",
     failed: "Couldn’t load the rankings.",
     close: "Close",
     today: "Today",

@@ -540,6 +540,8 @@ const ru: Translation = {
       "Модератор снял один из ваших списков, поэтому пока вы не можете показывать рейтинги.",
     cancel: "Отмена",
     withdrawFailed: "Не удалось снять рейтинг. Попробуйте ещё раз.",
+    // Nobody's ranking yet, not even the list's own (a house list placed by nobody).
+    empty: "Рейтингов пока нет. Сохраните свой — он будет здесь первым.",
     failed: "Не удалось загрузить рейтинги.",
     close: "Закрыть",
     today: "Сегодня",

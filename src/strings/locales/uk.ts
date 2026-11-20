@@ -535,6 +535,8 @@ const uk: Translation = {
     showBanned: "Модератор зняв один з ваших списків, тому поки ви не можете показувати рейтинги.",
     cancel: "Скасувати",
     withdrawFailed: "Не вдалося зняти рейтинг. Спробуйте ще раз.",
+    // Nobody's ranking yet, not even the list's own (a house list placed by nobody).
+    empty: "Рейтингів поки немає. Збережіть свій — він буде тут першим.",
     failed: "Не вдалося завантажити рейтинги.",
     close: "Закрити",
     today: "Сьогодні",

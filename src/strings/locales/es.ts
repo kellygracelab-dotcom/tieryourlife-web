@@ -528,6 +528,8 @@ const es: Translation = {
       "Un moderador retiró una de tus listas, así que por ahora no puedes mostrar rankings.",
     cancel: "Cancelar",
     withdrawFailed: "No se pudo retirar tu ranking. Inténtalo de nuevo.",
+    // Nobody's ranking yet, not even the list's own (a house list placed by nobody).
+    empty: "Aún no hay rankings. Guarda el tuyo y será el primero aquí.",
     failed: "No se pudieron cargar los rankings.",
     close: "Cerrar",
     today: "Hoy",

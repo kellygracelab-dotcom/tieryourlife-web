@@ -513,6 +513,8 @@ const tr: Translation = {
       "Bir moderatör listelerinizden birini kaldırdı, bu yüzden şimdilik sıralama gösteremezsiniz.",
     cancel: "Vazgeç",
     withdrawFailed: "Sıralamanız geri çekilemedi. Tekrar deneyin.",
+    // Nobody's ranking yet, not even the list's own (a house list placed by nobody).
+    empty: "Henüz sıralama yok. Sizinkini kaydedin, burada ilk o olsun.",
     failed: "Sıralamalar yüklenemedi.",
     close: "Kapat",
     today: "Bugün",

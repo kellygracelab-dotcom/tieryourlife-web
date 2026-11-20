@@ -526,6 +526,8 @@ const de: Translation = {
       "Ein Moderator hat eine deiner Listen entfernt, deshalb kannst du vorerst keine Ranglisten zeigen.",
     cancel: "Abbrechen",
     withdrawFailed: "Die Rangliste konnte nicht zurückgezogen werden. Versuch es noch einmal.",
+    // Nobody's ranking yet, not even the list's own (a house list placed by nobody).
+    empty: "Noch keine Ranglisten. Speichere deine, dann steht sie hier als erste.",
     failed: "Die Ranglisten konnten nicht geladen werden.",
     close: "Schließen",
     today: "Heute",

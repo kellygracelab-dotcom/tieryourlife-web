@@ -536,6 +536,8 @@ const pl: Translation = {
       "Moderator usunął jedną z twoich list, więc na razie nie możesz pokazywać rankingów.",
     cancel: "Anuluj",
     withdrawFailed: "Nie udało się wycofać rankingu. Spróbuj ponownie.",
+    // Nobody's ranking yet, not even the list's own (a house list placed by nobody).
+    empty: "Nie ma jeszcze rankingów. Zapisz swój, a będzie tu pierwszy.",
     failed: "Nie udało się wczytać rankingów.",
     close: "Zamknij",
     today: "Dzisiaj",
