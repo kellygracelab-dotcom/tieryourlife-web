@@ -2264,6 +2264,49 @@ describe("BoardPage: the editor's credits on a house list", () => {
     expect(await aboutOf("The Witch")).toHaveTextContent("Jane Roe");
   });
 
+  // Marketing, 20.11.2026: the draft kept the editor's own photos after
+  // Update; the backend swept them, and its cards and duel went empty.
+  it("points the editor's own photos at the list's copies once the update is back", async () => {
+    const own = `https://firebasestorage.googleapis.com/v0/b/bucket/o/${encodeURIComponent("users/ed/pictures/p1")}?alt=media`;
+    const copy = `https://firebasestorage.googleapis.com/v0/b/bucket/o/${encodeURIComponent("published/H1/p1")}?alt=media`;
+    const next = uids();
+    const houseRepository = boardsRepository(memoryStore());
+    houseRepository.save(
+      addToPool(
+        { ...newBoard("films", "Films", 100, next), category: "film_tv" },
+        [{ title: "The Witch", imageUrl: own, pictureId: "p1" }],
+        100,
+        next,
+      ),
+    );
+    const houseStore = memoryStore();
+    linkToHouse("films", "H1", houseStore);
+    const house = sending();
+    vi.mocked(house.replace).mockImplementation((id: string) =>
+      Promise.resolve({
+        id,
+        topicId: null,
+        revision: 3,
+        list: {
+          id,
+          revision: 3,
+          coverImageUrl: null,
+          items: [{ title: "The Witch", imageUrl: copy, tierIndex: null }],
+        } as unknown as PublishedList,
+      }),
+    );
+    open(boardsRepository(memoryStore()), "/b/films", { house, houseStore, houseRepository });
+
+    await userEvent.click(await screen.findByRole("button", { name: "Update house list" }));
+    await screen.findByText("House list updated");
+    expect(vi.mocked(house.replace).mock.calls[0]?.[1].items[0]?.pictureId).toBe("p1");
+    expect(liveItems(houseRepository.get("films")!)[0]).toMatchObject({
+      pictureId: null,
+      imageUrl: copy,
+    });
+    expect(hasUnsentEdits(houseRepository.get("films")!, houseStore)).toBe(false);
+  });
+
   it("credits the cover of one picture in the Cover window", async () => {
     const houseRepository = boardsRepository(memoryStore());
     houseRepository.save({ ...pictured(), coverImageUrls: [POSTER], coverImageUrl: POSTER });

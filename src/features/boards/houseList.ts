@@ -8,7 +8,7 @@ import type { PublishedList } from "../../api/types";
 import { publishedPictureOf } from "../../lib/pictures";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { arrange } from "../tierboard/arrange";
-import { coverCreditOf, type Board, type NextUid } from "./model";
+import { coverCreditOf, itemsIn, poolTier, rankedTiers, type Board, type NextUid } from "./model";
 import { boardFromList, publishRequestOf } from "./publish";
 
 /**
@@ -270,6 +270,76 @@ export async function afterHouseTranslations(
     markHouseRevision(uid, list.revision, store);
     markHouseSeen(uid, list.updatedAt, store);
   }
+}
+
+/** An address in somebody's own folder (`/o/users%2F…`), which only its owner may read. */
+const ownFolderPicture = (url: string | null): boolean =>
+  url !== null && /\/o\/users%2F/i.test(url);
+
+/**
+ * The board after its own Update with each of the editor's own photos at the
+ * list's copy of it. A house board lives on this device only, so no board in
+ * the account names those photos and the backend sweeps them from the
+ * editor's folder within a day: a draft still pointing there shows empty
+ * cards, in its duel too, and the next Edit opens it as it is. The cards go
+ * out tiers first, then the pool (`publishRequestOf`), and the list keeps
+ * them in that order: a card is matched to the one at its place with the
+ * same title, or else to the only one of its title. The cover follows its
+ * card, or takes the list's cover when it was a photo of the editor's own.
+ * Nothing else changes, its edit time neither; the same board when no photo
+ * of the editor's own is left on it, or none has a copy in the list.
+ */
+export function withPublishedPictures(board: Board, list: PublishedList): Board {
+  const pool = poolTier(board);
+  const order = [
+    ...rankedTiers(board).flatMap((tier) => itemsIn(board, tier.uid)),
+    ...(pool === null ? [] : itemsIn(board, pool.uid)),
+  ];
+  const byTitle = new Map<string, PublishedList["items"][number] | null>();
+  for (const one of list.items) {
+    const key = one.title;
+    byTitle.set(key, byTitle.has(key) ? null : one);
+  }
+  const moved = new Map<string, string>();
+  const swapped = new Map<string, string>();
+  order.forEach((item, place) => {
+    if (item.pictureId === null && !ownFolderPicture(item.imageUrl)) return;
+    const atPlace = list.items[place];
+    const theirs =
+      atPlace !== undefined && atPlace.title === item.title ? atPlace : byTitle.get(item.title);
+    const copy = theirs?.imageUrl ?? null;
+    if (copy === null || ownFolderPicture(copy)) return;
+    moved.set(item.uid, copy);
+    if (item.imageUrl !== null) swapped.set(item.imageUrl, copy);
+  });
+  const [only] = board.coverImageUrls;
+  const ownCover =
+    board.coverPictureId !== null ||
+    (board.coverImageUrls.length === 1 && only !== undefined && ownFolderPicture(only));
+  const coverCopy =
+    only !== undefined && board.coverImageUrls.length === 1 && swapped.has(only)
+      ? swapped.get(only)!
+      : ownCover && list.coverImageUrl !== null && !ownFolderPicture(list.coverImageUrl)
+        ? list.coverImageUrl
+        : null;
+  if (moved.size === 0 && coverCopy === null) return board;
+  return {
+    ...board,
+    items: board.items.map((item) => {
+      const copy = moved.get(item.uid);
+      return copy === undefined ? item : { ...item, pictureId: null, imageUrl: copy };
+    }),
+    ...(coverCopy === null
+      ? {}
+      : {
+          coverImageUrl: coverCopy,
+          coverImageUrls: [coverCopy],
+          coverPictureId: null,
+          ...(board.coverCredit === undefined
+            ? {}
+            : { coverCredit: { ...board.coverCredit, url: coverCopy } }),
+        }),
+  };
 }
 
 /**

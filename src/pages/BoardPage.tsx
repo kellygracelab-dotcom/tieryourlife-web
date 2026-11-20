@@ -121,6 +121,7 @@ import {
   linkToHouse,
   markHouseCopy,
   markHouseRevision,
+  withPublishedPictures,
   withServerCredits,
   markHouseSeen,
   markHouseSent,
@@ -732,10 +733,11 @@ function OpenBoard({
     list: PublishedList | null = null,
   ) => {
     // The credits the server filled in from their pages, read back with the
-    // list, unless somebody else wrote it in between.
+    // list, unless somebody else wrote it in between; and the editor's own
+    // photos at the list's copies, since the backend sweeps the originals.
     if (list !== null && (revision === null || list.revision === revision)) {
       const before = latest();
-      const filled = withServerCredits(before, list);
+      const filled = withPublishedPictures(withServerCredits(before, list), list);
       if (filled !== before) repository.save(filled);
     }
     linkToHouse(uid, id, houseStore);

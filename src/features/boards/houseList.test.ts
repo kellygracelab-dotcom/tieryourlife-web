@@ -20,12 +20,14 @@ import {
   markHouseSent,
   NEW_HOUSE_PATH,
   unlinkFromHouse,
+  withPublishedPictures,
   withServerCredits,
 } from "./houseList";
 import {
   addToPool,
   coverCreditOf,
   itemsIn,
+  moveItem,
   newBoard,
   poolTier,
   rankedTiers,
@@ -469,5 +471,86 @@ describe("withServerCredits", () => {
     expect(withServerCredits(board, other)).toBe(board);
     const once = withServerCredits(board, list());
     expect(withServerCredits(once, list())).toBe(once);
+  });
+});
+
+describe("withPublishedPictures", () => {
+  const own = (id: string) =>
+    `https://firebasestorage.googleapis.com/v0/b/bucket/o/${encodeURIComponent(`users/ed/pictures/${id}`)}?alt=media`;
+  const sent = () => {
+    const next = uids();
+    let board = addToPool(
+      newBoard("b1", "Every game console", 10, next),
+      [
+        { title: "Wii", imageUrl: own("p1"), pictureId: "p1" },
+        { title: "Switch", imageUrl: POSTER },
+        { title: "PS2", imageUrl: own("p2"), pictureId: "p2" },
+      ],
+      10,
+      next,
+    );
+    // The PS2 goes to the top tier: it is sent first, before the pool.
+    const ps2 = board.items.find((item) => item.title === "PS2")!.uid;
+    board = moveItem(board, ps2, rankedTiers(board)[0]!.uid, 0, 20);
+    board = setCover(board, [own("p1")], 30);
+    return { ...board, editedAt: 30 };
+  };
+  const list = (over: Partial<PublishedList> = {}) =>
+    ({
+      ...houseList,
+      id: "H1",
+      revision: 3,
+      coverImageUrl: feedCopy("H1", "cover"),
+      items: [
+        { title: "PS2", imageUrl: feedCopy("H1", "p2"), tierIndex: 0 },
+        { title: "Wii", imageUrl: feedCopy("H1", "p1"), tierIndex: null },
+        { title: "Switch", imageUrl: POSTER, tierIndex: null },
+      ],
+      ...over,
+    }) as PublishedList;
+
+  it("points the editor's own photos and the cover at the list's copies, keeping the edit time", () => {
+    const board = sent();
+    const next = withPublishedPictures(board, list());
+    const card = (title: string) => next.items.find((item) => item.title === title)!;
+    expect(card("PS2")).toMatchObject({ pictureId: null, imageUrl: feedCopy("H1", "p2") });
+    expect(card("Wii")).toMatchObject({ pictureId: null, imageUrl: feedCopy("H1", "p1") });
+    expect(card("Switch")).toMatchObject({ pictureId: null, imageUrl: POSTER });
+    // The cover was the Wii's photo, and follows it.
+    expect(next.coverImageUrls).toEqual([feedCopy("H1", "p1")]);
+    expect(next.coverPictureId).toBeNull();
+    expect(next.editedAt).toBe(30);
+    expect(JSON.stringify(next)).not.toContain("users%2F");
+    // Sent again, the copies go as the list's own addresses: no own photo left to sweep.
+    const request = publishRequestOf(setCategory(next, "games", 40))!;
+    expect(request.items.every((item) => item.pictureId === null)).toBe(true);
+  });
+
+  it("matches a card by its title when the places differ, and leaves one without a copy", () => {
+    const board = sent();
+    const next = withPublishedPictures(
+      board,
+      list({
+        items: [
+          { title: "Wii", imageUrl: feedCopy("H1", "p1"), tierIndex: null },
+          { title: "PS2", imageUrl: null, tierIndex: 0 },
+        ] as PublishedList["items"],
+      }),
+    );
+    const card = (title: string) => next.items.find((item) => item.title === title)!;
+    expect(card("Wii").imageUrl).toBe(feedCopy("H1", "p1"));
+    expect(card("PS2")).toMatchObject({ pictureId: "p2", imageUrl: own("p2") });
+  });
+
+  it("gives an own cover that is no card's the list's cover", () => {
+    const board = { ...setCover(sent(), [own("c9")], 50), editedAt: 50 };
+    const next = withPublishedPictures(board, list());
+    expect(next.coverImageUrls).toEqual([feedCopy("H1", "cover")]);
+    expect(next.coverImageUrl).toBe(feedCopy("H1", "cover"));
+  });
+
+  it("is the same board when no own photo is left", () => {
+    const once = withPublishedPictures(sent(), list());
+    expect(withPublishedPictures(once, list())).toBe(once);
   });
 });
