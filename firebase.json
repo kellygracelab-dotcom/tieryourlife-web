@@ -78,6 +78,10 @@
           }
         },
         {
+          "source": "/store-credits",
+          "destination": "/store-credits.html"
+        },
+        {
           "source": "**",
           "destination": "/index.html"
         }

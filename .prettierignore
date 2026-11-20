@@ -10,6 +10,8 @@ functions/lib-test
 docs
 public/privacy.html
 public/delete-account.html
+# Marketing's photo credits for the Play screenshots, kept as they wrote it
+public/store-credits.html
 # A byte-for-byte copy of the app's docs/play-vectors.json
 src/features/play/engine/play-vectors.json
 # A byte-for-byte copy of the proxy's functions/test/cover-crop-vectors.json (#140)

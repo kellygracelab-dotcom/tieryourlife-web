@@ -62,6 +62,22 @@ describe("firebase.json", () => {
     expect(rewrites[catchAll]?.destination).toBe("/index.html");
   });
 
+  // Play's full description says "Photo credits: tieryourlife.com/store-credits"
+  // (Marketing, 20.11.2026): that address, without .html, is the static page.
+  it("serves the store's photo credits at their address, before the catch-all", () => {
+    const rewrites = hosting[0]!.rewrites;
+    const credits = rewrites.findIndex((r) => r.source === "/store-credits");
+    expect(rewrites[credits]?.destination).toBe("/store-credits.html");
+    expect(credits).toBeLessThan(rewrites.findIndex((r) => r.source === "**"));
+    const page = readFileSync("public/store-credits.html", "utf8");
+    expect(page).toContain("<title>Photo credits · TierYourLife</title>");
+    // Its one script is privacy.html's, byte for byte: Firebase's own hosts open it on tieryourlife.com.
+    const scripts = (html: string) =>
+      [...html.replace(/\r\n/g, "\n").matchAll(/<script>[\s\S]*?<\/script>/g)].map((m) => m[0]);
+    expect(scripts(page)).toEqual(scripts(readFileSync("public/privacy.html", "utf8")));
+    expect(scripts(page)).toHaveLength(1);
+  });
+
   // The pages the catch-all serves are index.html under another name; without
   // a rule of their own they get the default hour of caching, and a deploy
   // reaches people an hour late.
@@ -138,6 +154,8 @@ describe("where a deploy goes", () => {
       "/r/abcdefgh",
       "/privacy.html",
       "/delete-account.html",
+      "/store-credits",
+      "/store-credits.html",
       "/assets/index-abc.js",
       "/_",
       "/__",
