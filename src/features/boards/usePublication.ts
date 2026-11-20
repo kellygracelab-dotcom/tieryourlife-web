@@ -6,6 +6,7 @@ import type { Published, PublishRequest } from "../../api/lists";
 import { isOwnList, type PublishedList } from "../../api/types";
 import type { Session } from "../../app/session";
 import { captureAccountAction } from "../../lib/accountAction";
+import { published } from "../../lib/usageEvents";
 import { keepListRanking, loadListAsWritten, loadTopic, withdrawListRanking } from "../../lib/api";
 import { boundToSource } from "./copiedPublication";
 import { copyRankingOf } from "./copyRanking";
@@ -250,6 +251,8 @@ export function publicationActions(
         answer.id,
         ranking ? 0 : (answer.droppedPictures ?? 0),
       );
+      // A list out, held for a moderator too; an update or a ranking is no new one.
+      if (what === "published" && !ranking) published();
       // The backend may have filed it under an approved topic of that name.
       if (sent.topic !== current.topic) settle(sent.topic, action);
       // Said nothing of a topic, the list kept its own, a moderator's move

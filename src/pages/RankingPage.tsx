@@ -35,6 +35,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
 import { siteHost } from "../lib/links";
+import { shared } from "../lib/usageEvents";
 
 export type Rearrange = (
   code: string,
@@ -139,7 +140,10 @@ function AddressChip({
     const button = chip.current;
     if (button !== null) button.style.minWidth = `${button.offsetWidth}px`;
     copy(`https://${address}`).then(
-      () => setCopied(true),
+      () => {
+        shared("link");
+        setCopied(true);
+      },
       () => {
         setCopied(false);
         onRefused();

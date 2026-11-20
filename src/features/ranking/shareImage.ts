@@ -7,6 +7,7 @@ import { fill, plural, strings } from "../../strings";
 import { cardNamesOn } from "../../lib/cardNames";
 import { shownScheme } from "../../lib/theme";
 import { shownLight } from "../../lib/tierColour";
+import { shared } from "../../lib/usageEvents";
 
 /**
  * The picture a finished ranking is shared as. 4:5, the tallest ratio feeds
@@ -793,6 +794,7 @@ export async function shareBoardPicture(
   if (sheet?.share !== undefined && sheet.canShare?.({ files }) === true) {
     try {
       await sheet.share({ files, title: list.title, text: `${list.title}\n${address}` });
+      shared("image");
       return;
     } catch (reason: unknown) {
       if (reason instanceof DOMException && reason.name === "AbortError") return;
@@ -800,6 +802,8 @@ export async function shareBoardPicture(
     }
   }
   save(blob, name);
+  // Saved as a file, to be sent on from there: an image shared all the same.
+  shared("image");
   return "saved";
 }
 
@@ -822,4 +826,5 @@ export async function downloadShare(
     dark: shownScheme() === "dark",
   });
   save(blob, fileNameFor(list.title));
+  shared("image");
 }

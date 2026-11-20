@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { freshChunk } from "../../lib/freshChunk";
+import { gameFinished, gameStarted } from "../../lib/usageEvents";
 import { TIP_CARDS } from "../../ui/tipMemory";
 import type { KeyValueStore } from "../../lib/storage";
 import { fill, strings } from "../../strings";
@@ -269,6 +270,7 @@ export function usePlay(
     // Smart sorts into the board's tiers, or orders the one tier it keeps.
     const tiers = keptTier(board, from) === null ? board.tiers.length : ids.length;
     show(rules.newGame(gameKind, ids, from, rules.seedOf(random), now(), tiers));
+    gameStarted(gameKind);
     if (before === null) return;
     notify({
       text: strings.play.savedDiscarded,
@@ -344,6 +346,8 @@ export function usePlay(
     };
     const rows = rules.applied(board, result, finished, unplayed);
     onApply(rows, played);
+    // Played to its result, which is on the board now: once, as OnEnd runs it once.
+    gameFinished(played.kind);
     forget();
     // The cards are elsewhere now: the next game starts from the whole board,
     // not from members and rows the result has just moved (QA W-GS1).

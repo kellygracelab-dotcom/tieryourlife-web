@@ -1,12 +1,13 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, useLocation } from "react-router";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { addToPool, arrangeItems, liveItems, newBoard, type Board } from "../features/boards/model";
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
 import { LONG_PRESS_MS } from "../features/boards/listMenuTriggers";
 import type { Share } from "../features/ranking/share";
 import { memoryStore } from "../lib/storage";
+import { usage } from "../lib/usage";
 import { BoardsPage } from "./BoardsPage";
 
 vi.mock("../lib/api", async () => (await import("../test/apiMock")).apiStubs());
@@ -142,12 +143,18 @@ describe("a list's menu in Your lists (artboard 39)", () => {
     const user = userEvent.setup();
     const repository = boardsRepository(memoryStore());
     repository.saveAll([list("a", "Films", 3, { publishedId: "L1" })]);
+    const count = vi.spyOn(usage, "count");
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+    });
     const { copy } = open(repository);
     fireEvent.contextMenu(listLink("Films"));
     expect(screen.getByRole("menu")).toHaveTextContent("public");
     await user.click(screen.getByRole("menuitem", { name: "Copy link" }));
     expect(copy).toHaveBeenCalledWith(`${window.location.origin}/l/L1`);
     expect(await screen.findByText("Link copied")).toBeVisible();
+    // On the clipboard: a link shared.
+    expect(count.mock.calls).toEqual([["share.link"]]);
   });
 
   it("stars, renames on the card and shares the picture", async () => {

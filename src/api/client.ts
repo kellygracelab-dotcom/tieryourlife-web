@@ -29,6 +29,11 @@ export interface RequestOptions {
    * error before (audit A1).
    */
   appCheckWaitMs?: number;
+  /**
+   * Lets the request outlive the page (`fetch` keepalive): the usage
+   * statistics sent as a tab goes out of sight or closes.
+   */
+  keepalive?: boolean;
 }
 
 /** The token, or null once `ms` have gone by; the check goes on in the background and is kept. */
@@ -60,6 +65,8 @@ export const REQUEST_TIMEOUT_MS = 20_000;
 interface ClientOptions extends TokenProviders {
   fetch?: FetchLike;
   timeoutMs?: number;
+  /** Headers every request carries, read as it goes: the site's version and language for the statistics. */
+  clientHeaders?: () => Record<string, string>;
 }
 
 function urlOf(path: string, query: Query | undefined): string {
@@ -78,12 +85,13 @@ export function createApiClient({
   limitedAppCheckToken,
   idToken,
   timeoutMs = REQUEST_TIMEOUT_MS,
+  clientHeaders = () => ({}),
 }: ClientOptions): ApiClient {
   async function headersFor(
     options: RequestOptions,
     forceRefresh: boolean,
   ): Promise<Record<string, string>> {
-    const headers: Record<string, string> = { Accept: "application/json" };
+    const headers: Record<string, string> = { ...clientHeaders(), Accept: "application/json" };
     if (options.body !== undefined) headers["Content-Type"] = "application/json";
     // Both tokens at once: on a first request each can cost a round trip or
     // more (reCAPTCHA and the App Check exchange; a guest's sign-in), and
@@ -125,6 +133,7 @@ export function createApiClient({
       headers: await headersFor(options, forceRefresh),
       signal: AbortSignal.timeout(timeoutMs),
     };
+    if (options.keepalive === true) init.keepalive = true;
     if (options.body !== undefined) init.body = JSON.stringify(options.body);
     checkAccount();
     try {

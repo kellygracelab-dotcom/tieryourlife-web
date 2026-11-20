@@ -7,6 +7,7 @@ import type { Incoming } from "../../lib/incoming";
 import { LinkRefused, type LinkedPicture } from "../../lib/linkPictures";
 import { PictureRefused } from "../../lib/pictures";
 import { searchAgainAt } from "../../lib/searchLimit";
+import { usage } from "../../lib/usage";
 import { AddCardBox, type LinkKeep, type Upload } from "./AddCardBox";
 import { draftForSignIn, forgetDraftForSignIn } from "./draftAfterSignIn";
 import type { EditorAction } from "./model";
@@ -103,6 +104,7 @@ const nameField = () => within(draft()).getByRole("textbox", { name: "Name" });
 afterEach(() => {
   vi.useRealTimers();
   forgetDraftForSignIn();
+  vi.restoreAllMocks();
 });
 
 describe("a picture's link in the add field", () => {
@@ -155,6 +157,7 @@ describe("a picture's link in the add field", () => {
   });
 
   it("adds by Enter in the name, and keeps a page that is not one off the card", async () => {
+    const count = vi.spyOn(usage, "count");
     const { dispatch } = setup();
     pasteLink("https://img.test/dune.jpg");
     await vi.waitFor(() => expect(within(draft()).queryByRole("status")).toBeNull());
@@ -172,6 +175,8 @@ describe("a picture's link in the add field", () => {
       attribution: { source: "web" },
       drafted: true,
     });
+    // A picture from a link, counted as the card goes in.
+    expect(count.mock.calls).toEqual([["picture.link"]]);
   });
 
   it.each([
@@ -182,6 +187,7 @@ describe("a picture's link in the add field", () => {
   ] as const)(
     "says why a %s link brought no picture, and offers the name alone",
     async (reason, text) => {
+      const count = vi.spyOn(usage, "count");
       const { dispatch } = setup({
         link: vi.fn<LinkKeep>(async () => Promise.reject(new LinkRefused(reason))),
       });
@@ -199,6 +205,8 @@ describe("a picture's link in the add field", () => {
         imageUrl: null,
         drafted: true,
       });
+      // The name alone: no picture to count.
+      expect(count).not.toHaveBeenCalled();
     },
   );
 
@@ -338,6 +346,7 @@ describe("a picture pasted or dropped on the board", () => {
   it("opens a draft for one picture of one's own, which goes up at once", async () => {
     const file = new File(["pixels"], "dune.jpg", { type: "image/jpeg" });
     const upload = vi.fn<Upload>(async () => ({ pictureId: "p2", previewUrl: "blob:dune" }));
+    const count = vi.spyOn(usage, "count");
     const { dispatch, hand } = setup({ upload });
     hand({ kind: "files", files: [file] });
     expect(draft()).toHaveTextContent("Picture from your device");
@@ -354,6 +363,7 @@ describe("a picture pasted or dropped on the board", () => {
       pictureId: "p2",
       drafted: true,
     });
+    expect(count.mock.calls).toEqual([["picture.own"]]);
   });
 
   it("says why a picture of one's own did not go up, and offers again what can be", async () => {
@@ -381,9 +391,12 @@ describe("a picture pasted or dropped on the board", () => {
       pictureId: file.name,
       previewUrl: `blob:${file.name}`,
     }));
+    const count = vi.spyOn(usage, "count");
     const { dispatch, hand } = setup({ upload });
     hand({ kind: "files", files });
     await vi.waitFor(() => expect(dispatch).toHaveBeenCalledTimes(2));
+    // One's own photo on each card.
+    expect(count.mock.calls).toEqual([["picture.own"], ["picture.own"]]);
     expect(dispatch.mock.calls.map(([action]) => action)).toEqual([
       { type: "addItem", title: "red fox", imageUrl: "blob:red_fox.jpg", pictureId: "red_fox.jpg" },
       {

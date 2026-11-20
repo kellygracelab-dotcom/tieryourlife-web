@@ -135,6 +135,8 @@ const tr: Translation = {
     shareText:
       "TierYourLife’ta tier listeleri yapıyorum: her şeyi S’den D’ye sıralıyorum, kararsız kaldıklarımı düellolarla çözüyorum ve başkalarının nasıl sıraladığına bakıyorum.\nWeb: {link}",
     privacyTitle: "Gizlilik",
+    sendUsage: "Kullanım istatistiklerini gönder",
+    sendUsageSub: "Neyin kullanıldığına dair anonim sayımlar, hesabınız olmadan",
     signOutNote:
       "Listeleriniz hesabınızda ve bu tarayıcıda kalır, yeniden giriş yapana kadar gizli olur. Oturum kapalıyken yalnızca hesapsız yapılan listeleri görürsünüz.",
     deleteAction: "Hesabı sil",

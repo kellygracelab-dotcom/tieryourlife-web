@@ -17,6 +17,7 @@ import {
   moveItem,
   newBoard,
   pictureOf,
+  poolCount,
   setPicture,
   toPoolFront,
   type CardPicture,
@@ -146,6 +147,13 @@ import "../features/editor/owner.css";
 import "../features/editor/editor.css";
 import "./BoardPage.css";
 import { siteOrigin } from "../lib/links";
+import {
+  boardMade,
+  cardAdded,
+  listFinished,
+  ownPicture,
+  pictureFromLink,
+} from "../lib/usageEvents";
 
 /** Play or Publish… chosen in the list's menu in Your lists (artboard 39): opened as the page opens. */
 export interface BoardPageState {
@@ -616,6 +624,7 @@ function OpenBoard({
       // Drawn afresh here, not again as an arrangement that came from elsewhere.
       setOwnArrangement(arrangementOf(after));
       repository.save(after);
+      listFinished(liveItems(after).length, poolCount(after));
       const round = arranged + 1;
       setArranged(round);
       setGameStep({ round, rows: was });
@@ -661,7 +670,13 @@ function OpenBoard({
     const nextOrder = arrangementOf(next);
     if (next.takenFrom !== null && nextOrder !== arrangement) noteRankingEdit(next.uid);
     setOwnArrangement(nextOrder);
-    repository.save(next);
+    // A new board is kept at its first touch: one's own board made, unless it is the house's.
+    const made = house === null && repository.get(uid) === null;
+    if (repository.save(next) && made) boardMade(false);
+  };
+  // A card placed or moved: the list is finished once every card has a tier.
+  const afterMove = (before: Board, next: Board) => {
+    if (next !== before) listFinished(liveItems(next).length, poolCount(next));
   };
 
   // Said under the board: out, sent again, in a list's Rankings, or down.
@@ -766,7 +781,10 @@ function OpenBoard({
 
   const onRows = (rows: readonly (readonly number[])[], pool: readonly number[]) => {
     const [poolUids = []] = uidRows(view, [pool]);
-    keep(arrangeItems(latest(), uidRows(view, rows), now(), poolUids));
+    const before = latest();
+    const next = arrangeItems(before, uidRows(view, rows), now(), poolUids);
+    keep(next);
+    afterMove(before, next);
   };
 
   const remove = (item: number) => {
@@ -821,10 +839,12 @@ function OpenBoard({
     );
     if (action.drafted !== true || added === current) {
       keep(added);
+      if (added !== current) cardAdded();
       return;
     }
     // A card made in the draft goes first in the pool, is shown, and can be undone.
     keep(toPoolFront(added, cardUid, now()));
+    cardAdded();
     setFreshUid(cardUid);
     setNotice({
       text: fill(strings.link.added, { name: title }),
@@ -1007,6 +1027,8 @@ function OpenBoard({
         if (before === undefined) return;
         const was = pictureOf(before);
         keep(setPicture(current, itemUid, next, now()));
+        if (file !== undefined) ownPicture();
+        else pictureFromLink();
         setNotice({
           text: fill(strings.link.changed, { name: before.title }),
           action: {
@@ -1274,7 +1296,10 @@ function OpenBoard({
             onMove={(itemUid, tierUid) => {
               const current = latest();
               const to = tierUid ?? poolTier(current)?.uid;
-              if (to !== undefined) keep(moveItem(current, itemUid, to, Infinity, now()));
+              if (to === undefined) return;
+              const next = moveItem(current, itemUid, to, Infinity, now());
+              keep(next);
+              afterMove(current, next);
             }}
             onRemove={(itemUid) => remove(view.uids.indexOf(itemUid))}
             onRename={renameCard}

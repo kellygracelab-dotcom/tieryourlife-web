@@ -1,7 +1,7 @@
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FollowState } from "../api/community";
 import { ApiFailure, type ApiError } from "../api/errors";
 import type { PublishedList } from "../api/types";
@@ -20,6 +20,7 @@ import { loadPlayScreens } from "../features/play/usePlay";
 import { writeKept } from "../features/ranking/kept";
 import { draftKey, loadDraft, saveDraft, scopeOf } from "../features/tierboard/draft";
 import { localStorageStore, memoryStore } from "../lib/storage";
+import { usage } from "../lib/usage";
 import { sayOnTheSite } from "../ui/siteNotice";
 
 /** Mine as this device keeps it, but when: every save says its own moment (for Continue). */
@@ -1556,5 +1557,131 @@ describe("ListPage, Play", () => {
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByRole("button", { name: "Play" }));
     expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+  });
+});
+
+describe("ListPage usage statistics", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  /** Five cards, every one placed by the author: a first move on Theirs finishes Mine. */
+  const fivePlaced: PublishedList = {
+    ...twoTiers,
+    itemCount: 5,
+    items: ["Ex Machina", "The Witch", "Climax", "Heat", "Alien"].map((title, index) => ({
+      title,
+      imageUrl: null,
+      tierIndex: index % 2,
+    })),
+  };
+
+  it("says somebody else's list was opened once it is known whose it is", async () => {
+    const step = vi.spyOn(usage, "step");
+    mocks.loadList.mockResolvedValue(list);
+    openAs(null);
+    await screen.findByRole("heading", { level: 1 });
+    expect(step).not.toHaveBeenCalledWith("open_list");
+    cleanup();
+    openAs(member);
+    await screen.findByRole("heading", { level: 1 });
+    expect(step).toHaveBeenCalledWith("open_list");
+  });
+
+  it("says nothing opened for the list's own author", async () => {
+    const step = vi.spyOn(usage, "step");
+    mocks.loadList.mockResolvedValue(list);
+    openAs({ kind: "signedIn", uid: "u1", displayName: "danylo", photoUrl: null });
+    await screen.findByRole("heading", { level: 1 });
+    expect(step).not.toHaveBeenCalledWith("open_list");
+  });
+
+  it("counts the link copied from the head and the menu, and handed to the share sheet", async () => {
+    const step = vi.spyOn(usage, "step");
+    const count = vi.spyOn(usage, "count");
+    mocks.loadList.mockResolvedValue(list);
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const share = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "share", { value: share, configurable: true });
+    try {
+      openAs(member);
+      await screen.findByRole("heading", { level: 1 });
+      await userEvent.click(screen.getAllByRole("button", { name: "Copy link" })[0]!);
+      await waitFor(() => expect(count.mock.calls).toEqual([["share.link"]]));
+      expect(step).toHaveBeenCalledWith("shared");
+
+      await userEvent.click(screen.getByLabelText("More about this list"));
+      const menu = within(screen.getByLabelText("More about this list").closest("details")!);
+      await userEvent.click(menu.getByRole("button", { name: "Copy link" }));
+      await waitFor(() => expect(count.mock.calls).toEqual([["share.link"], ["share.link"]]));
+
+      await userEvent.click(screen.getByLabelText("More about this list"));
+      await userEvent.click(screen.getByRole("button", { name: "Share" }));
+      await waitFor(() => expect(count).toHaveBeenCalledTimes(3));
+      expect(count).toHaveBeenLastCalledWith("share.link");
+    } finally {
+      Reflect.deleteProperty(navigator, "share");
+    }
+  });
+
+  it("counts no share for a clipboard that said no, or a share sheet closed", async () => {
+    const count = vi.spyOn(usage, "count");
+    mocks.loadList.mockResolvedValue(list);
+    const writeText = vi.fn(() => Promise.reject(new Error("refused")));
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const share = vi.fn(() => Promise.reject(new DOMException("closed", "AbortError")));
+    Object.defineProperty(navigator, "share", { value: share, configurable: true });
+    try {
+      openAs(member);
+      await screen.findByRole("heading", { level: 1 });
+      await userEvent.click(screen.getAllByRole("button", { name: "Copy link" })[0]!);
+      await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+      await userEvent.click(screen.getByLabelText("More about this list"));
+      await userEvent.click(screen.getByRole("button", { name: "Share" }));
+      await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
+      expect(count).not.toHaveBeenCalledWith("share.link");
+    } finally {
+      Reflect.deleteProperty(navigator, "share");
+    }
+  });
+
+  it("finishes Mine when every card of a list of five has a tier, not before", async () => {
+    const step = vi.spyOn(usage, "step");
+    mocks.loadList.mockResolvedValue({ ...fivePlaced, items: twoTiers.items });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    const theirs = screen.getByRole("region", { name: "Their ranking" });
+    await userEvent.click(within(theirs).getByRole("button", { name: "Ex Machina" }));
+    await userEvent.keyboard("2");
+    expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
+    // Three cards, all placed: too few to finish.
+    expect(step).not.toHaveBeenCalledWith("full_list");
+    cleanup();
+    localStorage.clear();
+
+    mocks.loadList.mockResolvedValue(fivePlaced);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    const five = screen.getByRole("region", { name: "Their ranking" });
+    await userEvent.click(within(five).getByRole("button", { name: "Ex Machina" }));
+    await userEvent.keyboard("2");
+    expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
+    expect(step).toHaveBeenCalledWith("full_list");
+  });
+
+  it("finishes Mine at the move that places its last card", async () => {
+    const step = vi.spyOn(usage, "step");
+    // Mine begun here: four of the five placed, Alien still in the pool.
+    saveDraft(localStorageStore, scopeOf(fivePlaced), [
+      [0, 2],
+      [1, 3],
+    ]);
+    mocks.loadList.mockResolvedValue(fivePlaced);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    const yours = screen.getByRole("region", { name: "Your ranking" });
+    expect(step).not.toHaveBeenCalledWith("full_list");
+    await userEvent.click(within(yours).getByRole("button", { name: "Alien" }));
+    await userEvent.keyboard("1");
+    await waitFor(() => expect(step).toHaveBeenCalledWith("full_list"));
   });
 });

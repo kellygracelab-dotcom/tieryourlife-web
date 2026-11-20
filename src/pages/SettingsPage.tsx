@@ -35,6 +35,7 @@ import { type CutFace, cutFaceOnCanvas, uploadPicture } from "../lib/pictures";
 import { renameAccount, rereadProfile, setFace } from "../lib/profile";
 import { appIsLive, FEEDBACK_EMAIL, onApple, playUrl, siteOrigin } from "../lib/links";
 import { localStorageStore } from "../lib/storage";
+import { setUsageOn, useUsageOn } from "../lib/usageSwitch";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
@@ -229,12 +230,30 @@ function AppCard({ share }: { share: ShareSite }) {
   );
 }
 
+/**
+ * Send usage statistics, on until it is turned off, as in the app. Off, the
+ * site keeps and sends nothing of its own; the policy below says what it is.
+ */
 function PrivacyCard() {
+  const on = useUsageOn();
   return (
     <section className="settings__card" aria-labelledby="privacy-title">
       <h2 id="privacy-title" className="settings__title">
         {strings.settings.privacyTitle}
       </h2>
+      <div className="settings__row settings__switch">
+        <label className="settings__switch-text" htmlFor="usage-switch">
+          <span>{strings.settings.sendUsage}</span>
+          <span className="settings__note">{strings.settings.sendUsageSub}</span>
+        </label>
+        <input
+          id="usage-switch"
+          type="checkbox"
+          role="switch"
+          checked={on}
+          onChange={(event) => setUsageOn(event.target.checked)}
+        />
+      </div>
       <a className="settings__row" href="/privacy.html" target="_blank" rel="noopener">
         <span>{strings.footer.privacy}</span>
         <Icon name="open_in_new" className="settings__row-icon" />

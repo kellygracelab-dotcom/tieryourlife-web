@@ -42,6 +42,24 @@ function clientWith(
 const headersOf = (call: Call) => call.init.headers as Record<string, string>;
 
 describe("createApiClient", () => {
+  it("adds the client's own headers to every request, and lets a request outlive the page when asked", async () => {
+    const { fetch, calls } = stubFetch([new Response(null, { status: 204 }), ok({})]);
+    const client = createApiClient({
+      fetch,
+      appCheckToken: async () => "app-check-token",
+      idToken: async () => "id-token",
+      clientHeaders: () => ({ "X-TYL-Client": "web/dev", "X-TYL-Locale": "ru-UA" }),
+    });
+    await client.request("POST", "/lists/stats", { body: {}, keepalive: true });
+    await client.request("GET", "/lists");
+    const headers = calls[0]!.init.headers as Record<string, string>;
+    expect(headers["X-TYL-Client"]).toBe("web/dev");
+    expect(headers["X-TYL-Locale"]).toBe("ru-UA");
+    expect(headers.Authorization).toBe("Bearer id-token");
+    expect(calls[0]!.init.keepalive).toBe(true);
+    expect(calls[1]!.init.keepalive).toBeUndefined();
+  });
+
   it("reads the next publication time from the weekly conflict, including after a token refresh", async () => {
     const retryAt = Date.UTC(2026, 10, 13, 9, 10, 11);
     const body = JSON.stringify({ code: "TOO_MANY_LISTS", retryAt });

@@ -48,6 +48,7 @@ import { PasteBox, PasteNote, type PasteOutcome } from "./PasteBox";
 import type { FindPictureBatch } from "./pasteBatch";
 import { scopeName, scopesFrom, sourcesOf } from "./pictureNames";
 import { PictureTile } from "./PictureTile";
+import { ownPicture, pictureFromLink, picturePicked } from "../../lib/usageEvents";
 
 /** Pictures going up at once: enough to keep the line busy, few enough not to starve each other. */
 const UPLOADS_AT_ONCE = 4;
@@ -449,6 +450,7 @@ export function AddCardBox({
           pictureId,
           ...(key === undefined ? {} : { key }),
         });
+        ownPicture();
         if (key !== undefined) setUnnamed((was) => [...was, { key, imageUrl: previewUrl }]);
         if (typedName !== "" && !namedFromFiles) setTyped("");
         return true;
@@ -539,6 +541,8 @@ export function AddCardBox({
       ...(attribution === null ? {} : { attribution }),
       drafted: true,
     });
+    if (draft.source.kind === "file") ownPicture();
+    else pictureFromLink();
     closeDraft();
   };
   const addWithout = () => {
@@ -572,7 +576,8 @@ export function AddCardBox({
   // A catalogue's picture stays at its address, as the phone keeps it; one
   // from the web is copied into the person's own pictures first. The search
   // stays open, its tile ticked, so several can be chosen in a row.
-  const addFound = (picture: FoundPicture) => {
+  // `at` is its place in the answers, from 0.
+  const addFound = (picture: FoundPicture, at: number) => {
     if (full()) return;
     if (picture.source !== "web") {
       dispatch({
@@ -584,6 +589,7 @@ export function AddCardBox({
         // Kept on the card, and sent back when it publishes (CONTRACT, PictureHit).
         ...(picture.attribution === null ? {} : { attribution: picture.attribution }),
       });
+      picturePicked(picture.source, at);
       return;
     }
     // A copy from the web lives in the person's own pictures: a guest has none,
@@ -606,6 +612,7 @@ export function AddCardBox({
             // The page it stands on goes out with the publication (CONTRACT, Picture attribution).
             ...(picture.attribution === null ? {} : { attribution: picture.attribution }),
           });
+          picturePicked(picture.source, at);
         },
         (failure: unknown) => setNote(pictureFailureText(picture.title, failure)),
       )
@@ -821,13 +828,13 @@ export function AddCardBox({
                 )}
                 {sources !== null && <p className="cards__source">{sources}</p>}
                 <div className="cards__picks">
-                  {found.items.map((picture) => (
+                  {found.items.map((picture, at) => (
                     <PictureTile
                       key={picture.id}
                       found={picture}
                       added={added.has(picture.id)}
                       busy={keeping.has(picture.id)}
-                      onPick={() => addFound(picture)}
+                      onPick={() => addFound(picture, at)}
                     />
                   ))}
                 </div>

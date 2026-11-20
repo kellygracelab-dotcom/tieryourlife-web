@@ -98,6 +98,7 @@ import { AuthorTools, VisitorTools, type Report, type Unpublish } from "./ListPa
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
 import { siteOrigin } from "../lib/links";
+import { listFinished, listOpened } from "../lib/usageEvents";
 
 /** Whose arrangement is on screen, in the app's words: the author's (or a reader's), or this person's own. */
 type View = "theirs" | "mine";
@@ -367,6 +368,11 @@ function OpenList({
   ).sections;
   const outOfSight = !own && isOutOfSight(hidden, list);
   const author = useMemo(() => arrange(list), [list]);
+  // Somebody else's list or the house's, once it is known whose it is.
+  const whoseKnown = account !== null;
+  useEffect(() => {
+    if (whoseKnown && !own) listOpened();
+  }, [whoseKnown, own]);
   // What somebody came for, as in the app: the author's ranking, unless this
   // device has begun its own. An author who placed nothing has no half to show.
   // Mine starts from the board the list was saved to; once anything is placed,
@@ -462,6 +468,9 @@ function OpenList({
   // Rows into Mine, which is drawn afresh from the draft: Play's result, or
   // Theirs with a first move made on it, whose tier words come too. Play's
   // result leaves the words Mine wears.
+  // Mine is finished once every card of the list has a tier.
+  const mineFinished = (rows: Rows) =>
+    listFinished(list.items.length, list.items.length - new Set(rows.flat()).size);
   const putInMine = (
     rows: Rows,
     labels?: TierLabels | null,
@@ -469,6 +478,7 @@ function OpenList({
     beforeGame?: Rows,
   ) => {
     const placed = rows.map((row) => [...row]);
+    mineFinished(placed);
     const before = loadPlacedDraft(localStorageStore, scopeOf(list));
     setMineBefore(
       beforeGame !== undefined
@@ -935,7 +945,10 @@ function OpenList({
               undoToggles={mineBefore?.toggles === true}
               onRows={(rows) => {
                 // A move, not the board drawn again (it says its rows as it comes).
-                if (!sameRows(rows, mineRows ?? [])) acted();
+                if (!sameRows(rows, mineRows ?? [])) {
+                  acted();
+                  mineFinished(rows);
+                }
                 // Undo took the game back: the offer it brought goes with it (QA 25).
                 if (afterGame && mineBefore?.toggles === true && sameRows(rows, mineBefore.rows)) {
                   setAfterGame(false);

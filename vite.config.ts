@@ -8,6 +8,7 @@ import {
   LEAKY_DEBUG_TOKEN_VAR,
   refuseLeakyDebugToken,
 } from "./config/debug-token.ts";
+import { buildVersionDefine } from "./config/build-version.ts";
 import { emulatorPort } from "./config/emulator-ports.ts";
 import { preloadApp } from "./config/preload-app.ts";
 
@@ -44,7 +45,7 @@ export default defineConfig(({ command, mode }) => {
       keepOutOfBundle([env[DEBUG_TOKEN_VAR], env[LEAKY_DEBUG_TOKEN_VAR]]),
       preloadApp(),
     ],
-    define: debugTokenDefine(command, env),
+    define: { ...debugTokenDefine(command, env), ...buildVersionDefine() },
     server: {
       proxy: proxyFor(env.PROXY_TARGET || emulatorFunctions(env)),
     },

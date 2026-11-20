@@ -139,6 +139,8 @@ const ptBR: Translation = {
     shareText:
       "Faço tier lists no TierYourLife: classifico qualquer coisa de S a D, decido as dúvidas em duelos e vejo como os outros classificaram.\nSite: {link}",
     privacyTitle: "Privacidade",
+    sendUsage: "Enviar estatísticas de uso",
+    sendUsageSub: "Contagens anônimas do que é usado, sem a sua conta",
     signOutNote:
       "Suas listas ficam na sua conta e neste navegador, ocultas até você entrar de novo. Fora da conta, você vê só as listas feitas sem conta.",
     deleteAction: "Excluir a conta",

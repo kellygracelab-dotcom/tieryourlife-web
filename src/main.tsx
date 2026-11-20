@@ -46,6 +46,17 @@ void boot({
     );
     // What actually loaded: a dictionary that would not come leaves the page in English.
     applyLocale(currentLocale());
+    // Usage statistics (Settings → Send usage statistics) start before the
+    // app writes anything of its own: a browser that already held the site's
+    // things came before them, and is no newcomer.
+    const [{ countWith, defaultUsageDeps, startUsage }, { api }, { getFirebaseAuth }] =
+      await Promise.all([import("./lib/usage"), import("./lib/api"), import("./lib/firebase")]);
+    countWith(
+      startUsage(
+        defaultUsageDeps(api, () => getFirebaseAuth().currentUser !== null),
+        window,
+      ),
+    );
     const { App, opened } = await import("./App.tsx");
     await opened();
     installSidewaysWheel();

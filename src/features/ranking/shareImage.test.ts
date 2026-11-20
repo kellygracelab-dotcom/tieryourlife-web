@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import type { PublishedList, PublishedTier } from "../../api/types";
+import { usage } from "../../lib/usage";
 import { loadStrings, setStrings } from "../../strings";
 import ru from "../../strings/locales/ru";
 import {
@@ -634,7 +635,12 @@ describe("a board's picture", () => {
     const save = vi.fn();
     const share = vi.fn(async () => undefined);
     const sheet = { canShare: () => true, share };
+    const count = vi.spyOn(usage, "count");
+    onTestFinished(() => {
+      count.mockRestore();
+    });
     await shareBoardPicture(board, [[1], [], []], "host/l/L1", render, save, sheet);
+    expect(count.mock.calls).toEqual([["share.image"]]);
     expect(render).toHaveBeenCalledWith(
       expect.objectContaining({ board: true, rows: [[1], [], []], dark: false }),
     );
@@ -647,6 +653,7 @@ describe("a board's picture", () => {
     share.mockRejectedValueOnce(new DOMException("closed", "AbortError"));
     await shareBoardPicture(board, [[1], [], []], "host/l/L1", render, save, sheet);
     expect(save).not.toHaveBeenCalled();
+    expect(count).toHaveBeenCalledTimes(1);
 
     // No sheet, or a refusal: the file is saved.
     // A file saved is said, so the page can tell where the picture went.
@@ -657,6 +664,8 @@ describe("a board's picture", () => {
     await shareBoardPicture(board, [[1], [], []], "host/l/L1", render, save, sheet);
     expect(save).toHaveBeenCalledTimes(2);
     expect(save).toHaveBeenCalledWith(blob, "films-tieryourlife.png");
+    // Each picture saved is one shared too.
+    expect(count).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -681,7 +690,14 @@ describe("downloadShare", () => {
     const blob = new Blob(["png"]);
     const render = vi.fn(async () => blob);
     const save = vi.fn();
+    const step = vi.spyOn(usage, "step");
+    const count = vi.spyOn(usage, "count");
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+    });
     await downloadShare(list, [[1], [0], []], "host/r/abcdefgh", render, save);
+    expect(step.mock.calls).toEqual([["shared"]]);
+    expect(count.mock.calls).toEqual([["share.image"]]);
     expect(render).toHaveBeenCalledWith({
       title: "Oscar films 2025",
       authorName: "Danylo",

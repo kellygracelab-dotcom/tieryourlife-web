@@ -17,6 +17,7 @@ import {
   type SignInOutcome,
 } from "../lib/signIn";
 import { localStorageStore } from "../lib/storage";
+import { signedIn } from "../lib/usageEvents";
 import { RedirectFailedContext, SessionContext, ShowFaceContext } from "./session";
 
 interface SessionProviderProps {
@@ -89,6 +90,7 @@ export function SessionProvider({
   const signInAndShow = useCallback(async () => {
     const outcome = await signIn();
     if (outcome.kind === "signedIn") {
+      signedIn();
       const next = current();
       noteSignedIn(next);
       owners.arrived({ owner: next.kind === "signedIn" ? next.uid : null, guestUid: null });
@@ -102,6 +104,8 @@ export function SessionProvider({
     void complete().then((outcome) => {
       if (kindOf(outcome) === "failed") setRedirectFailed(true);
       if (kindOf(outcome) === "signedIn") {
+        // Back from Google's own page: signed in all the same.
+        signedIn();
         const next = current();
         noteSignedIn(next);
         owners.arrived({ owner: next.kind === "signedIn" ? next.uid : null, guestUid: null });

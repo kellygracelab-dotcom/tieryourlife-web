@@ -1,8 +1,9 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Account } from "../lib/account";
 import { SIGNED_IN_KEY } from "../lib/signedInHint";
+import { usage } from "../lib/usage";
 import { useRedirectFailed, useSession, useShowFace } from "./session";
 import { SessionProvider } from "./SessionProvider";
 
@@ -21,6 +22,8 @@ function Probe() {
 }
 
 describe("SessionProvider", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("starts unknown, follows the account, finishes a redirect once, and lets go on unmount", () => {
     let listener: ((account: Account) => void) | null = null;
     const unsubscribe = vi.fn();
@@ -96,9 +99,47 @@ describe("SessionProvider", () => {
         <SignIn />
       </SessionProvider>,
     );
+    const step = vi.spyOn(usage, "step");
     act(() => listener?.({ kind: "guest", uid: "g1" }));
+    expect(step).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "sign in" }));
     expect(screen.getByRole("status")).toHaveTextContent("signedIn:g1");
+    expect(step.mock.calls).toEqual([["signed_in"]]);
+  });
+
+  it("says signed in only for a sign-in that went through, a redirect's too", async () => {
+    const step = vi.spyOn(usage, "step");
+    function SignIn() {
+      const { signIn } = useSession();
+      return (
+        <button type="button" onClick={() => void signIn()}>
+          sign in
+        </button>
+      );
+    }
+    const { unmount } = render(
+      <SessionProvider
+        subscribe={() => () => undefined}
+        complete={async () => null}
+        signIn={async () => ({ kind: "cancelled" })}
+      >
+        <SignIn />
+      </SessionProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "sign in" }));
+    expect(step).not.toHaveBeenCalled();
+    unmount();
+
+    render(
+      <SessionProvider
+        subscribe={() => () => undefined}
+        complete={async () => ({ kind: "signedIn", switched: false })}
+        current={() => ({ kind: "signedIn", uid: "g1", displayName: null, photoUrl: null })}
+      >
+        <Probe />
+      </SessionProvider>,
+    );
+    await waitFor(() => expect(step).toHaveBeenCalledWith("signed_in"));
   });
 
   it("notes a new name and face for the next visit's first moment, though Firebase fires nothing", async () => {

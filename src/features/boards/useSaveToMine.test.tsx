@@ -1,9 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import type { PublishedList } from "../../api/types";
 import { memoryStore } from "../../lib/storage";
+import { usage } from "../../lib/usage";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import type { Rows } from "../tierboard/model";
 import { itemsIn, liveItems, poolTier, rankedTiers, type Board } from "./model";
@@ -123,9 +124,17 @@ describe("useSaveToMine", () => {
 
   it("makes one board of a list however often Save is pressed, and puts what is shown on it", async () => {
     const of = list();
+    const step = vi.spyOn(usage, "step");
+    const count = vi.spyOn(usage, "count");
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+    });
     const { repository, notify, take, rerender } = show(of, mine(of, [[2], []]));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(repository.all()).toHaveLength(1);
+    // A board of one's own, taken from the list to rank it.
+    expect(step.mock.calls).toEqual([["first_board"]]);
+    expect(count.mock.calls).toEqual([["board.ranked"]]);
     const uid = repository.all()[0]!.uid;
     expect(titlesIn(repository.all()[0]!)).toEqual([["C"], [], ["A", "B"]]);
     expect(screen.getByRole("button", { name: "Saved" })).toBeInTheDocument();
@@ -137,6 +146,8 @@ describe("useSaveToMine", () => {
     expect(repository.all()[0]!.uid).toBe(uid);
     expect(titlesIn(repository.all()[0]!)).toEqual([["C", "A"], ["B"], []]);
     expect(take).toHaveBeenCalledTimes(1);
+    // The same board: no second one made.
+    expect(count).toHaveBeenCalledTimes(1);
     const undo = notify.mock.calls.at(-1)![0].action!;
     expect(undo.text).toBe("Undo");
     undo.onClick();

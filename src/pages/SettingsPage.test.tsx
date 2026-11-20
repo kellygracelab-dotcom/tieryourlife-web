@@ -12,6 +12,7 @@ import { type CutFace, PictureRefused, type UploadedPicture } from "../lib/pictu
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { memoryStore } from "../lib/storage";
+import { USAGE_OFF_KEY } from "../lib/usageSwitch";
 import { useCardFaceStoreForTests } from "../lib/cardFace";
 import {
   SettingsPage,
@@ -281,6 +282,22 @@ describe("the site to someone else, the app and a word to us", () => {
 });
 
 describe("SettingsPage", () => {
+  it("sends usage statistics until the switch is turned off, guest or not", async () => {
+    onTestFinished(() => localStorage.removeItem(USAGE_OFF_KEY));
+    open({ kind: "guest", uid: "g1" });
+    const usageSwitch = screen.getByRole("switch", { name: /Send usage statistics/ });
+    expect(usageSwitch).toBeChecked();
+    expect(
+      screen.getByText("Anonymous counts of what is used, without your account"),
+    ).toBeInTheDocument();
+    await userEvent.click(usageSwitch);
+    expect(usageSwitch).not.toBeChecked();
+    expect(localStorage.getItem(USAGE_OFF_KEY)).toBe("1");
+    await userEvent.click(usageSwitch);
+    expect(usageSwitch).toBeChecked();
+    expect(localStorage.getItem(USAGE_OFF_KEY)).toBeNull();
+  });
+
   it("asks a guest to sign in, and still offers the theme and the privacy policy", () => {
     open({ kind: "guest", uid: "g1" });
     expect(screen.getByText("Sign in to change your settings.")).toBeInTheDocument();
