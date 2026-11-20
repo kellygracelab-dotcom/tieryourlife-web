@@ -2,6 +2,7 @@ import { useCallback, useId, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import {
   FUNNEL_STEPS,
+  type CrashlyticsNumbers,
   type Counted,
   type Statistics,
   type StatsDay,
@@ -258,7 +259,7 @@ interface Series {
 }
 
 /** Days as stacked bars, an SVG of its own with no chart library; one part per series. */
-function DayBars({
+function DayBars<Day extends { day: string } = StatsDay>({
   name,
   days,
   series,
@@ -266,9 +267,9 @@ function DayBars({
   none = words().notCounted,
 }: {
   name: string;
-  days: readonly StatsDay[];
+  days: readonly Day[];
   series: readonly Series[];
-  parts: (day: StatsDay) => number[];
+  parts: (day: Day) => number[];
   none?: string;
 }) {
   const values = days.map((day) => ({ day: day.day, parts: parts(day) }));
@@ -399,6 +400,93 @@ function OutLink({ href, children }: { href: string; children: ReactNode }) {
       {children}
       <Icon name="open_in_new" />
     </a>
+  );
+}
+
+/**
+ * Google's own numbers for Android from Crashlytics' nightly export, ANRs
+ * included: waiting until the first export, the last numbers with their day
+ * when a night's read failed.
+ */
+function CrashlyticsPart({ numbers, file }: { numbers: CrashlyticsNumbers; file: string }) {
+  const waiting = numbers.state === "waiting_for_dataset" || numbers.state === "waiting_for_access";
+  return (
+    <div className="stats-crashlytics">
+      <h4 className="stats-table__caption">{words().crashlyticsTitle}</h4>
+      {waiting ? (
+        <p className="stats__none">{words().crashlyticsWaiting}</p>
+      ) : (
+        <>
+          <p className="admin-pane__note">
+            {numbers.state === "failed"
+              ? fill(words().crashlyticsFailed, { day: numbers.lastDay ?? "—" })
+              : fill(words().crashlyticsUpTo, { day: numbers.lastDay ?? "—" })}
+          </p>
+          <Figures
+            rows={[
+              {
+                label: words().fatal,
+                value: fill(words().eventsOn, {
+                  events: formatCount(numbers.totals.fatal.events),
+                  installs: formatCount(numbers.totals.fatal.installDays),
+                }),
+              },
+              {
+                label: words().anr,
+                value: fill(words().eventsOn, {
+                  events: formatCount(numbers.totals.anr.events),
+                  installs: formatCount(numbers.totals.anr.installDays),
+                }),
+              },
+              {
+                label: words().nonFatal,
+                value: fill(words().eventsOn, {
+                  events: formatCount(numbers.totals.nonFatal.events),
+                  installs: formatCount(numbers.totals.nonFatal.installDays),
+                }),
+              },
+            ]}
+          />
+          <DayBars
+            name={words().crashesAndAnrs}
+            days={numbers.daily}
+            none={words().noCrashes}
+            series={[
+              { name: words().fatal, className: "stats-chart__crash" },
+              { name: words().anr, className: "stats-chart__web" },
+            ]}
+            parts={(day) => [day.crashes, day.anrs]}
+          />
+          <StatTable
+            name="crashlytics-issues"
+            file={file}
+            caption={words().issues}
+            none={words().noCrashes}
+            rows={numbers.issues}
+            columns={[
+              {
+                label: words().issue,
+                value: (row) => row.title,
+                show: (row) => (
+                  <>
+                    {row.title}
+                    {row.subtitle !== null && (
+                      <span className="stats-crashlytics__sub">{row.subtitle}</span>
+                    )}
+                  </>
+                ),
+              },
+              { label: words().errorType, value: (row) => row.kind },
+              { label: words().version, value: (row) => row.version },
+              { label: words().count, value: (row) => row.events, numeric: true },
+              { label: words().installDays, value: (row) => row.installDays, numeric: true },
+              { label: words().firstSeen, value: (row) => row.first },
+              { label: words().lastSeen, value: (row) => row.last },
+            ]}
+          />
+        </>
+      )}
+    </div>
   );
 }
 
@@ -740,6 +828,7 @@ function Report({
             { label: words().lastSeen, value: (row) => row.last },
           ]}
         />
+        <CrashlyticsPart numbers={stats.crashlytics} file={file} />
         <p className="stats__links">
           <OutLink href={links.crashlytics}>{words().crashlytics}</OutLink>
           <OutLink href={links.playConsole}>{words().vitals}</OutLink>

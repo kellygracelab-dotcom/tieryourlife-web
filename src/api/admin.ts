@@ -619,7 +619,54 @@ export interface Statistics {
     referrers: { domain: string; utm: string | null; n: number }[];
   };
   links: { crashlytics: string | null; playConsole: string | null; searchConsole: string | null };
+  crashlytics: CrashlyticsNumbers;
 }
+
+/**
+ * Google's own crash numbers for Android, ANRs included, read each night from
+ * Crashlytics' BigQuery export (CONTRACT.md, Usage statistics → Crashes).
+ * Waiting until the export has written its first day, or the functions may
+ * read it; `failed` keeps what it had, up to `lastDay`.
+ */
+export type CrashlyticsState = "waiting_for_dataset" | "waiting_for_access" | "failed" | "ready";
+
+export interface CrashlyticsCount {
+  events: number;
+  /** Each day's distinct installs, summed: one device on two days counts twice. */
+  installDays: number;
+}
+
+export interface CrashlyticsNumbers {
+  state: CrashlyticsState;
+  lastDay: string | null;
+  totals: { fatal: CrashlyticsCount; anr: CrashlyticsCount; nonFatal: CrashlyticsCount };
+  daily: {
+    day: string;
+    crashes: number;
+    crashInstalls: number;
+    anrs: number;
+    anrInstalls: number;
+    nonFatal: number;
+  }[];
+  issues: {
+    id: string;
+    title: string;
+    subtitle: string | null;
+    kind: string;
+    version: string | null;
+    events: number;
+    installDays: number;
+    first: string | null;
+    last: string | null;
+  }[];
+}
+
+const CRASHLYTICS_STATES: readonly CrashlyticsState[] = [
+  "waiting_for_dataset",
+  "waiting_for_access",
+  "failed",
+  "ready",
+];
 
 type Loose = Record<string, unknown>;
 
@@ -766,6 +813,45 @@ export function statisticsOf(raw: unknown, query: StatsQuery): Statistics {
       playConsole: textOf(links.playConsole),
       searchConsole: textOf(links.searchConsole),
     },
+    crashlytics: crashlyticsOf(answer.crashlytics),
+  };
+}
+
+function crashlyticsOf(raw: unknown): CrashlyticsNumbers {
+  const block = objectOf(raw);
+  const totals = objectOf(block.totals);
+  const count = (value: unknown): CrashlyticsCount => {
+    const one = objectOf(value);
+    return { events: numberOf(one.events), installDays: numberOf(one.installDays) };
+  };
+  const state = CRASHLYTICS_STATES.find((one) => one === block.state) ?? "waiting_for_dataset";
+  return {
+    state,
+    lastDay: textOf(block.lastDay),
+    totals: {
+      fatal: count(totals.FATAL),
+      anr: count(totals.ANR),
+      nonFatal: count(totals.NON_FATAL),
+    },
+    daily: rowsOf(block.daily).map((row) => ({
+      day: String(row.day ?? ""),
+      crashes: numberOf(row.crashes),
+      crashInstalls: numberOf(row.crashInstalls),
+      anrs: numberOf(row.anrs),
+      anrInstalls: numberOf(row.anrInstalls),
+      nonFatal: numberOf(row.nonFatal),
+    })),
+    issues: rowsOf(block.issues).map((row) => ({
+      id: String(row.id ?? ""),
+      title: String(row.title ?? ""),
+      subtitle: textOf(row.subtitle),
+      kind: String(row.kind ?? ""),
+      version: textOf(row.version),
+      events: numberOf(row.events),
+      installDays: numberOf(row.installDays),
+      first: textOf(row.first),
+      last: textOf(row.last),
+    })),
   };
 }
 
