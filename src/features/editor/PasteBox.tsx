@@ -42,6 +42,7 @@ import {
 import { kindName, scopeName, scopesFrom, sourceName } from "./pictureNames";
 import { PictureTile } from "./PictureTile";
 import { usePictures, type FindPictures } from "./usePictures";
+import { picturePicked } from "../../lib/usageEvents";
 
 /** What a paste of many lines came to: how many cards, and those without a picture, and why. */
 export interface PasteOutcome {
@@ -112,7 +113,8 @@ function RowSearch({
   own: PictureScope;
   scope: PictureScope;
   find: FindPictures;
-  onPick: (found: FoundPicture) => void;
+  /** `at` is its place among the pictures shown, from 0. */
+  onPick: (found: FoundPicture, at: number) => void;
   onClose: () => void;
 }) {
   const [words, setWords] = useState(name);
@@ -186,13 +188,13 @@ function RowSearch({
       )}
       {items.length > 0 && (
         <div className="cards__picks">
-          {items.map((picture) => (
+          {items.map((picture, at) => (
             <PictureTile
               key={picture.id}
               found={picture}
               added={false}
               busy={false}
-              onPick={() => onPick(picture)}
+              onPick={() => onPick(picture, at)}
             />
           ))}
         </div>
@@ -540,7 +542,11 @@ export function PasteBox({
   const add = () => {
     if (check === null) return;
     const rows = check.rows.slice(0, Math.max(0, room));
-    for (const row of rows) dispatch({ type: "addItem", ...row.card });
+    for (const row of rows) {
+      dispatch({ type: "addItem", ...row.card });
+      // A picture the person picked from a search is counted once its card is in.
+      if (row.picked != null) picturePicked(row.picked.source, row.picked.at);
+    }
     // What the check could not settle is said once the cards are on the
     // board: a guest's pictures from links wait for the sign-in, and the
     // house's copied pictures for their page.
@@ -616,6 +622,7 @@ export function PasteBox({
                     missing: null,
                     chosen: true,
                     pageless: false,
+                    picked: null,
                   })
                 }
               >
@@ -625,13 +632,14 @@ export function PasteBox({
                     own={own}
                     scope={scope}
                     find={find}
-                    onPick={(found) => {
+                    onPick={(found, at) => {
                       update(index, {
                         card: cardOf(row.card.title, found),
                         origin: originOf(found),
                         missing: null,
                         chosen: true,
                         pageless: false,
+                        picked: { source: found.source, at },
                       });
                       setSearching(null);
                     }}

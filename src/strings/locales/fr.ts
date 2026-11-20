@@ -142,6 +142,8 @@ const fr: Translation = {
     shareText:
       "Je fais des tier lists dans TierYourLife : je classe n’importe quoi de S à D, je tranche en duels et je vois comment les autres classent.\nWeb : {link}",
     privacyTitle: "Confidentialité",
+    sendUsage: "Envoyer les statistiques d’utilisation",
+    sendUsageSub: "Des comptages anonymes de ce qui est utilisé, sans votre compte",
     signOutNote:
       "Vos listes restent dans votre compte et dans ce navigateur, masquées jusqu’à votre prochaine connexion. Déconnecté, vous ne voyez que les listes créées sans compte.",
     deleteAction: "Supprimer le compte",

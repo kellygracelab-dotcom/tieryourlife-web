@@ -65,6 +65,8 @@ export interface Account {
   calls: string[];
   /** Bodies of the publish and republish requests, in order. */
   publishes: unknown[];
+  /** Usage statistics batches the site sent (POST /lists/stats). */
+  usageBatches: unknown[];
   /** The next calls to these, by "METHOD /path", answer with this status instead. */
   failNext: Map<string, number>;
   photoUrl: string | null;
@@ -251,6 +253,10 @@ async function mockAccount(page: Page, account: Account): Promise<void> {
           followingNobody: following ? account.followed.length === 0 : undefined,
         });
       }
+      if (id === "stats" && verb === undefined && method === "POST") {
+        account.usageBatches.push(body());
+        return json(route, 204);
+      }
       if (id === undefined && method === "PATCH") return json(route, 200, { updated: 0 });
       if (id === undefined && method === "POST") {
         const listId = `L${account.published.size + 1}`;
@@ -399,6 +405,7 @@ export async function signIn(
     followedLists: seed.followedLists ?? [],
     calls: [],
     publishes: [],
+    usageBatches: [],
     failNext: new Map(),
     photoUrl: null,
   };

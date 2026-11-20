@@ -1,7 +1,8 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { memoryStore, type KeyValueStore } from "../../lib/storage";
+import { usage } from "../../lib/usage";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import type { PlayCard, PlayTier } from "./board";
 import { EVERYTHING } from "./chosen";
@@ -103,6 +104,7 @@ async function pickLeft(times: number, key = "{ArrowLeft}") {
 describe("Play on a page", () => {
   // The screens come as a chunk of their own; fetched here, Play opens in the frame it is pressed.
   beforeAll(() => loadPlayScreens());
+  afterEach(() => vi.restoreAllMocks());
 
   it("is not offered below three cards", async () => {
     render(<Page store={memoryStore()} cards={cardsOf(2)} />);
@@ -115,12 +117,17 @@ describe("Play on a page", () => {
     const store = memoryStore();
     const onApply = vi.fn<PlayOptions["onApply"]>();
     const notify = vi.fn();
+    const count = vi.spyOn(usage, "count");
+    const step = vi.spyOn(usage, "step");
     render(<Page store={store} onApply={onApply} notify={notify} />);
 
     await userEvent.click(playButton());
     expect(screen.getByText(inSummary("3 cards"))).toBeInTheDocument();
     await pickGame(/King of the hill/);
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    // Counted as the phone names it: the hill is King of the hill.
+    expect(count.mock.calls).toEqual([["game.king.start"]]);
+    expect(step).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog", { name: "King of the hill" })).toBeInTheDocument();
     expect(screen.getByText("playing")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Duel 1 of 2" })).toHaveFocus();
@@ -137,6 +144,9 @@ describe("Play on a page", () => {
     expect(rows.flat().sort()).toEqual(["c0", "c1", "c2"]);
     expect(played).toEqual({ kind: "hill", cards: 3, duels: 2 });
     expect(store.read(playKey("b1"))).toBeNull();
+    // Played to its result: done, and the newcomer's first game, once.
+    expect(count.mock.calls).toEqual([["game.king.start"], ["game.king.done"]]);
+    expect(step.mock.calls).toEqual([["first_game"]]);
 
     // The result in a window over the board (artboard 35), not a corner's notice.
     const ready = await screen.findByRole("dialog", { name: "Your ranking is ready" });
@@ -213,6 +223,8 @@ describe("Play on a page", () => {
     const store = memoryStore();
     const notify = vi.fn();
     const onApply = vi.fn<PlayOptions["onApply"]>(() => undefined);
+    const count = vi.spyOn(usage, "count");
+    const step = vi.spyOn(usage, "step");
     render(<Page store={store} notify={notify} onApply={onApply} />);
     await startGame(/King of the hill/);
     await pickLeft(2, "{ArrowDown}");
@@ -224,6 +236,9 @@ describe("Play on a page", () => {
     expect(onApply).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(store.read(playKey("b1"))).toBeNull();
+    // Started, never played to a result.
+    expect(count.mock.calls).toEqual([["game.king.start"]]);
+    expect(step).not.toHaveBeenCalledWith("first_game");
   });
 
   it("keeps the game on Quit, says so, and resumes it from the picker", async () => {

@@ -60,6 +60,7 @@ import { Menu } from "../ui/Menu";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "./BoardsPage.css";
 import { siteOrigin } from "../lib/links";
+import { shared } from "../lib/usageEvents";
 
 interface BoardsPageProps {
   repository?: BoardsRepository;
@@ -556,7 +557,10 @@ export function BoardsPage({
   const copyLink = (board: Board) => {
     const link = addressOf(board);
     copy(link).then(
-      () => setNotices([{ text: strings.list.linkCopied }]),
+      () => {
+        shared("link");
+        setNotices([{ text: strings.list.linkCopied }]);
+      },
       () => setNotices([{ text: fill(strings.list.copyFailed, { link }) }]),
     );
   };

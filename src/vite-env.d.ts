@@ -12,3 +12,6 @@ interface ImportMetaEnv {
 
 /** Filled in by the dev server only; always empty in a build (config/debug-token.ts). */
 declare const __APPCHECK_DEBUG_TOKEN__: string;
+
+/** The site's version, `2026.11.20-327ea66`, or `dev` (config/build-version.ts). */
+declare const __TYL_BUILD__: string;

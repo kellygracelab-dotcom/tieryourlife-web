@@ -35,6 +35,8 @@ export interface PasteRow {
   chosen: boolean;
   /** A house card's picture copied from another site without the page it is from. */
   pageless: boolean;
+  /** Picked by the person from a search: its catalogue and its place in the answers, from 0. */
+  picked?: { source: string; at: number } | null;
 }
 
 /** A kind of picture that can be in doubt: the web's say nothing of what they show. */

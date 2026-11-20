@@ -58,13 +58,14 @@ import { preloadedList, preloadedRanking } from "./preload";
 import { limitedSearch } from "./searchLimit";
 import { limitedLink } from "./linkPictures";
 import { listIn } from "./translated";
+import { usageHeaders } from "./usageSwitch";
 
 /**
  * Every call the pages make, bound to the client that carries this browser's
  * tokens. Each operation has one name, the same here and in api/; the few
  * that add something of their own say what.
  */
-export const api = createApiClient(tokenProviders);
+export const api = createApiClient({ ...tokenProviders, clientHeaders: () => usageHeaders() });
 
 type Rows = readonly (readonly number[])[];
 

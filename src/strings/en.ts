@@ -128,6 +128,8 @@ export const en = {
     shareText:
       "I make tier lists in TierYourLife: rank anything from S to D, settle it in duels and see how others rank it.\nWeb: {link}",
     privacyTitle: "Privacy",
+    sendUsage: "Send usage statistics",
+    sendUsageSub: "Anonymous counts of what is used, without your account",
     signOutNote:
       "Your lists stay in your account and in this browser, hidden until you sign in again. Signed out, you’ll see only lists made without an account.",
     deleteAction: "Delete account",

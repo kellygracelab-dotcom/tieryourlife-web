@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { GUEST, SessionContext, type Session } from "../../app/session";
 import { memoryStore } from "../../lib/storage";
+import { usage } from "../../lib/usage";
 import { strings } from "../../strings";
 import { tipWanted, useTipsStoreForTests } from "../../ui/tipMemory";
 import { ApiFailure } from "../../api/errors";
@@ -89,6 +90,7 @@ const typeAndWait = async (words: string) => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("AddCardBox", () => {
@@ -191,9 +193,12 @@ describe("AddCardBox", () => {
         picture("anilist:21", { title: "Naruto Shippuden" }),
       ]),
     );
+    const count = vi.spyOn(usage, "count");
     const { dispatch } = setup({ find });
     await typeAndWait("naruto");
     await userEvent.click(screen.getByRole("button", { name: /^Naruto(?! Shippuden)/ }));
+    // Picked from the catalogue's answers, the first of them.
+    expect(count.mock.calls).toEqual([["picture.pick.anilist"], ["picture.pos.1"]]);
     expect(dispatch).toHaveBeenCalledWith({
       type: "addItem",
       title: "Naruto",
@@ -207,6 +212,7 @@ describe("AddCardBox", () => {
     expect(dispatch).toHaveBeenLastCalledWith(
       expect.objectContaining({ title: "Naruto Shippuden", key: "anilist:21" }),
     );
+    expect(count.mock.calls.slice(2)).toEqual([["picture.pick.anilist"], ["picture.pos.2-3"]]);
   });
 
   it("puts the answers away on Escape or a press elsewhere, keeps the words, and the cross empties the field", async () => {
@@ -342,6 +348,7 @@ describe("AddCardBox", () => {
       pictureId: "kept-1",
       previewUrl: "https://dl/kept-1",
     }));
+    const count = vi.spyOn(usage, "count");
     const { dispatch } = setup({ find, keep, category: null });
     await typeAndWait("borscht");
     expect(screen.getByText("From the web", { selector: ".cards__source" })).toBeInTheDocument();
@@ -358,6 +365,8 @@ describe("AddCardBox", () => {
       pictureId: "kept-1",
       key: "web:abc",
     });
+    // Counted once the copy is the person's.
+    expect(count.mock.calls).toEqual([["picture.pick.web"], ["picture.pos.1"]]);
   });
 
   it("keeps the page a web picture stands on, for the publication", async () => {
@@ -561,6 +570,7 @@ describe("AddCardBox", () => {
       pictureId: file.name,
       previewUrl: `https://dl/${file.name}`,
     }));
+    const count = vi.spyOn(usage, "count");
     const { dispatch } = setup({ find: async () => page([]), upload });
     const field = screen.getByRole("textbox", { name: "Add a card" });
     fireEvent.change(field, { target: { value: " My cat " } });
@@ -585,6 +595,8 @@ describe("AddCardBox", () => {
       dispatch.mock.calls.slice(1).map(([action]) => "title" in action && action.title),
     ).toEqual(["", ""]);
     expect(field).toHaveValue("Pets");
+    // One's own photo on each of the three cards.
+    expect(count.mock.calls).toEqual([["picture.own"], ["picture.own"], ["picture.own"]]);
   });
 
   it("offers a field for the name of each picture uploaded without one, and leaves an empty one unnamed (W22)", async () => {

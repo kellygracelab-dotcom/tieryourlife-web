@@ -47,6 +47,7 @@ import {
 import { publishRequestOf } from "../features/boards/publish";
 import { resetModeratorForTests, type LoadReports } from "../features/moderation/useModerator";
 import { loadPlayScreens } from "../features/play/usePlay";
+import { usage } from "../lib/usage";
 import { BoardPage } from "./BoardPage";
 
 vi.mock("../lib/api", async () => (await import("../test/apiMock")).apiStubs());
@@ -2448,5 +2449,183 @@ describe("a picture search from the list", () => {
     await waitFor(() => expect(find).toHaveBeenCalled());
     expect(find.mock.calls[0]?.[0]).toMatchObject({ section: "film_tv" });
     expect(find.mock.calls[0]?.[0]).not.toHaveProperty("topic");
+  });
+});
+
+describe("BoardPage: usage statistics", () => {
+  beforeAll(() => loadPlayScreens());
+  afterEach(() => vi.restoreAllMocks());
+
+  /** Five cards, four of them in S and the last one, Heat, still in the pool. */
+  const fiveBoard = (placed = 4) => {
+    const next = uids();
+    const b = addToPool(
+      newBoard("films", "Films", 100, next),
+      ["Ex Machina", "The Witch", "Climax", "Alien", "Heat"].map((title) => ({
+        title,
+        imageUrl: null,
+      })),
+      100,
+      next,
+    );
+    return arrangeItems(
+      b,
+      [
+        liveItems(b)
+          .map((item) => item.uid)
+          .slice(0, placed),
+      ],
+      100,
+    );
+  };
+  const spies = () => ({ step: vi.spyOn(usage, "step"), count: vi.spyOn(usage, "count") });
+
+  it("counts a new board once, at the touch that keeps it, as a tier list", async () => {
+    const { step, count } = spies();
+    const repository = boardsRepository(memoryStore());
+    open(repository, "/b/fresh?new=777");
+    expect(step).not.toHaveBeenCalled();
+    await userEvent.keyboard("Ramen{Enter}");
+    expect(repository.get("fresh")).not.toBeNull();
+    expect(step.mock.calls).toEqual([["first_board"]]);
+    expect(count.mock.calls).toEqual([["board.tier"]]);
+    // Kept already: a card added after is a card, not another board.
+    await userEvent.type(screen.getByRole("textbox", { name: "Add a card" }), "Heat{Enter}");
+    expect(step.mock.calls).toEqual([["first_board"], ["first_card"]]);
+    expect(count.mock.calls).toEqual([["board.tier"]]);
+  });
+
+  it("counts no board made when a kept one is changed", async () => {
+    const { step, count } = spies();
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    await userEvent.click(screen.getByRole("button", { name: "The Witch" }));
+    await userEvent.keyboard("2");
+    expect(step).not.toHaveBeenCalledWith("first_board");
+    expect(count).not.toHaveBeenCalled();
+    // Two of three placed: not finished.
+    expect(step).not.toHaveBeenCalledWith("full_list");
+  });
+
+  it("finishes the list when the last of five cards leaves the pool", async () => {
+    const { step } = spies();
+    const repository = boardsRepository(memoryStore());
+    repository.save(fiveBoard());
+    open(repository, "/b/films");
+    expect(step).not.toHaveBeenCalledWith("full_list");
+    await userEvent.click(screen.getByRole("button", { name: "Heat" }));
+    await userEvent.keyboard("2");
+    const kept = repository.get("films")!;
+    expect(itemsIn(kept, poolTier(kept)!.uid)).toHaveLength(0);
+    expect(step).toHaveBeenCalledWith("full_list");
+  });
+
+  it("finishes the list from the ranked list's move sheet too", async () => {
+    const { step } = spies();
+    const repository = boardsRepository(memoryStore());
+    repository.save(setDisplayMode(fiveBoard(), "FLAT_RANKED", 100));
+    open(repository, "/b/films");
+    await userEvent.click(screen.getByRole("button", { name: "1 card left" }));
+    const pool = within(screen.getByRole("region", { name: "1 card left" }));
+    await userEvent.click(pool.getByRole("button", { name: "Heat" }));
+    const sheet = within(screen.getByRole("dialog", { name: "Heat" }));
+    await userEvent.click(sheet.getByRole("button", { name: "B" }));
+    expect(step).toHaveBeenCalledWith("full_list");
+  });
+
+  it("finishes the list when a game puts the last cards on the board", async () => {
+    const { step, count } = spies();
+    const repository = boardsRepository(memoryStore());
+    repository.save(fiveBoard(0));
+    open(repository, "/b/films");
+    await userEvent.click(screen.getByRole("button", { name: /^Play/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Other ways to play" }));
+    await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    expect(count).toHaveBeenCalledWith("game.king.start");
+    for (let duel = 1; duel <= 4; duel++) {
+      await screen.findByText(`Duel ${duel} of 4`, { selector: "[aria-live] *, [aria-live]" });
+      const [left] = await screen.findAllByRole("button", { name: /^Pick / });
+      await userEvent.click(left!);
+    }
+    await screen.findByRole("dialog", { name: "Your ranking is ready" }, { timeout: 3000 });
+    expect(count).toHaveBeenCalledWith("game.king.done");
+    expect(step).toHaveBeenCalledWith("first_game");
+    expect(step).toHaveBeenCalledWith("full_list");
+  });
+
+  it("says the list published once it is out, and not for an update", async () => {
+    const { step } = spies();
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "film_tv" });
+    const publishing: PublishingDeps = {
+      ...noPublishing,
+      publish: vi.fn(() => Promise.resolve({ id: "L1" })),
+      republish: vi.fn(() => Promise.resolve({ id: "L1", topicId: null })),
+    };
+    open(repository, "/b/films", { publishing, account: member });
+    await userEvent.click(headerPublish()!);
+    await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
+    await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
+    expect(step.mock.calls).toEqual([["published"]]);
+
+    // Changed and sent again: an update, no list of its own.
+    await userEvent.click(screen.getByRole("button", { name: "The Witch" }));
+    await userEvent.keyboard("2");
+    await waitFor(() => expect(headerPublish()).toHaveAccessibleName("Update"));
+    await userEvent.click(headerPublish()!);
+    await waitFor(() => expect(publishing.republish).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(said()).toHaveTextContent(/^Updated/));
+    expect(step.mock.calls).toEqual([["published"]]);
+  });
+
+  it("says nothing published when the publish is refused", async () => {
+    const { step } = spies();
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "film_tv" });
+    open(repository, "/b/films", { account: member });
+    await userEvent.click(headerPublish()!);
+    await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
+    await waitFor(() =>
+      expect(within(publishWindow()).getByRole("button", { name: "Publish" })).toBeEnabled(),
+    );
+    expect(step).not.toHaveBeenCalledWith("published");
+  });
+
+  it("counts a picture put on a card from a link, and one's own photo dropped on it", async () => {
+    const { count } = spies();
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    const linkWeb = vi.fn<LinkKeep>(async (ask) => ({
+      imageUrl: ask.url,
+      pictureId: "p1",
+      attribution: { source: "web" },
+      credit: null,
+      quota: null,
+    }));
+    const upload = vi.fn<Upload>(async (file) => ({
+      pictureId: file.name,
+      previewUrl: `https://dl.test/${file.name}`,
+    }));
+    open(repository, "/b/films", { account: member, linkWeb, upload });
+    fireEvent.drop(screen.getByRole("button", { name: "The Witch" }), {
+      dataTransfer: {
+        types: ["text/uri-list"],
+        files: [],
+        getData: (type: string) => (type === "text/uri-list" ? "https://img.test/witch.jpg" : ""),
+      },
+    });
+    await screen.findByText("Picture changed on “The Witch”");
+    expect(count.mock.calls).toEqual([["picture.link"]]);
+    fireEvent.drop(screen.getByRole("button", { name: "Climax" }), {
+      dataTransfer: {
+        types: ["Files"],
+        files: [new File(["c"], "climax.png", { type: "image/png" })],
+        getData: () => "",
+      },
+    });
+    await screen.findByText("Picture changed on “Climax”");
+    expect(count.mock.calls).toEqual([["picture.link"], ["picture.own"]]);
   });
 });

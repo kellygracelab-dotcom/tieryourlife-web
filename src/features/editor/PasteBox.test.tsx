@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FoundPicture, PicturePage } from "../../api/pictures";
+import { usage } from "../../lib/usage";
 import { AddCardBox, type Upload } from "./AddCardBox";
 import type { EditorAction } from "./model";
 import { LOOKUP_DEBOUNCE_MS, type FindPictures } from "./usePictures";
@@ -83,6 +84,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("Paste a list, step 1", () => {
@@ -116,6 +118,7 @@ describe("Paste a list, step 1", () => {
 
 describe("Paste a list, step 2", () => {
   it("shows the doubtful first, counts the names, and adds them in the order pasted", async () => {
+    const count = vi.spyOn(usage, "count");
     const { dispatch } = setup();
     await findFor(LIST, "Find pictures for 4 names");
     expect(screen.getByRole("heading", { name: "Check the pictures" })).toBeInTheDocument();
@@ -151,9 +154,12 @@ describe("Paste a list, step 2", () => {
     ]);
     // The box is done: the button that opens it is back.
     expect(screen.getByRole("button", { name: "Paste a list" })).toBeEnabled();
+    // Pictures the search chose by itself: nobody picked them.
+    expect(count).not.toHaveBeenCalled();
   });
 
   it("leaves a picture out, or finds another, and the counts follow", async () => {
+    const count = vi.spyOn(usage, "count");
     const { dispatch, find } = setup();
     await findFor(LIST, "Find pictures for 4 names");
 
@@ -179,8 +185,11 @@ describe("Paste a list, step 2", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "4 names · 3 look right · 1 has no picture",
     );
+    // A pick is counted once its card is in, not while the list is checked.
+    expect(count).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Add 4 cards" }));
+    expect(count.mock.calls).toEqual([["picture.pick.wikidata"], ["picture.pos.1"]]);
     expect(dispatch).toHaveBeenCalledWith({ type: "addItem", title: "Arsenal", imageUrl: null });
     // The card keeps the name as pasted, with the picture the person picked.
     expect(dispatch).toHaveBeenCalledWith({

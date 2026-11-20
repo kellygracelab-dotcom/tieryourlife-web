@@ -134,6 +134,8 @@ const ja: Translation = {
     shareText:
       "TierYourLife で Tier 表を作っています。なんでも S から D に並べて、迷ったら対戦で決めて、ほかの人の並べ方も見られます。\nWeb：{link}",
     privacyTitle: "プライバシー",
+    sendUsage: "使用状況の統計を送信",
+    sendUsageSub: "使われている機能の匿名の集計。アカウントは含みません",
     signOutNote:
       "リストはアカウントとこのブラウザに残り、もう一度ログインするまで非表示になります。ログアウト中は、アカウントなしで作ったリストだけが表示されます。",
     deleteAction: "アカウントを削除",

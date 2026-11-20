@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import type { AccountAction } from "../../api/client";
 import type { PublishedList, PublishedTier } from "../../api/types";
 import { noteTake } from "../../lib/api";
+import { boardMade } from "../../lib/usageEvents";
 import { strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import type { Rows } from "../tierboard/model";
@@ -86,6 +87,8 @@ export function useSaveToMine(
     }
     // Counted once a person, and never worth failing a save over.
     if (kept === null) void take(list.id);
+    // A board of one's own, taken from somebody's list to rank.
+    if (kept === null) boardMade(true);
     notify({
       text: strings.list.savedToMine,
       // A board saved before had an arrangement of its own: Undo gives it back.

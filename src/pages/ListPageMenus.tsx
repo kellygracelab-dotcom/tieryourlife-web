@@ -26,6 +26,7 @@ import { useLeave } from "../ui/useLeave";
 import "../features/community/report.css";
 import "./ListPage.css";
 import { siteOrigin } from "../lib/links";
+import { shared } from "../lib/usageEvents";
 
 export type Report = typeof sendReport;
 export type Unpublish = typeof unpublishList;
@@ -35,14 +36,20 @@ type Notify = (notice: SnackbarNotice) => void;
 /** The list's address, and the two ways to hand it to someone. */
 function useListLink(list: PublishedList) {
   const link = `${siteOrigin()}/l/${encodeURIComponent(list.id)}`;
+  // On the clipboard: the link handed on.
   const copy = (): Promise<void> =>
-    navigator.clipboard?.writeText(link) ?? Promise.reject(new Error("no clipboard"));
+    (navigator.clipboard?.writeText(link) ?? Promise.reject(new Error("no clipboard"))).then(() =>
+      shared("link"),
+    );
   // The clipboard said no: the link is spelled out, to be copied by hand.
   const refused = (): SnackbarNotice => ({ text: fill(strings.list.copyFailed, { link }) });
   // The phone's own share sheet, where there is one; closing it is not a failure.
   const canShare = typeof navigator.share === "function";
   const share = () => {
-    void navigator.share({ title: list.title, url: link }).catch(() => undefined);
+    void navigator.share({ title: list.title, url: link }).then(
+      () => shared("link"),
+      () => undefined,
+    );
   };
   return { copy, refused, canShare, share };
 }

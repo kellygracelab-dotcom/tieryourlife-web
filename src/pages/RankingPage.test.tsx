@@ -7,6 +7,7 @@ import type { Ranking } from "../api/rank";
 import { writeKept } from "../features/ranking/kept";
 import type { Share } from "../features/ranking/shareImage";
 import { localStorageStore } from "../lib/storage";
+import { usage } from "../lib/usage";
 import { setStrings } from "../strings";
 import { RankingPage } from "./RankingPage";
 
@@ -162,8 +163,12 @@ describe("RankingPage", () => {
     // The address in the header is the button: one press copies it, nothing to select.
     const chip = screen.getByRole("button", { name: `${window.location.host}/r/abcdefgh` });
     expect(chip).toHaveAttribute("title", "Copy link");
+    const count = vi.spyOn(usage, "count");
     await userEvent.click(chip);
     expect(copy).toHaveBeenCalledWith(`https://${window.location.host}/r/abcdefgh`);
+    // On the clipboard: a link shared.
+    expect(count.mock.calls).toEqual([["share.link"]]);
+    count.mockRestore();
     expect(screen.getByRole("button", { name: "Link copied" })).toBe(chip);
     expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
 
@@ -183,6 +188,7 @@ describe("RankingPage", () => {
   it("spells the link out when the clipboard refuses it", async () => {
     copy.mockRejectedValue(new Error("no clipboard"));
     load.mockResolvedValue(ranking);
+    const count = vi.spyOn(usage, "count");
     open();
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(
@@ -191,6 +197,8 @@ describe("RankingPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       `Could not copy the link: https://${window.location.host}/r/abcdefgh`,
     );
+    expect(count).not.toHaveBeenCalled();
+    count.mockRestore();
   });
 
   it("leads from the title to the list while the list is up", async () => {

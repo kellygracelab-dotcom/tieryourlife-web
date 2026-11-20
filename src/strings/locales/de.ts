@@ -136,6 +136,8 @@ const de: Translation = {
     shareText:
       "Ich mache Tierlists in TierYourLife: alles von S bis D einordnen, Streitfälle im Duell klären und sehen, wie andere es einordnen.\nWeb: {link}",
     privacyTitle: "Datenschutz",
+    sendUsage: "Nutzungsstatistik senden",
+    sendUsageSub: "Anonyme Zählungen der Nutzung, ohne dein Konto",
     signOutNote:
       "Deine Listen bleiben in deinem Konto und in diesem Browser, versteckt, bis du dich wieder anmeldest. Abgemeldet siehst du nur Listen, die ohne Konto gemacht wurden.",
     deleteAction: "Konto löschen",
