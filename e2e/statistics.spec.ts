@@ -1,31 +1,34 @@
 import { expect, test, type Page } from "@playwright/test";
 import { signIn } from "./signedIn";
 
-const day = (date: string, android: number, web: number) => ({
-  date,
-  active: { android, web },
-  newUsers: { android: Math.round(android / 8), web: Math.round(web / 8) },
-  crashes: { android: android % 3, web: web % 2 },
+const tile = (value: number, previous: number) => ({
+  value,
+  previous,
+  change: (value - previous) / previous,
 });
 
+const day = (date: string, android: number, web: number) => ({
+  day: date,
+  active: android + web,
+  "active.android": android,
+  "active.web": web,
+  "step.first_launch": Math.round((android + web) / 8),
+  sessions: (android + web) * 2,
+  "sessions.crashed": android % 3,
+});
+
+/** The backend's answer as CONTRACT.md (Usage statistics) writes it. */
 const STATISTICS = {
-  period: { from: "2026-10-22", to: "2026-11-20", partialToday: true },
-  updatedAt: Date.UTC(2026, 10, 20, 11),
+  period: { from: "2026-10-22", to: "2026-11-20", days: 30, todayIsPartial: true, platform: "all" },
+  previous: { from: "2026-09-22", to: "2026-10-21" },
   tiles: {
-    mau: 2340,
-    dauAverage: 410,
-    newUsers: 1120,
-    d7: 0.18,
-    published: 64,
-    crashFreeUsers: 0.996,
-  },
-  previous: {
-    mau: 2090,
-    dauAverage: 380,
-    newUsers: 930,
-    d7: 0.2,
-    published: 59,
-    crashFreeUsers: 0.995,
+    mau: tile(2340, 2090),
+    dauAverage: tile(410, 380),
+    newcomers: tile(1120, 930),
+    d7: tile(0.18, 0.2),
+    published: tile(64, 59),
+    crashFreeUsers: tile(0.996, 0.995),
+    crashFreeSessions: tile(0.999, 0.998),
   },
   daily: Array.from({ length: 30 }, (_, index) =>
     day(
@@ -34,66 +37,77 @@ const STATISTICS = {
       60 + index * 2,
     ),
   ),
+  totals: {
+    "search.pictures": 820,
+    "search.pictures.miss": 40,
+    "search.lists": 140,
+    "search.lists.miss": 12,
+    "server.5xx": 3,
+    "server.appCheckRefused": 12,
+    "server.sourceBusy": 1,
+    "f.game": 190,
+    "f.share_image": 120,
+  },
   funnel: [
-    { step: "firstOpen", count: 1120 },
-    { step: "openedList", count: 900 },
-    { step: "firstBoard", count: 640 },
-    { step: "firstCard", count: 600 },
-    { step: "rankedFive", count: 380 },
-    { step: "finishedGame", count: 190 },
-    { step: "sharedImage", count: 120 },
-    { step: "signedIn", count: 150 },
-    { step: "published", count: 40 },
+    { step: "first_launch", n: 1120 },
+    { step: "open_list", n: 900 },
+    { step: "first_board", n: 640 },
+    { step: "first_card", n: 600 },
+    { step: "full_list", n: 380 },
+    { step: "first_game", n: 190 },
+    { step: "shared", n: 120 },
+    { step: "signed_in", n: 150 },
+    { step: "published", n: 40 },
   ],
   retention: [
     { week: "2026-W47", size: 310, d1: 0.34, d7: 0.19, d30: null },
     { week: "2026-W46", size: 280, d1: 0.31, d7: 0.17, d30: 0.09 },
   ],
-  pictureSearches: {
-    top: [
-      { q: "game consoles of the nineties", section: "games", count: 30 },
-      { q: "dogs", section: "animals", count: 12 },
-    ],
-    empty: [{ q: "obscure band name", count: 4 }],
-  },
-  listSearches: { top: [{ q: "anime", count: 18 }] },
-  lists: [{ id: "L1", title: "Every game console", opens: 90, copies: 12, finished: 7, shared: 3 }],
-  topics: [{ id: "t1", name: "Pizza", section: "food", opens: 40, follows: 6 }],
+  rolling: { asOf: "2026-11-20", dau: 420, wau: 1500, mau: 2340 },
   audience: {
-    guests: 1500,
-    google: 840,
+    versions: [{ value: "1.4.0 (140)", n: 1800 }],
     languages: [
-      { code: "en", count: 1200 },
-      { code: "ru", count: 400 },
+      { value: "en", n: 1200 },
+      { value: "ru", n: 400 },
     ],
     regions: [
-      { code: "US", count: 700 },
-      { code: "UA", count: 300 },
+      { value: "US", n: 700 },
+      { value: "UA", n: 300 },
     ],
-    versions: [{ platform: "android", version: "1.4.0 (140)", count: 1800 }],
+    accounts: {
+      asOf: "2026-11-20T03:00:00Z",
+      complete: true,
+      guests: { total: 1500, new1: 40, active1: 120, active7: 600, active30: 1100 },
+      google: { total: 840, new1: 9, active1: 70, active7: 300, active30: 640 },
+    },
   },
-  referrers: [
-    { domain: "reddit.com", count: 50 },
-    { domain: "direct", count: 400 },
-  ],
-  crashes: {
-    freeUsers: 0.996,
-    freeSessions: 0.999,
-    top: [
+  top: {
+    lists: [{ id: "L1", title: "Every game console", views: 90, takes: 12 }],
+    topics: [{ id: "t1", name: "Pizza", opens: 40, follows: 6 }],
+    sections: [{ id: "food", opens: 120 }],
+    pictureSearch: [
+      { q: "game consoles of the nineties", section: "games", n: 30, miss: 0 },
+      { q: "dogs", section: "animals", n: 12, miss: 1 },
+    ],
+    pictureMisses: [{ q: "obscure band name", section: "music", n: 4, miss: 4 }],
+    listSearch: [{ q: "anime", section: null, n: 18, miss: 0 }],
+    listMisses: [],
+    crashes: [
       {
-        platform: "android",
         type: "IllegalStateException",
         place: "com.tieryourlife.board.BoardViewModel.save",
         version: "1.4.0",
-        count: 7,
-        people: 5,
-        firstAt: Date.UTC(2026, 10, 18),
-        lastAt: Date.UTC(2026, 10, 20),
+        n: 7,
+        first: "2026-11-18",
+        last: "2026-11-20",
       },
     ],
+    referrers: [
+      { domain: "reddit.com", utm: null, n: 50 },
+      { domain: "", utm: null, n: 400 },
+    ],
   },
-  server: { errors5xx: 3, appCheckRefused: 12, catalogueBusy: 1, searchLimit: 0 },
-  costs: { serper: 820, vision: 140 },
+  links: { crashlytics: null, playConsole: null, searchConsole: null },
 };
 
 async function openStatistics(page: Page) {
@@ -108,7 +122,7 @@ async function openStatistics(page: Page) {
       }),
   );
   await page.route(
-    (url) => url.pathname.endsWith("/lists/admin/statistics"),
+    (url) => url.pathname.endsWith("/lists/admin/stats"),
     (route) =>
       route.fulfill({
         status: 200,
@@ -127,7 +141,7 @@ async function openStatistics(page: Page) {
   );
   await page.goto("/admin/statistics");
   await expect(page.getByRole("heading", { level: 2, name: "Statistics" })).toBeVisible();
-  await expect(page.getByText("2,340")).toBeVisible();
+  await expect(page.locator(".stats-tile").first()).toContainText("2,340");
 }
 
 test("Statistics fits the window: its tables scroll inside, the page never sideways", async ({
@@ -135,6 +149,7 @@ test("Statistics fits the window: its tables scroll inside, the page never sidew
 }, testInfo) => {
   await openStatistics(page);
   await expect(page.getByText("soulslikes")).toBeVisible();
+  await expect(page.getByRole("table", { name: "Accounts on 2026-11-20" })).toBeVisible();
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );

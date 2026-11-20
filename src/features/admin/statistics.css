@@ -370,3 +370,7 @@
 .stats-table__head .btn {
   margin-inline-start: auto;
 }
+
+.stats-chart__crash {
+  fill: var(--error);
+}

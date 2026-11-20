@@ -493,46 +493,55 @@ export interface StatsQuery {
   platform: StatsPlatform;
 }
 
-/** A number the backend counts; null while nothing counts it yet. */
+/** A number the backend counts; null while it cannot say (no days, no sessions). */
 export type Counted = number | null;
 
-/** The six figures at the top of Statistics; d7 and crashFreeUsers are shares, 0 to 1. */
-export interface StatsTiles {
-  mau: Counted;
-  dauAverage: Counted;
-  newUsers: Counted;
-  d7: Counted;
-  published: Counted;
-  crashFreeUsers: Counted;
+export const TILE_NAMES = [
+  "mau",
+  "dauAverage",
+  "newcomers",
+  "d7",
+  "published",
+  "crashFreeUsers",
+  "crashFreeSessions",
+] as const;
+export type TileName = (typeof TILE_NAMES)[number];
+
+/** A figure on top: the period's, the one before's (with compare), and the change, a fraction. */
+export interface StatsTile {
+  value: Counted;
+  previous: Counted;
+  change: Counted;
 }
 
-export interface ByPlatform {
-  android: number;
-  web: number;
-}
-
+/** A day of the period, by the event names of CONTRACT.md (Usage statistics). */
 export interface StatsDay {
-  date: string;
-  active: ByPlatform;
-  newUsers: ByPlatform;
-  crashes: ByPlatform;
+  day: string;
+  active: number;
+  /** Present when both platforms are asked for. */
+  activeAndroid: number | null;
+  activeWeb: number | null;
+  newcomers: number;
+  sessions: number;
+  crashedSessions: number;
 }
 
+/** The newcomers' steps, each once per install, in their order. */
 export const FUNNEL_STEPS = [
-  "firstOpen",
-  "openedList",
-  "firstBoard",
-  "firstCard",
-  "rankedFive",
-  "finishedGame",
-  "sharedImage",
-  "signedIn",
+  "first_launch",
+  "open_list",
+  "first_board",
+  "first_card",
+  "full_list",
+  "first_game",
+  "shared",
+  "signed_in",
   "published",
 ] as const;
 export type FunnelStep = (typeof FUNNEL_STEPS)[number];
 
 export interface StatsCohort {
-  /** The ISO week of the first open, "2026-W47". */
+  /** The ISO week of the first launch, "2026-W47". */
   week: string;
   size: number;
   d1: Counted;
@@ -542,167 +551,238 @@ export interface StatsCohort {
 
 export interface StatsSearch {
   q: string;
-  section?: string | null;
-  count: number;
-}
-
-export interface StatsList {
-  id: string;
-  title: string;
-  opens: number;
-  copies: number;
-  finished: number;
-  shared: number;
-}
-
-export interface StatsTopic {
-  id: string;
-  name: string;
   section: string | null;
-  opens: number;
-  follows: number;
+  n: number;
+  miss: number;
 }
 
-export interface StatsShare {
-  code: string;
-  count: number;
+export interface StatsCut {
+  value: string;
+  n: number;
 }
 
-export interface StatsVersion {
-  platform: "android" | "web";
-  version: string;
-  count: number;
+/** Firebase Auth's accounts of one kind, as counted the night before. */
+export interface AccountCount {
+  total: number;
+  new1: number;
+  active1: number;
+  active7: number;
+  active30: number;
 }
 
 export interface StatsCrash {
-  platform: "android" | "web";
   type: string;
   place: string;
-  version: string;
-  count: number;
-  people: number;
-  firstAt: number;
-  lastAt: number;
+  version: string | null;
+  n: number;
+  /** The first and last UTC day it was counted on. */
+  first: string | null;
+  last: string | null;
 }
 
 /**
- * The admin's Statistics for a period: anonymous daily totals the backend
- * keeps (no uid, device or address in them), summed for the days asked. A
- * figure nothing counts yet comes as null, a table as empty.
+ * The owner's Statistics for a period (CONTRACT.md, `GET /lists/admin/stats`):
+ * anonymous daily sums the backend keeps, no uid, device or address in them.
+ * Read leniently: anything missing is empty, so an older or newer backend
+ * still draws a screen.
  */
 export interface Statistics {
-  period: { from: string; to: string; partialToday: boolean };
-  updatedAt: number | null;
-  tiles: StatsTiles;
-  /** The same figures for the period of the same length just before. */
-  previous: StatsTiles | null;
+  period: { from: string; to: string; todayIsPartial: boolean };
+  compared: boolean;
+  tiles: Record<TileName, StatsTile>;
   daily: StatsDay[];
-  funnel: { step: FunnelStep; count: number }[];
+  /** Every event and client feature (`f.<name>`) summed over the period. */
+  totals: Record<string, number>;
+  funnel: { step: FunnelStep; n: number }[];
   retention: StatsCohort[];
-  pictureSearches: { top: StatsSearch[]; empty: StatsSearch[] };
-  listSearches: { top: StatsSearch[] };
-  lists: StatsList[];
-  topics: StatsTopic[];
+  rolling: { dau: Counted; wau: Counted; mau: Counted };
   audience: {
-    guests: Counted;
-    google: Counted;
-    languages: StatsShare[];
-    regions: StatsShare[];
-    versions: StatsVersion[];
+    versions: StatsCut[];
+    languages: StatsCut[];
+    regions: StatsCut[];
+    accounts: {
+      asOf: string | null;
+      complete: boolean;
+      guests: AccountCount;
+      google: AccountCount;
+    } | null;
   };
-  referrers: { domain: string; count: number }[];
-  crashes: { freeUsers: Counted; freeSessions: Counted; top: StatsCrash[] };
-  server: {
-    errors5xx: Counted;
-    appCheckRefused: Counted;
-    catalogueBusy: Counted;
-    searchLimit: Counted;
+  top: {
+    lists: { id: string; title: string | null; views: number; takes: number }[];
+    topics: { id: string; name: string | null; opens: number; follows: number }[];
+    sections: { id: string; opens: number }[];
+    pictureSearch: StatsSearch[];
+    pictureMisses: StatsSearch[];
+    listSearch: StatsSearch[];
+    listMisses: StatsSearch[];
+    crashes: StatsCrash[];
+    referrers: { domain: string; utm: string | null; n: number }[];
   };
-  costs: { serper: Counted; vision: Counted };
+  links: { crashlytics: string | null; playConsole: string | null; searchConsole: string | null };
 }
 
-const NO_TILES: StatsTiles = {
-  mau: null,
-  dauAverage: null,
-  newUsers: null,
-  d7: null,
-  published: null,
-  crashFreeUsers: null,
-};
+type Loose = Record<string, unknown>;
 
+const numberOf = (value: unknown): number =>
+  typeof value === "number" && Number.isFinite(value) ? value : 0;
 const countedOf = (value: unknown): Counted =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
+const textOf = (value: unknown): string | null =>
+  typeof value === "string" && value !== "" ? value : null;
+const objectOf = (value: unknown): Loose =>
+  value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Loose) : {};
+const rowsOf = (value: unknown): Loose[] => (Array.isArray(value) ? value.map(objectOf) : []);
 
-const tilesOf = (value: Partial<StatsTiles> | null | undefined): StatsTiles => ({
-  mau: countedOf(value?.mau),
-  dauAverage: countedOf(value?.dauAverage),
-  newUsers: countedOf(value?.newUsers),
-  d7: countedOf(value?.d7),
-  published: countedOf(value?.published),
-  crashFreeUsers: countedOf(value?.crashFreeUsers),
+const accountOf = (value: unknown): AccountCount => {
+  const one = objectOf(value);
+  return {
+    total: numberOf(one.total),
+    new1: numberOf(one.new1),
+    active1: numberOf(one.active1),
+    active7: numberOf(one.active7),
+    active30: numberOf(one.active30),
+  };
+};
+
+const searchOf = (row: Loose): StatsSearch => ({
+  q: String(row.q ?? ""),
+  section: textOf(row.section),
+  n: numberOf(row.n),
+  miss: numberOf(row.miss),
 });
+
+const cutOf = (row: Loose): StatsCut => ({ value: String(row.value ?? ""), n: numberOf(row.n) });
+
+/** The admin answer as the screen reads it; `{}` stands for a backend that counts nothing yet. */
+export function statisticsOf(raw: unknown, query: StatsQuery): Statistics {
+  const answer = objectOf(raw);
+  const period = objectOf(answer.period);
+  const tiles = objectOf(answer.tiles);
+  const audience = objectOf(answer.audience);
+  const accounts = audience.accounts;
+  const top = objectOf(answer.top);
+  const links = objectOf(answer.links);
+  const rolling = objectOf(answer.rolling);
+  const totals: Record<string, number> = {};
+  for (const [event, n] of Object.entries(objectOf(answer.totals))) {
+    if (typeof n === "number" && Number.isFinite(n)) totals[event] = n;
+  }
+  return {
+    period: {
+      from: textOf(period.from) ?? query.from,
+      to: textOf(period.to) ?? query.to,
+      todayIsPartial: period.todayIsPartial === true,
+    },
+    compared: answer.previous !== null && answer.previous !== undefined,
+    tiles: Object.fromEntries(
+      TILE_NAMES.map((name) => {
+        const tile = objectOf(tiles[name]);
+        return [
+          name,
+          {
+            value: countedOf(tile.value),
+            previous: countedOf(tile.previous),
+            change: countedOf(tile.change),
+          },
+        ];
+      }),
+    ) as Record<TileName, StatsTile>,
+    daily: rowsOf(answer.daily).map((row) => ({
+      day: String(row.day ?? ""),
+      active: numberOf(row.active),
+      activeAndroid: countedOf(row["active.android"]),
+      activeWeb: countedOf(row["active.web"]),
+      newcomers: numberOf(row["step.first_launch"]),
+      sessions: numberOf(row.sessions),
+      crashedSessions: numberOf(row["sessions.crashed"]),
+    })),
+    totals,
+    funnel: rowsOf(answer.funnel)
+      .filter((row) => (FUNNEL_STEPS as readonly unknown[]).includes(row.step))
+      .map((row) => ({ step: row.step as FunnelStep, n: numberOf(row.n) })),
+    retention: rowsOf(answer.retention).map((row) => ({
+      week: String(row.week ?? ""),
+      size: numberOf(row.size),
+      d1: countedOf(row.d1),
+      d7: countedOf(row.d7),
+      d30: countedOf(row.d30),
+    })),
+    rolling: {
+      dau: countedOf(rolling.dau),
+      wau: countedOf(rolling.wau),
+      mau: countedOf(rolling.mau),
+    },
+    audience: {
+      versions: rowsOf(audience.versions).map(cutOf),
+      languages: rowsOf(audience.languages).map(cutOf),
+      regions: rowsOf(audience.regions).map(cutOf),
+      accounts:
+        accounts === null || typeof accounts !== "object"
+          ? null
+          : {
+              asOf: textOf(objectOf(accounts).asOf),
+              complete: objectOf(accounts).complete !== false,
+              guests: accountOf(objectOf(accounts).guests),
+              google: accountOf(objectOf(accounts).google),
+            },
+    },
+    top: {
+      lists: rowsOf(top.lists).map((row) => ({
+        id: String(row.id ?? ""),
+        title: textOf(row.title),
+        views: numberOf(row.views),
+        takes: numberOf(row.takes),
+      })),
+      topics: rowsOf(top.topics).map((row) => ({
+        id: String(row.id ?? ""),
+        name: textOf(row.name),
+        opens: numberOf(row.opens),
+        follows: numberOf(row.follows),
+      })),
+      sections: rowsOf(top.sections).map((row) => ({
+        id: String(row.id ?? ""),
+        opens: numberOf(row.opens),
+      })),
+      pictureSearch: rowsOf(top.pictureSearch).map(searchOf),
+      pictureMisses: rowsOf(top.pictureMisses).map(searchOf),
+      listSearch: rowsOf(top.listSearch).map(searchOf),
+      listMisses: rowsOf(top.listMisses).map(searchOf),
+      crashes: rowsOf(top.crashes).map((row) => ({
+        type: String(row.type ?? ""),
+        place: String(row.place ?? ""),
+        version: textOf(row.version),
+        n: numberOf(row.n),
+        first: textOf(row.first),
+        last: textOf(row.last),
+      })),
+      referrers: rowsOf(top.referrers).map((row) => ({
+        domain: String(row.domain ?? ""),
+        utm: textOf(row.utm),
+        n: numberOf(row.n),
+      })),
+    },
+    links: {
+      crashlytics: textOf(links.crashlytics),
+      playConsole: textOf(links.playConsole),
+      searchConsole: textOf(links.searchConsole),
+    },
+  };
+}
 
 /** Statistics with nothing counted: what a backend without the route stands for. */
 export const emptyStatistics = (query: StatsQuery): Statistics => statisticsOf({}, query);
 
-type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> | null : T[K] };
-
-function statisticsOf(answer: DeepPartial<Statistics>, query: StatsQuery): Statistics {
-  const list = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
-  return {
-    period: {
-      from: answer.period?.from ?? query.from,
-      to: answer.period?.to ?? query.to,
-      partialToday: answer.period?.partialToday === true,
-    },
-    updatedAt: countedOf(answer.updatedAt),
-    tiles: tilesOf(answer.tiles ?? NO_TILES),
-    previous: answer.previous ? tilesOf(answer.previous) : null,
-    daily: list(answer.daily),
-    funnel: list<{ step: FunnelStep; count: number }>(answer.funnel).filter((row) =>
-      (FUNNEL_STEPS as readonly string[]).includes(row.step),
-    ),
-    retention: list(answer.retention),
-    pictureSearches: {
-      top: list(answer.pictureSearches?.top),
-      empty: list(answer.pictureSearches?.empty),
-    },
-    listSearches: { top: list(answer.listSearches?.top) },
-    lists: list(answer.lists),
-    topics: list(answer.topics),
-    audience: {
-      guests: countedOf(answer.audience?.guests),
-      google: countedOf(answer.audience?.google),
-      languages: list(answer.audience?.languages),
-      regions: list(answer.audience?.regions),
-      versions: list(answer.audience?.versions),
-    },
-    referrers: list(answer.referrers),
-    crashes: {
-      freeUsers: countedOf(answer.crashes?.freeUsers),
-      freeSessions: countedOf(answer.crashes?.freeSessions),
-      top: list(answer.crashes?.top),
-    },
-    server: {
-      errors5xx: countedOf(answer.server?.errors5xx),
-      appCheckRefused: countedOf(answer.server?.appCheckRefused),
-      catalogueBusy: countedOf(answer.server?.catalogueBusy),
-      searchLimit: countedOf(answer.server?.searchLimit),
-    },
-    costs: { serper: countedOf(answer.costs?.serper), vision: countedOf(answer.costs?.vision) },
-  };
-}
-
 /**
- * The owner's Statistics for the days asked. A backend that does not count
- * them yet answers 404, read as nothing counted rather than as a failure.
+ * The owner's Statistics for the days asked, with the period before to
+ * compare. A backend without the route answers 404, read as nothing counted
+ * rather than as a failure.
  */
 export async function loadStatistics(client: ApiClient, query: StatsQuery): Promise<Statistics> {
   try {
-    const answer = await client.request<DeepPartial<Statistics>>("GET", "/lists/admin/statistics", {
-      query: { from: query.from, to: query.to, platform: query.platform },
+    const answer = await client.request<unknown>("GET", "/lists/admin/stats", {
+      query: { from: query.from, to: query.to, platform: query.platform, compare: "1" },
     });
-    return statisticsOf(answer ?? {}, query);
+    return statisticsOf(answer, query);
   } catch (reason) {
     if (errorOf(reason).kind === "notFound") return emptyStatistics(query);
     throw reason;
