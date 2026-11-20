@@ -525,6 +525,8 @@ const uk: Translation = {
     title: "Рейтинги",
     body: "Ті самі картки, розставлені по-своєму. Оберіть, чиї ряди показати.",
     author: "Автор",
+    // The author of a list published without a name, in the first row.
+    anonymous: "Анонім",
     you: "Ви",
     withdraw: "Зняти",
     withdrawTitle: "Зняти ваш рейтинг?",

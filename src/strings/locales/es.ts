@@ -517,6 +517,8 @@ const es: Translation = {
     title: "Clasificaciones",
     body: "Las mismas tarjetas, colocadas a la manera de alguien. Elige de quién mostrar las filas.",
     author: "Autor",
+    // The author of a list published without a name, in the first row.
+    anonymous: "Anónimo",
     you: "Tú",
     withdraw: "Retirar",
     withdrawTitle: "¿Retirar tu ranking?",

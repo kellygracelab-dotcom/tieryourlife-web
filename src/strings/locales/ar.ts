@@ -559,6 +559,8 @@ const ar: Translation = {
     title: "التصنيفات",
     body: "البطاقات نفسها مرتبة على طريقة شخص آخر. اختر صفوف من تريد عرضها.",
     author: "المؤلف",
+    // The author of a list published without a name, in the first row.
+    anonymous: "مجهول",
     you: "أنت",
     withdraw: "سحب",
     withdrawTitle: "هل تريد سحب ترتيبك؟",

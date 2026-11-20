@@ -504,6 +504,8 @@ const ja: Translation = {
     title: "ランキング",
     body: "同じカードを誰かが自分流に並べたものです。誰の並びを表示するか選んでください。",
     author: "作者",
+    // The author of a list published without a name, in the first row.
+    anonymous: "匿名",
     you: "あなた",
     withdraw: "取り下げる",
     withdrawTitle: "ランキングを取り下げますか？",
