@@ -38,6 +38,7 @@ import {
   markHouseSeen,
   NEW_HOUSE_PATH,
   unlinkFromHouse,
+  withPublishedPictures,
 } from "../boards/houseList";
 import { liveItems, type Board } from "../boards/model";
 import { publishProblemsOf } from "../boards/publish";
@@ -466,6 +467,10 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
       (full) => {
         if (editing !== null) {
           if (boardMatchesList(editing, full, deps.links)) {
+            // A draft from before the fix still names the editor's own photos,
+            // which the backend has swept since: the list's copies stand in.
+            const mended = withPublishedPictures(editing, full);
+            if (mended !== editing) deps.houseRepository.save(mended);
             markHouseSeen(editing.uid, full.updatedAt, deps.links);
             void navigate(houseBoardPath(editing.uid, list.id));
             return;

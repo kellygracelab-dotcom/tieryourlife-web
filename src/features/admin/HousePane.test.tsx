@@ -148,6 +148,27 @@ describe("HousePane: Edit by the list's revision", () => {
 
   // Content, 13.11.2026: the house list Fruit was fixed on the server, its
   // updatedAt stayed, and Edit opened the old board kept in the browser.
+  // Marketing, 20.11.2026: after Update the draft kept the editor's own
+  // photos, which the backend swept, and Edit opened it with empty cards.
+  it("mends a kept draft's own photos to the list's copies, keeping it unsent-free", async () => {
+    const own = `https://firebasestorage.googleapis.com/v0/b/bucket/o/${encodeURIComponent("users/ed/pictures/p9")}?alt=media`;
+    const board = setCategory(newBoard("mine", "Ramen", 1, uid), "film_tv", 1);
+    houseRepository.save({
+      ...addToPool(board, [{ title: "Tonkotsu", imageUrl: own, pictureId: "p9" }], 1, uid),
+      editedAt: 7,
+    });
+    linkToHouse("mine", "l1", links);
+    markHouseSent("mine", 7, links);
+    markHouseRevision("mine", 5, links);
+    open();
+    await editRamen();
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    const mended = houseRepository.get("mine")!;
+    expect(mended.items[0]).toMatchObject({ pictureId: null, imageUrl: feedCopy("l1", "p1") });
+    expect(mended.editedAt).toBe(7);
+    expect(hasUnsentEdits(mended, links)).toBe(false);
+  });
+
   it("opens the list as it stands once its revision moved on, whatever the times say", async () => {
     keep(true, 4);
     const router = open();
