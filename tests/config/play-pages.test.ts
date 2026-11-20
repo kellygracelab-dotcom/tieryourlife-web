@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 // Google Play links to these two pages, so they are copied from the backend
 // repository as they are. Changing one is a deliberate act: update the digest.
 const pages = {
-  "public/privacy.html": "97bfb241ba372e5bd7e2ea9cbe3f63db763e2e6155396e41bc61f5de2e43dc2b",
-  "public/delete-account.html": "3ab04c03a4cd5b3c17274fa3644517fc3ceb3e43ac702c2ceb20824e93139d41",
+  "public/privacy.html": "a546056818d2ff8520f891a07fad1fc4852be0943f3590fd89db795abeff609e",
+  "public/delete-account.html": "b93afaa0535ec10d9cde90540cedcb9d14bc2fa6989961b655249e00f03721d7",
 };
 
 const digestOf = (path: string) =>
