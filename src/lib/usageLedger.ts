@@ -1,7 +1,7 @@
 /**
  * The site's usage statistics as the browser keeps them between batches
  * (proxy CONTRACT.md, Usage statistics; the same ledger as the Android app's):
- * counts since the last batch, the newcomers' steps, and two local days to say
+ * counts since the last batch, the newcomers' steps, and two days to say
  * how long it has been. Nothing in it names the person, and the days never
  * leave the browser: only how many days have passed does.
  */
@@ -75,7 +75,7 @@ export interface UsageReferrer {
   utm: string;
 }
 
-/** Days are the browser's own local days, counted from 1970-01-01. */
+/** Days are UTC days, counted from 1970-01-01, as the server counts them. */
 export interface Ledger {
   firstDay: number;
   lastActiveDay: number | null;
@@ -113,11 +113,12 @@ const MAX_TYPE = 80;
 const MAX_PLACE = 120;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** The browser's local day of [at]. */
-export function dayOf(at: number): number {
-  const date = new Date(at);
-  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS);
-}
+/**
+ * The UTC day of [at]. The server counts a browser active once a UTC day
+ * (proxy CONTRACT.md, Usage statistics): a local day would send `active` in a
+ * UTC day that already had it, east of UTC, and the server would drop it.
+ */
+export const dayOf = (at: number): number => Math.floor(at / DAY_MS);
 
 /** The ISO week of a day, `2026-W47`. */
 export function isoWeekOf(day: number): string {

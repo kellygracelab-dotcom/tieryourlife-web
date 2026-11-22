@@ -29,11 +29,30 @@ describe("the usage ledger", () => {
     expect(isoWeekOf(dayOfDate("2024-12-30"))).toBe("2025-W01");
   });
 
-  it("counts days on the browser's own calendar", () => {
-    const noon = new Date(2026, 10, 20, 12).getTime();
-    const late = new Date(2026, 10, 20, 23, 59).getTime();
-    expect(dayOf(noon)).toBe(dayOf(late));
-    expect(dayOf(new Date(2026, 10, 21, 0, 1).getTime())).toBe(dayOf(noon) + 1);
+  it("counts UTC days as the server does, whatever the browser's time zone", () => {
+    expect(dayOf(Date.parse("2026-11-20T00:00:00Z"))).toBe(dayOfDate("2026-11-20"));
+    expect(dayOf(Date.parse("2026-11-20T23:59:59.999Z"))).toBe(dayOfDate("2026-11-20"));
+    // 22:10 UTC is the 21st in Kyiv: still the 20th for the server, and so here.
+    expect(dayOf(Date.parse("2026-11-21T00:10:00+02:00"))).toBe(dayOfDate("2026-11-20"));
+    expect(dayOf(Date.parse("2026-11-21T00:00:00Z"))).toBe(dayOfDate("2026-11-21"));
+  });
+
+  it("sends active once a UTC day, though the local day turned over in between", () => {
+    const at = (iso: string) => dayOf(Date.parse(iso));
+    // Kyiv, 00:10 on the 21st local = 22:10 UTC on the 20th, after a batch at 20:00 UTC.
+    const first = freshLedger(at("2026-11-20T20:00:00Z"), true, true);
+    const sent = after(
+      counted(first, "share.link"),
+      batchOf(counted(first, "share.link"), at("2026-11-20T20:00:00Z"), "v", null)!,
+      at("2026-11-20T20:00:00Z"),
+    );
+    expect(
+      batchOf(counted(sent, "share.link"), at("2026-11-21T00:10:00+02:00"), "v", null)!.active,
+    ).toBeUndefined();
+    // The next UTC day it goes again, a day after.
+    expect(batchOf(sent, at("2026-11-21T09:00:00+02:00"), "v", null)!.active).toMatchObject({
+      gap: 1,
+    });
   });
 
   it("starts a newcomer with its first launch waiting, and a returning browser with its steps behind it", () => {
