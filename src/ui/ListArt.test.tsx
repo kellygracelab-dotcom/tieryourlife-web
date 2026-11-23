@@ -212,4 +212,24 @@ describe("ListArt", () => {
     expect(tile.querySelector(".art__title")).toBeNull();
     expect(tile.querySelector(".art__bars")).toBeNull();
   });
+
+  it("asks for a first tile's pictures at once and before the rest, the others when near", () => {
+    const pictures = ["https://img/a.jpg", "https://img/b.jpg"];
+    const { container, rerender } = render(
+      <ListArt cover={null} previews={pictures} tierColors={[]} first />,
+    );
+    for (const img of Array.from(container.querySelectorAll("img"))) {
+      expect(img).toHaveAttribute("loading", "eager");
+      expect(img).toHaveAttribute("fetchpriority", "high");
+    }
+    rerender(<ListArt cover={null} previews={pictures} tierColors={[]} />);
+    for (const img of Array.from(container.querySelectorAll("img"))) {
+      expect(img).toHaveAttribute("loading", "lazy");
+      expect(img).not.toHaveAttribute("fetchpriority");
+    }
+    rerender(
+      <ListArt cover="https://img/c.jpg" previews={[]} collage={null} tierColors={[]} first />,
+    );
+    expect(container.querySelector("img")).toHaveAttribute("fetchpriority", "high");
+  });
 });

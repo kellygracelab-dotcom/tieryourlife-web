@@ -126,6 +126,28 @@ const collagePictures: CollageDeps = {
   load: async (url) =>
     (await fetchPictureBytes(url, undefined, undefined, bucketPictures.read, collageSizeOf))
       ?.bytes ?? null,
+  // Drawn once, then read: a bucket read is a tenth of a drawing.
+  shelf: {
+    read: async (path) => {
+      try {
+        const [bytes] = await getStorage().bucket().file(path).download();
+        return bytes;
+      } catch {
+        return null;
+      }
+    },
+    keep: async (path, folder, webp) => {
+      const bucket = getStorage().bucket();
+      await bucket.file(path).save(webp, {
+        contentType: "image/webp",
+        resumable: false,
+        metadata: { cacheControl: "public, max-age=31536000, immutable" },
+      });
+      // Only after the new one is in: a failed save must not leave the list without one.
+      const [files] = await bucket.getFiles({ prefix: folder });
+      await Promise.all(files.filter((file) => file.name !== path).map((file) => file.delete()));
+    },
+  },
 };
 
 const production: WebDeps = {
@@ -147,6 +169,12 @@ export const web = onRequest(
     timeoutSeconds: 30,
     // Drawing a share card holds the fonts, the layout engine and a few posters at once.
     memory: "512MiB",
+    // A whole processor, so one instance answers many requests at once: with
+    // a third of one it took one at a time, and a page of collages asked for
+    // together waited four seconds each (Danylo, 23.11: covers came slower).
+    // Drawing is limited inside (collage.ts), so memory holds.
+    cpu: 1,
+    concurrency: 16,
     // One kept warm: a cold start made the first Finish after a quiet hour
     // wait seconds, or fail with "no available instance". Danylo chose the
     // few dollars a month over that (30.10.2026).

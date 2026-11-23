@@ -5,6 +5,7 @@
  */
 
 import type { LookupAddress } from "node:dns";
+import { limiter } from "./limit";
 import { storedPublicMedia } from "./publicMedia";
 import { rasterType, storagePictures, type PictureDeps } from "./pictures";
 import { lookup } from "node:dns/promises";
@@ -444,6 +445,8 @@ export async function discardOlderCopies(
   return old.length;
 }
 
+const sharing = limiter(2);
+
 /**
  * The picture for one version of a list or a ranking: from the bucket when it
  * has been drawn before, drawn and kept otherwise. A copy that will not save
@@ -473,7 +476,8 @@ export async function shareImageFor(
     resolveHost,
     storagePictures(() => bucket).read,
   );
-  const png = await renderShareImage(data, pictures, fetchImpl);
+  // Fonts, layout and a few posters at once: two cards drawn at a time in one instance.
+  const png = await sharing(() => renderShareImage(data, pictures, fetchImpl));
   await file
     .save(png, {
       contentType: "image/png",

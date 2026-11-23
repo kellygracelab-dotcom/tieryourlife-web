@@ -16,6 +16,13 @@ import { useYours } from "./yours";
 import "../community/report.css";
 import "./feed.css";
 
+/**
+ * The cards a page opens on, about a row on a wide screen and the screenful
+ * on a phone: their pictures are asked for first (Danylo, 23.11: covers came
+ * slower). The rest wait until they are near.
+ */
+const FIRST_CARDS = 4;
+
 interface FeedGridProps {
   state: FeedState;
   label: string;
@@ -216,11 +223,12 @@ export function FeedGrid({
       )}
       {slots.length > 0 && (
         <ul className="feed" aria-label={label} ref={keepGrid}>
-          {shown.map(({ kind, list }) => (
+          {shown.map(({ kind, list }, at) => (
             <li key={list.id} data-list={list.id}>
               {kind === "card" ? (
                 <ListCard
                   list={list}
+                  first={at < FIRST_CARDS}
                   reason={reasonOf?.(list) ?? null}
                   fresh={freshIds?.has(list.id) === true}
                   yours={yours(list)}

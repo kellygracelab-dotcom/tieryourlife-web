@@ -994,6 +994,72 @@ describe("the router", () => {
     assert.equal(short.headers["Cache-Control"], "no-store");
   });
 
+  it("keeps a drawn collage and sends it again without drawing, but not one missing a picture", async () => {
+    const { default: sharp } = await import("sharp");
+    const { deps, table } = setup(null);
+    const red = await sharp({
+      create: { width: 60, height: 90, channels: 3, background: { r: 255, g: 0, b: 0 } },
+    })
+      .png()
+      .toBuffer();
+    let loads = 0;
+    const kept = new Map<string, Buffer>();
+    const withCollage: WebDeps = {
+      ...deps,
+      collage: {
+        load: async (url) => {
+          loads++;
+          return url.endsWith("broken.jpg") ? null : red;
+        },
+        shelf: {
+          read: async (path) => kept.get(path) ?? null,
+          keep: async (path, folder, webp) => {
+            kept.set(path, webp);
+            for (const name of [...kept.keys()]) {
+              if (name.startsWith(folder) && name !== path) kept.delete(name);
+            }
+          },
+        },
+      },
+    };
+    const previews = [1, 2, 3].map((n) => `https://image.tmdb.org/t/p/w500/${n}.jpg`);
+    table("publishedLists").set(LIST_ID, { ...LIST, coverImageUrl: null, previewImages: previews });
+    const first = await call(withCollage, "GET", `/img/collage/${LIST_ID}.webp`);
+    assert.equal(first.status, 200);
+    assert.equal(loads, 3);
+    assert.deepEqual(
+      [...kept.keys()].map((path) => path.startsWith(`share/c/${LIST_ID}/`)),
+      [true],
+    );
+    const again = await call(withCollage, "GET", `/img/collage/${LIST_ID}.webp`);
+    assert.equal(again.status, 200);
+    assert.equal(loads, 3);
+    assert.deepEqual(again.body, first.body);
+    assert.equal(
+      again.headers["Cache-Control"],
+      "public, max-age=31536000, s-maxage=60, immutable",
+    );
+
+    // Other pictures: drawn again and kept in place of the old one.
+    table("publishedLists").set(LIST_ID, { ...LIST, previewImages: previews.slice(0, 2) });
+    assert.equal((await call(withCollage, "GET", `/img/collage/${LIST_ID}.webp`)).status, 200);
+    assert.equal(loads, 5);
+    assert.equal(kept.size, 1);
+
+    // A picture that would not load: sent without it, not kept, tried again next time.
+    table("publishedLists").set(LIST_ID, {
+      ...LIST,
+      previewImages: [...previews, "https://x.example/broken.jpg"],
+    });
+    const before = [...kept.keys()];
+    assert.equal((await call(withCollage, "GET", `/img/collage/${LIST_ID}.webp`)).status, 200);
+    assert.deepEqual([...kept.keys()], before);
+
+    // Taken for review: the kept one is not sent.
+    table("publishedLists").set(LIST_ID, { ...LIST, previewImages: previews, underReview: true });
+    assert.equal((await call(withCollage, "GET", `/img/collage/${LIST_ID}.webp`)).status, 404);
+  });
+
   it("draws no collage for a list missing, under review, with a cover or with one preview", async () => {
     const { deps, table } = setup(null);
     let loads = 0;

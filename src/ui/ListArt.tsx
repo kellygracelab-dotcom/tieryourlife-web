@@ -28,6 +28,11 @@ interface ListArtProps {
    * own, or every card without pictures is read as "No picture" and its title.
    */
   decorative?: boolean;
+  /**
+   * One of the first tiles the page opens on: its pictures are asked for at
+   * once and before the rest, not when the browser gets round to lazy ones.
+   */
+  first?: boolean;
 }
 
 const MOSAIC_MAX = 6;
@@ -45,7 +50,11 @@ export function ListArt({
   tierColors,
   title,
   decorative = false,
+  first = false,
 }: ListArtProps) {
+  const asked = first
+    ? ({ loading: "eager", fetchPriority: "high" } as const)
+    : ({ loading: "lazy" } as const);
   // Each picture shows once it has come (a short fade); until then, and for
   // good when it fails, its place is the tile's one quiet surface, no frame and
   // no gap, with one soft shimmer over the whole tile while any is on its way
@@ -77,7 +86,7 @@ export function ListArt({
           className={cellClass(key, "art__picture")}
           src={cover}
           focus={focus}
-          loading="lazy"
+          {...asked}
           onLoad={add(setLoaded, key)}
           onError={add(setBroken, key)}
         />
@@ -95,7 +104,7 @@ export function ListArt({
           className={cellClass(key, "art__picture")}
           src={collage}
           focus={null}
-          loading="lazy"
+          {...asked}
           onLoad={add(setLoaded, key)}
           onError={() => setCollageFailed(collage)}
         />
@@ -116,7 +125,7 @@ export function ListArt({
             className={cellClass(key, "art__cell")}
             src={url}
             focus={cell}
-            loading="lazy"
+            {...asked}
             onLoad={add(setLoaded, key)}
             onError={add(setBroken, key)}
           />

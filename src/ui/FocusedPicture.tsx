@@ -12,6 +12,8 @@ interface FocusedPictureProps {
   className?: string;
   alt?: string;
   loading?: "lazy" | "eager";
+  /** A picture the page opens on: asked for before the others. */
+  fetchPriority?: "high" | "low" | "auto";
   draggable?: boolean;
   onLoad?: () => void;
   onError?: () => void;
@@ -35,6 +37,7 @@ function Placed({
   className,
   alt = "",
   loading,
+  fetchPriority,
   draggable,
   onLoad,
   onError,
@@ -96,6 +99,7 @@ function Placed({
         srcSet={srcSet}
         alt={alt}
         loading={loading}
+        fetchPriority={fetchPriority}
         draggable={draggable}
         ref={picture}
         onError={onError}
