@@ -147,6 +147,7 @@ import "../features/editor/owner.css";
 import "../features/editor/editor.css";
 import "./BoardPage.css";
 import { siteOrigin } from "../lib/links";
+import { cardLabel } from "../lib/cardText";
 import {
   boardMade,
   cardAdded,
@@ -795,7 +796,7 @@ function OpenBoard({
     if (card === undefined) return;
     keep(removeItem(current, itemUid, now()));
     setNotice({
-      text: fill(strings.boards.cardTrashed, { name: card.title }),
+      text: fill(strings.boards.cardTrashed, { name: cardLabel(card.title) }),
       action: {
         text: strings.boards.undo,
         onClick: () => {
@@ -820,7 +821,8 @@ function OpenBoard({
     const key = action.key;
     const taken = key !== undefined && current.items.some((it) => it.uid === key);
     const cardUid = key !== undefined && !taken ? key : nextUid();
-    const title = action.title.length > 0 ? action.title : strings.new.unnamed;
+    // A card with a picture may have no name (cardText): its notice says "Card".
+    const title = action.title.trim();
     const added = addToPool(
       current,
       [
@@ -847,7 +849,7 @@ function OpenBoard({
     cardAdded();
     setFreshUid(cardUid);
     setNotice({
-      text: fill(strings.link.added, { name: title }),
+      text: fill(strings.link.added, { name: cardLabel(title) }),
       action: {
         text: strings.boards.undo,
         onClick: () => {
@@ -1030,7 +1032,7 @@ function OpenBoard({
         if (file !== undefined) ownPicture();
         else pictureFromLink();
         setNotice({
-          text: fill(strings.link.changed, { name: before.title }),
+          text: fill(strings.link.changed, { name: cardLabel(before.title) }),
           action: {
             text: strings.boards.undo,
             onClick: () => {

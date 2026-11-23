@@ -16,6 +16,7 @@ import { PICTURE_CREDIT_LIMIT, creditOf } from "../../api/pictureCredit";
 export { creditOf } from "../../api/pictureCredit";
 import { roundedFocus, sameFocus, type CoverFocus } from "../../lib/coverFocus";
 import { holds } from "../../lib/locale";
+import { hasPicture } from "../../lib/cardText";
 import { currentLocale } from "../../strings";
 
 /**
@@ -606,7 +607,8 @@ export function addToPool(
   let position = itemsIn(board, pool.uid).length;
   const added: BoardItem[] = taken.flatMap((draft) => {
     const title = clip(draft.title, BOARD_LIMITS.title).trim();
-    if (title.length === 0) return [];
+    // A card with a picture may have no name; one without needs one.
+    if (title.length === 0 && !hasPicture(draft)) return [];
     return [
       {
         uid: nextUid(),
@@ -731,12 +733,14 @@ export function setPictureFocus(
 
 /**
  * Another name on a card, within the length a card is made with: its picture
- * and its place stay. A name emptied keeps the old one, as a list's does.
+ * and its place stay. A card with a picture may lose its name and show the
+ * picture alone; one without keeps the old name when it is emptied.
  */
 export function renameItem(board: Board, itemUid: string, title: string, now: number): Board {
   const card = board.items.find((item) => item.uid === itemUid && item.deletedAt === null);
-  const next = clip(title, BOARD_LIMITS.title);
-  if (card === undefined || next === "" || next === card.title) return board;
+  const next = clip(title, BOARD_LIMITS.title).trim();
+  if (card === undefined || next === card.title) return board;
+  if (next === "" && !hasPicture(card)) return board;
   return touched(
     {
       ...board,

@@ -1,5 +1,6 @@
 import { focusOf, type CoverFocus } from "./coverFocus";
 import type { AccountAction, ApiClient } from "./client";
+import { cardTitleOf } from "./cardTitle";
 import {
   attributionField,
   catalogueCreditOf,
@@ -95,7 +96,8 @@ export const itemsOf = (items: unknown): PublishedItem[] =>
         const pictureFocus = imageUrl === null ? null : focusOf(sent);
         return {
           ...card,
-          title: textOf(card.title),
+          // An old default name on a card with a picture is none (cardText).
+          title: cardTitleOf(textOf(card.title), imageUrl !== null),
           imageUrl,
           ...attributionField(imageUrl, attribution),
           ...(pictureFocus === null ? {} : { pictureFocus }),

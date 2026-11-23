@@ -298,6 +298,8 @@ export function withPublishedPictures(board: Board, list: PublishedList): Board 
   const byTitle = new Map<string, PublishedList["items"][number] | null>();
   for (const one of list.items) {
     const key = one.title;
+    // Cards with only a picture have no name to be found by: their place finds them.
+    if (key.trim() === "") continue;
     byTitle.set(key, byTitle.has(key) ? null : one);
   }
   const moved = new Map<string, string>();

@@ -324,7 +324,6 @@ const tr: Translation = {
     addAsName: "“{name}” kart olarak ekle",
     pickHint: "Eklemek için bir sonuca tıkla. Enter, “{name}” kartını yalnızca adıyla ekler.",
     add: "Ekle",
-    unnamed: "Başlıksız kart",
     noCardsYet: "Henüz kart yok. Katalogda arayın ya da bir ad yazıp Enter’a basın.",
     tiers: "Seviyeler",
     addTier: "Seviye ekle",
@@ -679,7 +678,8 @@ const tr: Translation = {
       one: "Yüklediğiniz görsele ad verin",
       other: "Yüklediğiniz {n} görsele ad verin",
     },
-    nameHint: "Boş bırakılırsa kartın adı “{untitled}” olur.",
+    unnamed: "Kart",
+    nameHint: "Boş bırakılırsa kartta yalnızca resmi görünür.",
     nameDone: "Tamam",
   },
   android: {

@@ -12,6 +12,7 @@ import { duelText, gameName, secondLine } from "./labels";
 import { lessMotion, SIDEWAYS, useMedia } from "./media";
 import { useFitText } from "./useFitText";
 import "./play.css";
+import { cardLabel, isNamed } from "../../lib/cardText";
 
 /**
  * The design's timing of a pick: the chosen card grows and wears its ring
@@ -104,7 +105,7 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
   const pair = useMemo(() => currentPair(shown), [shown]);
   const progress = useMemo(() => gameProgress(shown), [shown]);
   const over = pair === null;
-  const nameOf = (card: number) => cardOf(board, shown.ids[card] ?? "").name;
+  const nameOf = (card: number) => cardLabel(cardOf(board, shown.ids[card] ?? "").name);
 
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const later = (ms: number, then: () => void) => {
@@ -368,7 +369,7 @@ function Slot({ card, keycap, state, leaving, onPick }: SlotProps) {
       <button
         type="button"
         className={`duel-card duel-card--${state}${pictured ? "" : " duel-card--text"}`}
-        aria-label={fill(strings.play.pick, { name: card.name })}
+        aria-label={fill(strings.play.pick, { name: cardLabel(card.name) })}
         onClick={onPick}
       >
         {card.imageUrl !== null ? (
@@ -382,7 +383,7 @@ function Slot({ card, keycap, state, leaving, onPick }: SlotProps) {
           </span>
         )}
       </button>
-      {pictured && (
+      {pictured && isNamed(card.name) && (
         <p className="duel-card__name" aria-hidden="true">
           {card.name}
         </p>

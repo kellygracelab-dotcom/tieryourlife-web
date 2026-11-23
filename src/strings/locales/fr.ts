@@ -341,7 +341,6 @@ const fr: Translation = {
     pickHint:
       "Cliquez sur un résultat pour l’ajouter. Entrée ajoute « {name} » comme carte avec son seul nom.",
     add: "Ajouter",
-    unnamed: "Carte sans titre",
     noCardsYet:
       "Aucune carte pour l’instant. Cherchez dans le catalogue ou tapez un nom et appuyez sur Entrée.",
     tiers: "Rangs",
@@ -726,7 +725,8 @@ const fr: Translation = {
       many: "Nommez les {n} images importées",
       other: "Nommez les {n} images importées",
     },
-    nameHint: "Laissée vide, la carte s’appelle « {untitled} ».",
+    unnamed: "Carte",
+    nameHint: "Laissée vide, la carte ne montre que son image.",
     nameDone: "Terminé",
   },
   android: {

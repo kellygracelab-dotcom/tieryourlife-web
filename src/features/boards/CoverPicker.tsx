@@ -28,6 +28,7 @@ import {
 } from "./model";
 import "./boards.css";
 import "./publishing.css";
+import { cardLabel } from "../../lib/cardText";
 
 const MAX_COVER = 6;
 
@@ -36,7 +37,7 @@ function cardPictures(board: Board): Map<string, string> {
   const pictures = new Map<string, string>();
   for (const card of liveItems(board)) {
     const picture = pictureOfCard(card);
-    if (picture !== null && !pictures.has(picture)) pictures.set(picture, card.title);
+    if (picture !== null && !pictures.has(picture)) pictures.set(picture, cardLabel(card.title));
   }
   return pictures;
 }

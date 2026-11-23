@@ -329,7 +329,6 @@ const de: Translation = {
     pickHint:
       "Klicke auf ein Ergebnis, um es hinzuzufügen. Enter fügt „{name}“ als Karte nur mit Namen hinzu.",
     add: "Hinzufügen",
-    unnamed: "Unbenannte Karte",
     noCardsYet: "Noch keine Karten. Such im Katalog oder tipp einen Namen und drück Enter.",
     tiers: "Stufen",
     addTier: "Stufe hinzufügen",
@@ -696,7 +695,8 @@ const de: Translation = {
       one: "Gib dem hochgeladenen Bild einen Namen",
       other: "Gib den {n} hochgeladenen Bildern Namen",
     },
-    nameHint: "Bleibt das Feld leer, heißt die Karte „{untitled}“.",
+    unnamed: "Karte",
+    nameHint: "Bleibt das Feld leer, zeigt die Karte nur ihr Bild.",
     nameDone: "Fertig",
   },
   android: {

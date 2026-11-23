@@ -10,6 +10,7 @@ import { useBrokenPicture } from "../../ui/useBrokenPicture";
 import { CardName } from "./CardName";
 import type { BoardSize } from "./nameFit";
 import { shownLight } from "../../lib/tierColour";
+import { cardLabel, isNamed } from "../../lib/cardText";
 
 /** Where the device keeps whether the pool shows one card at a time; it is not synced. */
 export const ONE_BY_ONE_KEY = "tyl.board.oneByOne";
@@ -87,7 +88,12 @@ export function OneByOne({
         {/* The name and Skip, a word beside it (artboard 18), over the tiers. */}
         <div className="one__head">
           <p className="one__name" aria-live="polite">
-            <bdi>{card.title}</bdi>
+            {isNamed(card.title) ? (
+              <bdi>{card.title}</bdi>
+            ) : (
+              // A card with only a picture shows no name; a screen reader still hears one.
+              <span className="visually-hidden">{cardLabel(card.title)}</span>
+            )}
           </p>
           <button
             type="button"
@@ -119,7 +125,10 @@ export function OneByOne({
                     "--band-dark": tier.colorDark,
                   } as CSSProperties
                 }
-                aria-label={fill(strings.rank.placeIn, { name: card.title, tier: where })}
+                aria-label={fill(strings.rank.placeIn, {
+                  name: cardLabel(card.title),
+                  tier: where,
+                })}
                 aria-current={placedIn === index ? "true" : undefined}
                 aria-keyshortcuts={index < keys ? String(index + 1) : undefined}
                 title={where}

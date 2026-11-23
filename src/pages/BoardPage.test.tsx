@@ -320,7 +320,8 @@ describe("BoardPage", () => {
     const field = await screen.findByRole("textbox", { name: "Card name" });
     const card = () =>
       liveItems(repository.get("films")!).find((item) => item.pictureId === "garden.png");
-    expect(card()?.title).toBe("Untitled card");
+    // A picture alone, no name until one is given (Danylo, 23.11).
+    expect(card()?.title).toBe("");
     await userEvent.type(field, "Grandma's garden{Enter}");
     expect(card()?.title).toBe("Grandma's garden");
     expect(screen.queryByRole("textbox", { name: "Card name" })).toBeNull();

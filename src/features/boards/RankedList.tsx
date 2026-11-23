@@ -11,6 +11,7 @@ import { RenameCard } from "../tierboard/RenameCard";
 import { itemsIn, liveItems, poolTier, rankedTiers, type Board, type BoardItem } from "./model";
 import "./boards.css";
 import { shownLight } from "../../lib/tierColour";
+import { cardLabel, hasPicture } from "../../lib/cardText";
 
 interface RankedListProps {
   board: Board;
@@ -146,7 +147,11 @@ export function RankedList({ board, onMove, onRemove, onRename, onCredit }: Rank
           {rows.map(({ tier, item }, index) =>
             row(
               item,
-              fill(strings.boards.rankedRow, { n: index + 1, name: item.title, tier: tier.label }),
+              fill(strings.boards.rankedRow, {
+                n: index + 1,
+                name: cardLabel(item.title),
+                tier: tier.label,
+              }),
               <>
                 <span className="ranked__number">{index + 1}</span>
                 <Poster item={item} />
@@ -189,7 +194,7 @@ export function RankedList({ board, onMove, onRemove, onRename, onCredit }: Rank
             {unranked.map((item) =>
               row(
                 item,
-                item.title,
+                cardLabel(item.title),
                 <>
                   <Poster item={item} />
                   <span className="ranked__title">{item.title}</span>
@@ -201,7 +206,7 @@ export function RankedList({ board, onMove, onRemove, onRename, onCredit }: Rank
       )}
       {credited !== null && (
         <AboutPicture
-          name={credited.title}
+          name={cardLabel(credited.title)}
           attribution={credited.attribution}
           credit={credited.credit}
           editing={
@@ -220,7 +225,7 @@ export function RankedList({ board, onMove, onRemove, onRename, onCredit }: Rank
       )}
       {chosen !== undefined && (
         <MoveSheet
-          name={chosen.title}
+          name={cardLabel(chosen.title)}
           onAbout={
             chosen.imageUrl !== null && (hasAbout(chosen) || onCredit !== undefined)
               ? () => {
@@ -260,6 +265,7 @@ export function RankedList({ board, onMove, onRemove, onRename, onCredit }: Rank
       {renaming !== null && onRename !== undefined && (
         <RenameCard
           name={renaming.title}
+          pictured={hasPicture(renaming)}
           onRename={(title) => onRename(renaming.uid, title)}
           onClose={() => setRenaming(null)}
         />

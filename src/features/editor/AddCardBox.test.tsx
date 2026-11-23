@@ -629,8 +629,8 @@ describe("AddCardBox", () => {
 
     const first = within(names).getByRole("textbox", { name: "Card name 1" });
     expect(first).toHaveFocus();
-    expect(first).toHaveAttribute("placeholder", "Untitled card");
-    expect(names).toHaveTextContent("Left empty, a card is called “Untitled card”.");
+    expect(first).not.toHaveAttribute("placeholder");
+    expect(names).toHaveTextContent("Left empty, the card shows only its picture.");
     await userEvent.type(first, "  Grandma's garden {Enter}");
     expect(onRename).toHaveBeenCalledWith(keys[0], "Grandma's garden");
     // Enter goes on to the next; left empty, its card keeps its name.

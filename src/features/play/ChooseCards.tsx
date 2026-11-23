@@ -12,6 +12,7 @@ import { PlaySheet, SheetCancel } from "./PlaySheet";
 import { SheetArrival } from "./sheet";
 import "../tierboard/board.css";
 import { shownLight } from "../../lib/tierColour";
+import { cardLabel } from "../../lib/cardText";
 
 interface ChooseCardsProps {
   board: PlayBoard;
@@ -326,7 +327,7 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
             <summary>{plural(strings.play.picked, sample.length)}</summary>
             <ul>
               {sample.map((card) => (
-                <li key={card}>{board.cards.get(card)?.name}</li>
+                <li key={card}>{cardLabel(board.cards.get(card)?.name ?? "")}</li>
               ))}
             </ul>
           </details>
@@ -491,7 +492,11 @@ function PickCards({ board, ids: from, where, initial, onBack, onDone, onCancel 
                     onChange={(event) => flip(card.id, event.target.checked)}
                   />
                   {card.imageUrl !== null ? (
-                    <MediaImage {...sizedFor(card.imageUrl, 64)} alt={card.name} loading="lazy" />
+                    <MediaImage
+                      {...sizedFor(card.imageUrl, 64)}
+                      alt={cardLabel(card.name)}
+                      loading="lazy"
+                    />
                   ) : (
                     <CardName title={card.name} board={size} />
                   )}

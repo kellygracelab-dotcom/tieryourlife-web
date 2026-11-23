@@ -1,4 +1,5 @@
 import { itemsIn, poolTier, rankedTiers, type Board } from "./model";
+import { cardLabel } from "../../lib/cardText";
 
 /** The words the listing needs, handed in so this stays free of the dictionaries. */
 export interface ExportWords {
@@ -49,13 +50,13 @@ export function exportText(boards: readonly Board[], words: ExportWords): string
       );
       const items = itemsIn(board, tier.uid);
       if (items.length === 0) lines.push(`  ${words.tierEmpty}`);
-      else items.forEach((item, i) => lines.push(`  ${i + 1}. ${item.title}`));
+      else items.forEach((item, i) => lines.push(`  ${i + 1}. ${cardLabel(item.title)}`));
     }
     const pool = poolTier(board);
     const waiting = pool === null ? [] : itemsIn(board, pool.uid);
     if (waiting.length > 0) {
       lines.push(words.unrankedHeading);
-      for (const item of waiting) lines.push(`  ${item.title}`);
+      for (const item of waiting) lines.push(`  ${cardLabel(item.title)}`);
     }
     if (index !== boards.length - 1) lines.push("");
   });

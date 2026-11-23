@@ -82,7 +82,8 @@ export function DraftCard({
   const fromLink = source.kind === "link";
   const page = fromLink ? pageLinkOf(draft.page) : null;
   const badPage = fromLink && draft.page.trim() !== "" && page === null;
-  const canAdd = ready && named && !guest;
+  // A card with its picture needs no name (Danylo, 23.11); without one it does.
+  const canAdd = ready && !guest;
   // A busy site's Try again waits for the time it gave.
   const busyUntil = picture.status === "failed" ? picture.busyUntil : undefined;
   const [waited, setWaited] = useState<number | null>(null);

@@ -6,6 +6,7 @@ import { useModal } from "../../ui/useModal";
 import { cardOf, type PlayBoard } from "./board";
 import "./play.css";
 import { shownLight } from "../../lib/tierColour";
+import { cardLabel } from "../../lib/cardText";
 
 /** How many tiers the window draws; the rest are counted under them. */
 const TIERS_SHOWN = 3;
@@ -107,7 +108,7 @@ export function GameReady({ ready, board, onShare, rankings, onClose, onAgain }:
                       key={id}
                       className="game-ready__card"
                       src={card.imageUrl}
-                      alt={card.name}
+                      alt={cardLabel(card.name)}
                     />
                   );
                 })}

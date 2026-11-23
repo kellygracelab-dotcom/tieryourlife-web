@@ -323,7 +323,6 @@ export const en = {
     addAsName: "Add “{name}” as a card",
     pickHint: "Click a result to add it. Enter adds “{name}” as a card with just a name.",
     add: "Add",
-    unnamed: "Untitled card",
     noCardsYet: "No cards yet. Search the catalogue or type a name and press Enter.",
     tiers: "Tiers",
     // The phone app's names for the five tiers a new list starts with.
@@ -1724,7 +1723,9 @@ export const en = {
       one: "Name the picture you uploaded",
       other: "Name the {n} pictures you uploaded",
     },
-    nameHint: "Left empty, a card is called “{untitled}”.",
+    // Where words are needed for a card with only a picture: a screen reader, a menu, a notice.
+    unnamed: "Card",
+    nameHint: "Left empty, the card shows only its picture.",
     nameDone: "Done",
   },
   // A picture from a link, a paste or a drop, and who made a picture

@@ -36,6 +36,25 @@ describe("ReadOnlyBoard", () => {
     expect(board.querySelector(".tier")).toHaveStyle({ "--band-light": "#b03a32" });
   });
 
+  it("shows a card with no name as its picture alone, and calls it Card to a screen reader", () => {
+    render(
+      <ReadOnlyBoard
+        label="Author's version"
+        tiers={tiers}
+        items={[{ title: "", imageUrl: "https://img/garden.jpg", tierIndex: 0 }]}
+        rows={[[0], []]}
+        pool={[]}
+      />,
+    );
+    const s = screen.getByRole("list", { name: "S" });
+    expect(within(s).getByRole("img", { name: "Card" })).toHaveAttribute(
+      "src",
+      "https://img/garden.jpg",
+    );
+    expect(s.querySelector(".tile__caption")?.textContent ?? "").toBe("");
+    expect(s).not.toHaveTextContent("Untitled");
+  });
+
   it("shows what was left unranked under the tiers", () => {
     render(
       <ReadOnlyBoard label="Yours" tiers={tiers} items={items} rows={[[0], [1]]} pool={[2]} />,

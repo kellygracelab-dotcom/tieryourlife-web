@@ -43,6 +43,7 @@ import { kindName, scopeName, scopesFrom, sourceName } from "./pictureNames";
 import { PictureTile } from "./PictureTile";
 import { usePictures, type FindPictures } from "./usePictures";
 import { picturePicked } from "../../lib/usageEvents";
+import { cardLabel } from "../../lib/cardText";
 
 /** What a paste of many lines came to: how many cards, and those without a picture, and why. */
 export interface PasteOutcome {
@@ -268,7 +269,7 @@ function CheckRow({
 }) {
   const [broken, setBroken] = useState<string | null>(null);
   const { title, imageUrl } = row.card;
-  const name = title || strings.new.unnamed;
+  const name = cardLabel(title);
   const line = lineOf(row, area);
   const shown = imageUrl !== null && broken !== imageUrl;
   return (
@@ -757,7 +758,7 @@ export function PasteNote({
           <ul className="cards__paste-missing">
             {outcome.missing.map(({ title, reason }, index) => (
               <li key={`${index}-${title}`}>
-                <span className="cards__paste-missing-name">{title || strings.new.unnamed}</span>
+                <span className="cards__paste-missing-name">{cardLabel(title)}</span>
                 <span className="cards__paste-missing-why">{missText(reason)}</span>
               </li>
             ))}
@@ -772,7 +773,7 @@ export function PasteNote({
           </p>
           <ul className="cards__paste-missing">
             {outcome.pageless.map((title, index) => (
-              <li key={`${index}-${title}`}>{title || strings.new.unnamed}</li>
+              <li key={`${index}-${title}`}>{cardLabel(title)}</li>
             ))}
           </ul>
           <p className="cards__note">{strings.link.pagelessHint}</p>

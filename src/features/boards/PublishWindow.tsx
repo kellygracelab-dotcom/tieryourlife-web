@@ -54,6 +54,7 @@ import {
 } from "./usePublication";
 import "./boards.css";
 import "./publishing.css";
+import { cardLabel } from "../../lib/cardText";
 
 export interface PublishWindowProps {
   board: Board;
@@ -99,11 +100,10 @@ function failureOf(failure: PublishFailure, board: Board): string {
   if (failure.error.kind === "invalid" && failure.error.code === "TOPIC_UNAVAILABLE") {
     return strings.boards.topicUnavailable;
   }
-  return failureText(
-    failure.error,
-    failure.on === "update" ? "edit" : "new",
-    (url) => liveItems(board).find((item) => item.imageUrl === url)?.title ?? null,
-  );
+  return failureText(failure.error, failure.on === "update" ? "edit" : "new", (url) => {
+    const card = liveItems(board).find((item) => item.imageUrl === url);
+    return card === undefined ? null : cardLabel(card.title);
+  });
 }
 
 /** What keeps the board from going out, the first reason in the phone's order; null when nothing does. */

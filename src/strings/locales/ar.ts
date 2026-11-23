@@ -381,7 +381,6 @@ const ar: Translation = {
     addAsName: "إضافة «{name}» كبطاقة",
     pickHint: "انقر على نتيجة لإضافتها. يضيف Enter «{name}» كبطاقة بالاسم فقط.",
     add: "إضافة",
-    unnamed: "بطاقة بلا عنوان",
     noCardsYet: "لا بطاقات بعد. ابحث في الفهرس أو اكتب اسمًا واضغط Enter.",
     tiers: "المستويات",
     addTier: "إضافة مستوى",
@@ -790,7 +789,8 @@ const ar: Translation = {
       many: "سمِّ الصور الـ{n} التي رفعتها",
       other: "سمِّ الصور الـ{n} التي رفعتها",
     },
-    nameHint: "إن تُرك الاسم فارغًا، تُسمّى البطاقة «{untitled}».",
+    unnamed: "بطاقة",
+    nameHint: "إن تُرك الاسم فارغًا، تظهر البطاقة بصورتها فقط.",
     nameDone: "تم",
   },
   android: {
