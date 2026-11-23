@@ -1476,7 +1476,11 @@ describe("syncBoards", () => {
     expect(isBehind(repository.get("a")!)).toBe(false);
     await run();
     // Changed after the list went out: Update has that change to send.
-    expect(repository.get("a")).toMatchObject({ editedAt: 900, publishedEditedAt: 800 });
+    expect(repository.get("a")).toMatchObject({
+      editedAt: 900,
+      publishedEditedAt: 800,
+      publishedEditedAtGuessed: true,
+    });
     expect(isBehind(repository.get("a")!)).toBe(true);
     // Not changed since: as sent.
     expect(repository.get("b")).toMatchObject({ editedAt: 700, publishedEditedAt: 700 });
@@ -1502,6 +1506,9 @@ describe("syncBoards", () => {
     // Two cards here, one went out: Update. The same two: as sent.
     expect(isBehind(repository.get("a")!)).toBe(true);
     expect(isBehind(repository.get("b")!)).toBe(false);
+    // Only the time taken from the list is a guess, for the board's page to check.
+    expect(repository.get("a")?.publishedEditedAtGuessed).toBeUndefined();
+    expect(repository.get("b")?.publishedEditedAtGuessed).toBe(true);
   });
 
   it("holds a board that gets its list back when the account says that list waits", async () => {

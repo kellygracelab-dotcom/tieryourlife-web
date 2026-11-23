@@ -37,6 +37,10 @@ import {
   setPictureFocus,
   cardFocusByPicture,
   setFavourite,
+  setPublished,
+  setRanking,
+  sentAsItIs,
+  isBehind,
   setTopic,
   shouldGroup,
   takeFavourite,
@@ -980,5 +984,27 @@ describe("a card's focus", () => {
     expect(renameItem(named, "nobody", "New", 9)).toBe(named);
     const gone = removeItem(named, card!.uid, 9);
     expect(renameItem(gone, card!.uid, "New", 10)).toBe(gone);
+  });
+});
+
+describe("a sending time guessed from the list", () => {
+  const guessed = () => ({
+    ...newBoard("g", "Games", 1000, () => "t"),
+    publishedId: "L1",
+    editedAt: 6500,
+    publishedEditedAt: 1000,
+    publishedEditedAtGuessed: true as const,
+  });
+
+  it("is the board's own once the list shows the board as it is", () => {
+    const settled = sentAsItIs(guessed());
+    expect(settled.publishedEditedAt).toBe(6500);
+    expect(settled.publishedEditedAtGuessed).toBeUndefined();
+    expect(isBehind(settled)).toBe(false);
+  });
+
+  it("is known, not guessed, once the board is sent from here", () => {
+    expect(setPublished(guessed(), "L1", "Danylo", 7000).publishedEditedAtGuessed).toBeUndefined();
+    expect(setRanking(guessed(), "L2", 7000).publishedEditedAtGuessed).toBeUndefined();
   });
 });

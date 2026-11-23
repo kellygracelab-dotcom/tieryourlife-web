@@ -9,9 +9,9 @@ import { routes } from "../app/routes";
 import { SessionContext, type Session } from "../app/session";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
-import { itemsIn, newBoard, poolTier, rankedTiers } from "../features/boards/model";
+import { addToPool, itemsIn, newBoard, poolTier, rankedTiers } from "../features/boards/model";
 import { boards } from "../features/boards/owners";
-import { boardFromList } from "../features/boards/publish";
+import { boardFromList, publishRequestOf } from "../features/boards/publish";
 import { AS_COMMUNITY } from "../features/boards/ownList";
 import { EVERYTHING } from "../features/play/chosen";
 import { newGame } from "../features/play/game";
@@ -1308,6 +1308,37 @@ describe("ListPage for its author", () => {
     openAs(author, undefined, { pathname: "/l/abc", state: AS_COMMUNITY });
     await screen.findByRole("heading", { level: 1 });
     expect(screen.queryByText(/Changes not published yet/)).toBeNull();
+  });
+
+  // QA, 23.11: the time of a board from the account is guessed from its list,
+  // and read as behind though the list shows the board as it is.
+  it("says nothing of changes when the list shows a board from the account as it is", async () => {
+    const made = addToPool(
+      { ...newBoard("b1", "Every A24 film", 1, () => "t"), category: "film_tv" },
+      [{ title: "Heat", imageUrl: null }],
+      1,
+      () => "c1",
+    );
+    const board = {
+      ...made,
+      publishedId: "abc",
+      editedAt: 6500,
+      publishedEditedAt: 1000,
+      publishedEditedAtGuessed: true as const,
+    };
+    boards.save(board);
+    const request = publishRequestOf(board)!;
+    mocks.loadList.mockResolvedValue({
+      ...list,
+      title: request.title,
+      category: request.category,
+      tiers: request.tiers,
+      items: request.items.map(({ title, tierIndex }) => ({ title, imageUrl: null, tierIndex })),
+    });
+    openAs(author, undefined, { pathname: "/l/abc", state: AS_COMMUNITY });
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByText(/Changes not published yet/)).toBeNull();
+    await waitFor(() => expect(boards.get("b1")?.publishedEditedAt).toBe(6500));
   });
 
   it("waits to know who is here before it shows a list a board here published", async () => {

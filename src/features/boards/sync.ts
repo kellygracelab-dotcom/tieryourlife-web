@@ -967,10 +967,14 @@ async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
     // Other cards than went out are a change to send whenever the list went
     // out: someone may have put the list out again since from its old cards.
     const differs = entry.itemCount !== undefined && entry.itemCount !== liveItems(board).length;
-    const dated = {
-      ...board,
-      publishedEditedAt: differs ? board.editedAt - 1 : Math.min(board.editedAt, entry.updatedAt),
-    };
+    // Otherwise a guess, which the board's page checks against the list.
+    const dated: Board = differs
+      ? { ...board, publishedEditedAt: board.editedAt - 1 }
+      : {
+          ...board,
+          publishedEditedAt: Math.min(board.editedAt, entry.updatedAt),
+          publishedEditedAtGuessed: true,
+        };
     if (at === -1) changed.push(dated);
     else changed[at] = dated;
   }
@@ -985,6 +989,7 @@ async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
           ...board,
           publishedId: entry.id,
           publishedEditedAt: Math.min(board.editedAt, entry.updatedAt),
+          publishedEditedAtGuessed: true,
         },
         entry.underReview === true,
       ),

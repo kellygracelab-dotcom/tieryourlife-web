@@ -323,6 +323,7 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
     ...(favouriteChangedAt === null ? {} : { favouriteChangedAt }),
     arrivedFrom: text(source.arrivedFrom),
     publishedEditedAt: time(source.publishedEditedAt),
+    ...(source.publishedEditedAtGuessed === true ? { publishedEditedAtGuessed: true } : {}),
     topic: topicOf(source.topic),
     ...(source.topicOff === true ? { topicOff: true } : {}),
     ...(source.heldForReview === true ? { heldForReview: true } : {}),

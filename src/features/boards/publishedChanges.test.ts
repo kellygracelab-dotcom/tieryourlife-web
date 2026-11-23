@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { PublishedList } from "../../api/types";
-import { addToPool, liveItems, moveItem, newBoard, rankedTiers, type Board } from "./model";
-import { changesAgainst } from "./publishedChanges";
+import { addToPool, liveItems, moveItem, newBoard, rankedTiers, rename, type Board } from "./model";
+import { publishRequestOf } from "./publish";
+import { changesAgainst, sameAsPublished } from "./publishedChanges";
 
 const uids = () => {
   let n = 0;
@@ -53,5 +54,56 @@ describe("changesAgainst", () => {
         ]),
       ),
     ).toBe(3);
+  });
+});
+
+/** The list as a publish of the board would have made it, pictures under other addresses. */
+const published = (b: Board): PublishedList => {
+  const request = publishRequestOf(b)!;
+  return {
+    title: request.title,
+    category: request.category,
+    tiers: request.tiers,
+    items: request.items.map((item) => ({
+      title: item.title,
+      imageUrl:
+        item.imageUrl === null && item.pictureId === null ? null : "https://copy/w-hash_p_1.webp",
+      tierIndex: item.tierIndex,
+    })),
+  } as unknown as PublishedList;
+};
+
+describe("sameAsPublished", () => {
+  const out = (): Board => ({ ...board(), category: "film_tv" });
+
+  it("says so when the list shows the board, whatever addresses its pictures have", () => {
+    const b = out();
+    const pictured = {
+      ...b,
+      items: b.items.map((item) => ({ ...item, imageUrl: `https://elsewhere/${item.title}.jpg` })),
+    };
+    expect(sameAsPublished(b, published(b))).toBe(true);
+    expect(sameAsPublished(pictured, published(pictured))).toBe(true);
+  });
+
+  it("does not, for a new name, a card moved or reordered, a tier renamed or a picture taken off", () => {
+    const b = out();
+    const list = published(b);
+    expect(sameAsPublished(rename(b, "Films I love", 5), list)).toBe(false);
+    const [dune, heat] = liveItems(b);
+    const s = rankedTiers(b)[0]!.uid;
+    const a = rankedTiers(b)[1]!.uid;
+    expect(sameAsPublished(moveItem(b, dune!.uid, a, 0, 5), list)).toBe(false);
+    expect(sameAsPublished(moveItem(b, heat!.uid, s, 0, 5), list)).toBe(false);
+    const relabelled = {
+      ...b,
+      tiers: b.tiers.map((tier) => (tier.uid === s ? { ...tier, label: "Best" } : tier)),
+    };
+    expect(sameAsPublished(relabelled, list)).toBe(false);
+    const pictured = {
+      ...b,
+      items: b.items.map((item) => ({ ...item, imageUrl: "https://p/1.jpg" })),
+    };
+    expect(sameAsPublished(b, published(pictured))).toBe(false);
   });
 });
