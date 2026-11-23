@@ -1981,6 +1981,16 @@ const ptBR: Translation = {
     meta: "Uma lista pronta · {cards}",
     try: "Experimentar",
   },
+  share: {
+    updated: "atualizada em {date}",
+    button: "Compartilhar",
+    hook: "Meu nível {tier}: {names}. E o seu?",
+    question: "E o seu?",
+    copyByHand: "Copie o endereço à mão:",
+    address: "Endereço da lista",
+    openInCommunity: "Abrir na comunidade",
+    settings: "Configurações de publicação",
+  },
 };
 
 export default ptBR;

@@ -756,3 +756,15 @@
     display: none;
   }
 }
+
+/* "Public" in the board's status line, its globe the size of the words. */
+.list-head__public {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--ok);
+}
+
+.list-head__public .ms {
+  font-size: 14px;
+}

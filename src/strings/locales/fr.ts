@@ -2011,6 +2011,16 @@ const fr: Translation = {
     meta: "Une liste toute prête · {cards}",
     try: "Essayer",
   },
+  share: {
+    updated: "mise à jour le {date}",
+    button: "Partager",
+    hook: "Mon niveau {tier} : {names}. Et le tien ?",
+    question: "Et le tien ?",
+    copyByHand: "Copie l’adresse à la main :",
+    address: "Adresse de la liste",
+    openInCommunity: "Ouvrir dans la communauté",
+    settings: "Réglages de publication",
+  },
 };
 
 export default fr;

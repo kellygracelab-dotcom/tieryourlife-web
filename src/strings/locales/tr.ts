@@ -1869,6 +1869,16 @@ const tr: Translation = {
     meta: "Hazır bir liste · {cards}",
     try: "Deneyin",
   },
+  share: {
+    updated: "{date} güncellendi",
+    button: "Paylaş",
+    hook: "{tier} seviyem: {names}. Seninki?",
+    question: "Seninki nasıl?",
+    copyByHand: "Adresi elle kopyala:",
+    address: "Listenin adresi",
+    openInCommunity: "Toplulukta aç",
+    settings: "Yayın ayarları",
+  },
 };
 
 export default tr;

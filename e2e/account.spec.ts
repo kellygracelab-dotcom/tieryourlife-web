@@ -81,11 +81,12 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   expect(account.published.size).toBe(0);
 
   await press(publishButton, hasTouch);
-  // The window goes by itself; said under the board, with View; the header says Published.
+  // The window goes by itself; said under the board, with View; Share where Published stood.
   await expect(window).toHaveCount(0);
   await expect(page.locator(".snackbar")).toContainText("Published");
   await expect(page.locator(".snackbar").getByRole("button", { name: "View" })).toBeVisible();
-  await expect(word).toHaveText("Published");
+  await expect(header).toHaveCount(0);
+  await expect(page.locator(".list-head .share-button")).toBeVisible();
   expect(account.publishes[0]).toMatchObject({
     title: "Films I make people watch",
     category: "film_tv",
@@ -99,7 +100,7 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   await expect(word).toHaveText("Update");
   await press(header, hasTouch);
   await expect(page.locator(".snackbar")).toContainText("Updated");
-  await expect(word).toHaveText("Published");
+  await expect(header).toHaveCount(0);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(account.calls).toContain("POST /lists/L1");
 
@@ -108,8 +109,9 @@ test("publishes a board, sends it again and takes it down, and says when a try f
     .poll(() => [...account.boards.values()].find((b) => b.title === "Films I make people watch"))
     .toMatchObject({ body: { publishedId: "L1" } });
 
-  // Published opens the window with the link, and Take it down there asks first.
-  await press(header, hasTouch);
+  // Publishing settings in ⋮ opens the window with the link, and Take it down there asks first.
+  await press(page.getByLabel("More about this list"), hasTouch);
+  await press(page.getByRole("button", { name: "Publishing settings" }), hasTouch);
   const out = page.getByRole("dialog", { name: "Films I make people watch" });
   await expect(out.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
     "href",

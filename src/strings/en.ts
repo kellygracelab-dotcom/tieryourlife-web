@@ -1884,4 +1884,14 @@ export const en = {
     meta: "A ready list · {cards}",
     try: "Try it",
   },
+  share: {
+    updated: "updated {date}",
+    button: "Share",
+    hook: "My {tier} tier: {names}. What’s yours?",
+    question: "What’s yours?",
+    copyByHand: "Copy the address by hand:",
+    address: "The list’s address",
+    openInCommunity: "Open in Community",
+    settings: "Publishing settings",
+  },
 } as const;
