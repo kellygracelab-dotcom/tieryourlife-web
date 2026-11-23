@@ -1579,6 +1579,7 @@ const uk: Translation = {
     photoBy: "Фото: {credit}",
     publication: "Публікація",
     publishedStatus: "Опублікований",
+    notPublishedYet: "Зміни ще не опубліковані",
     publishedShort: "Опубліковано",
     updatedShort: "Оновлено",
     rankedShort: "У рейтингах",

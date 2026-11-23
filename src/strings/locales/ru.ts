@@ -1587,6 +1587,7 @@ const ru: Translation = {
     photoBy: "Фото: {credit}",
     publication: "Публикация",
     publishedStatus: "Опубликован",
+    notPublishedYet: "Изменения ещё не опубликованы",
     publishedShort: "Опубликовано",
     updatedShort: "Обновлено",
     rankedShort: "В рейтингах",

@@ -1537,6 +1537,8 @@ describe("BoardPage: Publish beside Play", () => {
     };
     open(repository, "/b/films", { publishing, account: member });
     expect(headerPublish()).toHaveAccessibleName("Update");
+    // Said in words under the title too, not by the dot alone (23.11).
+    expect(screen.getByText("Changes not published yet")).toBeInTheDocument();
     await userEvent.click(headerPublish()!);
     // No window in between.
     expect(screen.queryByRole("dialog")).toBeNull();

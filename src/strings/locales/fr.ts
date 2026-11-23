@@ -1530,6 +1530,7 @@ const fr: Translation = {
     photoBy: "Photo : {credit}",
     publication: "Publication",
     publishedStatus: "Publiée",
+    notPublishedYet: "Modifications pas encore publiées",
     publishedShort: "Publiée",
     updatedShort: "Mise à jour",
     rankedShort: "Dans les classements",

@@ -1742,6 +1742,7 @@ const ar: Translation = {
     photoBy: "الصورة: {credit}",
     publication: "النشر",
     publishedStatus: "منشورة",
+    notPublishedYet: "تغييرات لم تُنشر بعد",
     publishedShort: "تم النشر",
     updatedShort: "تم التحديث",
     rankedShort: "في الترتيبات",

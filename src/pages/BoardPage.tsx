@@ -1133,6 +1133,13 @@ function OpenBoard({
           {board.category !== null && (
             <p className="list-head__meta">{filedUnder(board.category, sections, me, homes)}</p>
           )}
+          {/* What the link shows is behind the board: said in words, beside Update's dot. */}
+          {publishKind === "update" && (
+            <p className="list-head__behind">
+              <span className="list-head__behind-dot" aria-hidden="true" />
+              {strings.boards.notPublishedYet}
+            </p>
+          )}
         </div>
         <span className="list-head__tools">
           <ViewButton

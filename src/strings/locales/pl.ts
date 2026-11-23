@@ -1578,6 +1578,7 @@ const pl: Translation = {
     photoBy: "Zdjęcie: {credit}",
     publication: "Publikacja",
     publishedStatus: "Opublikowana",
+    notPublishedYet: "Zmiany jeszcze nieopublikowane",
     publishedShort: "Opublikowano",
     updatedShort: "Zaktualizowano",
     rankedShort: "W rankingach",

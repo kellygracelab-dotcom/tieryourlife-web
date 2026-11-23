@@ -1289,6 +1289,27 @@ describe("ListPage for its author", () => {
     expect(seen.state.location.pathname).toBe("/l/abc");
   });
 
+  // What the link shows is behind the author's board: the page says so and leads to Update (23.11).
+  it("tells its author, seeing it as others do, that the board has changes the list does not show yet", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    boards.save({
+      ...newBoard("b1", "Every A24 film", 1, () => "t"),
+      publishedId: "abc",
+      publishedEditedAt: 1,
+      editedAt: 9,
+    });
+    openAs(author, undefined, { pathname: "/l/abc", state: AS_COMMUNITY });
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByText(/Changes not published yet/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Update" })).toHaveAttribute("href", "/b/b1");
+    cleanup();
+
+    boards.save({ ...boards.get("b1")!, publishedEditedAt: 9 });
+    openAs(author, undefined, { pathname: "/l/abc", state: AS_COMMUNITY });
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByText(/Changes not published yet/)).toBeNull();
+  });
+
   it("waits to know who is here before it shows a list a board here published", async () => {
     mocks.loadList.mockResolvedValue(list);
     boards.save({ ...newBoard("b1", "Every A24 film", 1, () => "t"), publishedId: "abc" });

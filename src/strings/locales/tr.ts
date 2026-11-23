@@ -1409,6 +1409,7 @@ const tr: Translation = {
     photoBy: "Fotoğraf: {credit}",
     publication: "Yayın",
     publishedStatus: "Yayımlandı",
+    notPublishedYet: "Değişiklikler henüz yayımlanmadı",
     publishedShort: "Yayımlandı",
     updatedShort: "Güncellendi",
     rankedShort: "Sıralamalarda",

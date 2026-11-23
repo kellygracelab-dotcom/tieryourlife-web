@@ -1455,6 +1455,7 @@ const de: Translation = {
     photoBy: "Foto: {credit}",
     publication: "Veröffentlichung",
     publishedStatus: "Veröffentlicht",
+    notPublishedYet: "Änderungen noch nicht veröffentlicht",
     publishedShort: "Veröffentlicht",
     updatedShort: "Aktualisiert",
     rankedShort: "In den Ranglisten",
