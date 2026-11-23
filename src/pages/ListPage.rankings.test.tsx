@@ -156,7 +156,7 @@ describe("ListPage rankings", () => {
   describe("a house list nobody placed", () => {
     const house: PublishedList = {
       ...list,
-      authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+      authorUid: "tyl-editorial",
       authorName: "",
       rankingCount: 0,
       items: list.items.map((item) => ({ ...item, tierIndex: null })),
@@ -489,11 +489,8 @@ describe("ListPage rankings", () => {
 
   // As the app names it (20.11.2026): the house's, with the app's mark, never its editor.
   it("names TierYourLife, with the app's mark, in the first row of a house list", async () => {
-    mocks.loadList.mockResolvedValue({
-      ...list,
-      authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
-      authorName: "Danylo Petrov",
-    });
+    // As the backend sends a house list: no author, and saying it is the house's.
+    mocks.loadList.mockResolvedValue({ ...list, authorUid: "", authorName: "", anonymous: true });
     openAs();
     const sheet = await openSheet();
     await within(sheet).findByRole("button", { name: /^olena/ });

@@ -19,7 +19,7 @@ describe("the editorial accounts", () => {
 
   it("are told by the author's uid, or by the list saying so itself", () => {
     const uid = EDITORIAL_UIDS[0]!;
-    expect(uid).toMatch(/^[A-Za-z0-9]{20,40}$/);
+    expect(uid).toBe("tyl-editorial");
     expect(isEditorialAuthor(uid)).toBe(true);
     expect(isEditorialAuthor("u1")).toBe(false);
     expect(isEditorialAuthor("")).toBe(false);
@@ -29,5 +29,10 @@ describe("the editorial accounts", () => {
     // A snapshot without a uid is somebody's list all the same.
     expect(isEditorial({ authorUid: "" })).toBe(false);
     expect(isEditorial({ authorUid: "u1", anonymous: false })).toBe(false);
+    // Danylo's own lists are his, under his name (23.11): no person's account is the house's.
+    expect(EDITORIAL_UIDS).toEqual(["tyl-editorial"]);
+    expect(isEditorial({ authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2", anonymous: false })).toBe(
+      false,
+    );
   });
 });
