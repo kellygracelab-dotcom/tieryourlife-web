@@ -75,8 +75,9 @@ describe("ListArt", () => {
     vi.restoreAllMocks();
   });
 
-  // Night W7 (18.11.2026): a card whose picture fails shows its name on the board, and leaves the collage.
-  it("leaves a picture that fails to load out of the collage, with no blank tile", () => {
+  // The Designer, 23.11: a picture that fails stays the tile's surface, with no
+  // mark and no frame; only every picture failing falls back (night W7).
+  it("keeps a picture that fails as the tile's surface, falling back only when all fail", () => {
     const { container } = render(
       <ListArt
         cover={null}
@@ -84,15 +85,53 @@ describe("ListArt", () => {
         tierColors={["#000"]}
       />,
     );
-    expect(container.querySelector(".art--mosaic")).toHaveAttribute("data-count", "3");
-    fireEvent.error(container.querySelectorAll("img")[1]!);
-    expect(container.querySelector(".art--mosaic")).toHaveAttribute("data-count", "2");
-    expect(Array.from(container.querySelectorAll("img"), (img) => img.getAttribute("src"))).toEqual(
-      ["https://img/a.jpg", "https://img/b.jpg"],
-    );
+    const mosaic = () => container.querySelector(".art--mosaic");
+    expect(mosaic()).toHaveAttribute("data-count", "3");
+    const images = Array.from(container.querySelectorAll("img"));
+    fireEvent.error(images[1]!);
+    expect(mosaic()).toHaveAttribute("data-count", "3");
+    expect(images[1]!.parentElement).not.toHaveClass("art__shown");
     // Every one gone: the tier colours, as for a list without pictures.
-    for (const img of Array.from(container.querySelectorAll("img"))) fireEvent.error(img);
+    for (const img of images) fireEvent.error(img);
     expect(container.querySelector(".art--stripes")).not.toBeNull();
+  });
+
+  it("shows each picture once it has come, and shimmers as one tile until all have", () => {
+    const { container } = render(
+      <ListArt
+        cover={null}
+        previews={["https://img/a.jpg", "https://img/b.jpg", "https://img/gone.jpg"]}
+        tierColors={[]}
+      />,
+    );
+    const mosaic = container.querySelector(".art--mosaic")!;
+    const [a, b, gone] = Array.from(container.querySelectorAll("img"));
+    expect(mosaic).toHaveClass("art--waiting");
+    expect(container.querySelectorAll(".art__shown")).toHaveLength(0);
+    fireEvent.load(a!);
+    expect(a!.parentElement).toHaveClass("art__shown");
+    expect(b!.parentElement).not.toHaveClass("art__shown");
+    expect(mosaic).toHaveClass("art--waiting");
+    fireEvent.load(b!);
+    fireEvent.error(gone!);
+    expect(mosaic).not.toHaveClass("art--waiting");
+    expect(container.querySelectorAll(".art__shown")).toHaveLength(2);
+  });
+
+  it("shimmers over a cover until it has come, and stops when it fails", () => {
+    const { container, rerender } = render(
+      <ListArt cover="https://img/cover.jpg" previews={[]} tierColors={[]} />,
+    );
+    const art = () => container.querySelector(".art--cover")!;
+    expect(art()).toHaveClass("art--waiting");
+    fireEvent.load(container.querySelector("img")!);
+    expect(art()).not.toHaveClass("art--waiting");
+    expect(container.querySelector(".art__shown")).not.toBeNull();
+    rerender(<ListArt cover="https://img/other.jpg" previews={[]} tierColors={[]} />);
+    expect(art()).toHaveClass("art--waiting");
+    fireEvent.error(container.querySelector("img")!);
+    expect(art()).not.toHaveClass("art--waiting");
+    expect(container.querySelector(".art__shown")).toBeNull();
   });
 
   it("falls back to a titled tile with at most five tier colours along the bottom", () => {

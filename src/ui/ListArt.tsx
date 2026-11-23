@@ -39,34 +39,62 @@ export function ListArt({
   title,
   decorative = false,
 }: ListArtProps) {
-  // A picture that fails to load leaves the collage, as a card whose picture
-  // fails shows its name on the board: no blank tile among the others (night W7).
+  // Each picture shows once it has come (a short fade); until then, and for
+  // good when it fails, its place is the tile's one quiet surface, no frame and
+  // no gap, with one soft shimmer over the whole tile while any is on its way
+  // (the Designer, 23.11). Only when every picture failed does the tile fall
+  // back to the title or the colours, as for a list without pictures.
+  const [loaded, setLoaded] = useState<ReadonlySet<string>>(() => new Set());
   const [broken, setBroken] = useState<ReadonlySet<string>>(() => new Set());
-  const drawn = previews.flatMap((url, at) =>
-    broken.has(url) ? [] : [{ url, at, focus: cellFocus?.get(url) ?? previewFocus?.[at] ?? null }],
-  );
+  const add = (set: typeof setLoaded, key: string) => () =>
+    set((seen) => (seen.has(key) ? seen : new Set(seen).add(key)));
+  const cells = previews
+    .slice(0, MOSAIC_MAX)
+    .map((url, at) => ({
+      url,
+      key: `${at}-${url}`,
+      focus: cellFocus?.get(url) ?? previewFocus?.[at] ?? null,
+    }));
+  const waiting = (keys: readonly string[]) =>
+    keys.some((key) => !loaded.has(key) && !broken.has(key));
   const named = (label: string) =>
     decorative
       ? ({ "aria-hidden": true } as const)
       : ({ role: "img", "aria-label": label } as const);
+  const cellClass = (key: string, base: string) => (loaded.has(key) ? `${base} art__shown` : base);
   if (cover !== null) {
+    const key = `cover-${cover}`;
     return (
-      <div className="art art--cover">
-        <FocusedPicture src={cover} focus={focus} loading="lazy" />
+      <div className={waiting([key]) ? "art art--cover art--waiting" : "art art--cover"}>
+        <FocusedPicture
+          key={key}
+          className={cellClass(key, "art__picture")}
+          src={cover}
+          focus={focus}
+          loading="lazy"
+          onLoad={add(setLoaded, key)}
+          onError={add(setBroken, key)}
+        />
       </div>
     );
   }
-  if (drawn.length > 0) {
+  if (cells.length > 0 && !cells.every(({ key }) => broken.has(key))) {
     return (
-      <div className="art art--mosaic" data-count={Math.min(drawn.length, MOSAIC_MAX)}>
-        {drawn.slice(0, MOSAIC_MAX).map(({ url, at, focus: cell }) => (
+      <div
+        className={
+          waiting(cells.map(({ key }) => key)) ? "art art--mosaic art--waiting" : "art art--mosaic"
+        }
+        data-count={cells.length}
+      >
+        {cells.map(({ url, key, focus: cell }) => (
           <FocusedPicture
-            key={`${at}-${url}`}
-            className="art__cell"
+            key={key}
+            className={cellClass(key, "art__cell")}
             src={url}
             focus={cell}
             loading="lazy"
-            onError={() => setBroken((gone) => new Set(gone).add(url))}
+            onLoad={add(setLoaded, key)}
+            onError={add(setBroken, key)}
           />
         ))}
       </div>

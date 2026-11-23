@@ -41,16 +41,6 @@
   background: var(--surface-container-highest);
 }
 
-.list-card .art img {
-  animation: list-card-fade 150ms ease;
-}
-
-@keyframes list-card-fade {
-  from {
-    opacity: 0;
-  }
-}
-
 /*
  * The text keeps the same rows on every card (Claude Design, 03.11.2026): a
  * title block two lines tall whatever the title, then one footer row 20px
