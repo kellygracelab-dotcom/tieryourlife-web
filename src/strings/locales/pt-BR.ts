@@ -201,6 +201,8 @@ const ptBR: Translation = {
     categories: "Seções",
     popular: "Populares",
     popularNote: "Abra uma e comece a arrastar. Não precisa de conta.",
+    fresh: "Novidades da comunidade",
+    freshNote: "Listas que as pessoas publicaram há pouco.",
     source: "Listas de quem mostrar",
     everyone: "Todas",
     following: "Seguindo",

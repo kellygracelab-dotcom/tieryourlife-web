@@ -194,6 +194,8 @@ export const en = {
     categories: "Sections",
     popular: "Popular",
     popularNote: "Open one and start dragging. No account needed.",
+    fresh: "New from the community",
+    freshNote: "Lists people published lately.",
     source: "Whose lists to show",
     // "All" is the phone app's word for the same switch.
     everyone: "All",
