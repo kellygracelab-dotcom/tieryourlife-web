@@ -324,6 +324,40 @@ describe("a link's preview", () => {
     assert.equal(unread.description, "1 item to rank");
   });
 
+  it("hands a person's card the author's tiers and dark colours, at an address that changes with an update", () => {
+    const own = {
+      ...house,
+      authorUid: "u1",
+      category: "games",
+      tiers: [
+        { label: "S", caption: null, colorLight: "#B03A32", colorDark: "#F1948C" },
+        { label: "A", caption: null, colorLight: "#C06A25" },
+      ],
+      items: [
+        { title: "Elden Ring", imageUrl: "https://img/e.jpg", tierIndex: 0 },
+        { title: "Prey", imageUrl: null, tierIndex: 1 },
+        { title: "Odd", imageUrl: null, tierIndex: -1 },
+        { title: "Loose", imageUrl: null },
+      ],
+    };
+    const card = listCard(own, "en", null);
+    assert.ok(card.kind === "list" && card.editorial === false);
+    assert.deepEqual(
+      card.items.map((item) => item.tierIndex),
+      [0, 1, null, null],
+    );
+    assert.equal(card.tiers[0]?.colorDark, "#F1948C");
+    assert.equal(card.tiers[1]?.colorDark, undefined);
+    // The picture's address carries the list's updatedAt: a chat fetches it again after an Update.
+    const meta = listMeta("tieryourlife.com", "abc12345", own, "en", null);
+    assert.equal(meta.image, "https://tieryourlife.com/og/l/abc12345.png?v=17.7");
+    const updated = { ...own, updatedAt: { toMillis: () => 18 } as never };
+    assert.equal(
+      listMeta("tieryourlife.com", "abc12345", updated, "en", null).image,
+      "https://tieryourlife.com/og/l/abc12345.png?v=18.7",
+    );
+  });
+
   it("gives a ranking of a house list in the language its list was read in", () => {
     const stored = {
       listId: "abc12345",

@@ -4,7 +4,7 @@ vi.mock("../lib/firebase", async (original) => ({
   ...(await original<typeof import("../lib/firebase")>()),
   getFirebaseAuth: () => actionAuth,
 }));
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState, type ReactElement } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router";
@@ -1551,6 +1551,80 @@ describe("BoardPage: Publish beside Play", () => {
     const cards = liveItems(board).length;
     expect(await screen.findByText(`${cards + 1} changes not published`)).toBeInTheDocument();
     expect(loadOriginal).toHaveBeenCalledWith("L1");
+  });
+
+  // QA, 23.11: a board from the account is saved seconds after its list went
+  // out, so the time guessed from the list read as behind with nothing to send.
+  it("puts Update away for a board from the account whose list shows it as it is", async () => {
+    const repository = boardsRepository(memoryStore());
+    const board = {
+      ...filmBoard(),
+      category: "film_tv",
+      publishedId: "L1",
+      authorName: "Danylo",
+      editedAt: 6500,
+      publishedEditedAt: 1000,
+      publishedEditedAtGuessed: true as const,
+    };
+    repository.save(board);
+    const request = publishRequestOf(board)!;
+    const asItIs = {
+      title: request.title,
+      category: request.category,
+      tiers: request.tiers,
+      items: request.items.map(({ title, imageUrl, tierIndex }) => ({
+        title,
+        imageUrl,
+        tierIndex,
+      })),
+    } as unknown as PublishedList;
+    const loadOriginal = vi.fn(() => Promise.resolve(asItIs));
+    open(repository, "/b/films", {
+      publishing: { ...noPublishing, loadOriginal },
+      account: member,
+    });
+    expect(headerPublish()).toHaveAccessibleName("Update");
+    await waitFor(() => expect(headerPublish()).toBeNull());
+    expect(screen.queryByText(/not published/)).toBeNull();
+    expect(repository.get("films")).toMatchObject({ editedAt: 6500, publishedEditedAt: 6500 });
+    expect(repository.get("films")?.publishedEditedAtGuessed).toBeUndefined();
+  });
+
+  it("keeps Update when the guessed time is behind for real, or the time is the board's own", async () => {
+    for (const guessed of [true, false]) {
+      const repository = boardsRepository(memoryStore());
+      const board = {
+        ...filmBoard(),
+        category: "film_tv",
+        publishedId: "L1",
+        editedAt: 6500,
+        publishedEditedAt: 1000,
+        ...(guessed ? { publishedEditedAtGuessed: true as const } : {}),
+      };
+      repository.save(board);
+      const request = publishRequestOf(board)!;
+      // Guessed: the list has another name. Known: the same list, a change made here and undone.
+      const list = {
+        title: guessed ? "Older name" : request.title,
+        category: request.category,
+        tiers: request.tiers,
+        items: request.items.map(({ title, imageUrl, tierIndex }) => ({
+          title,
+          imageUrl,
+          tierIndex,
+        })),
+      } as unknown as PublishedList;
+      const loadOriginal = vi.fn(() => Promise.resolve(list));
+      open(repository, "/b/films", {
+        publishing: { ...noPublishing, loadOriginal },
+        account: member,
+      });
+      await waitFor(() => expect(loadOriginal).toHaveBeenCalled());
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(headerPublish()).toHaveAccessibleName("Update");
+      expect(repository.get("films")?.publishedEditedAt).toBe(1000);
+      cleanup();
+    }
   });
 
   it("says Update when the published list is behind the board, and sends it from the header at once", async () => {

@@ -153,6 +153,14 @@ export interface Board {
   arrivedFrom: string | null;
   /** This device's: the edit time the published copy was sent at, so "behind" can be told. Never sent. */
   publishedEditedAt: number | null;
+  /**
+   * This device's: `publishedEditedAt` is the list's own time, guessed for a
+   * board that came from the account, not the time this device sent it. The
+   * board saved after a publish is a few seconds later than its list, so the
+   * guess reads as behind: the list is read to tell, and when it shows the
+   * board as it is, the time becomes the board's own (QA, 23.11). Never sent.
+   */
+  publishedEditedAtGuessed?: true;
   /** This device's, as on the phone: the topic the list goes out under. Never kept in the account. */
   topic: BoardTopic | null;
   /**
@@ -581,12 +589,28 @@ export const setPublished = (
   authorName: string | null,
   now: number,
 ): Board => ({
-  ...unheld(board),
+  ...unguessed(unheld(board)),
   publishedId,
   rankingOf: null,
   authorName,
   editedAt: now,
   publishedEditedAt: publishedId === null ? null : now,
+});
+
+/** Sent from here: its time of sending is known, not guessed. */
+const unguessed = (board: Board): Board => {
+  if (board.publishedEditedAtGuessed === undefined) return board;
+  const { publishedEditedAtGuessed: _guessed, ...rest } = board;
+  return rest;
+};
+
+/**
+ * A board whose sending time was guessed, found the same as its list: it went
+ * out as it is, and nothing is left for Update.
+ */
+export const sentAsItIs = (board: Board): Board => ({
+  ...unguessed(board),
+  publishedEditedAt: board.editedAt,
 });
 
 /** The board without the hold: a fresh answer, or none, says whether it still waits. */
@@ -606,7 +630,7 @@ export const setHeld = (board: Board, held: boolean): Board =>
  * since the cards are still theirs.
  */
 export const setRanking = (board: Board, listId: string | null, now: number): Board => ({
-  ...unheld(board),
+  ...unguessed(unheld(board)),
   publishedId: null,
   rankingOf: listId,
   ...(board.takenFrom !== null

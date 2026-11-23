@@ -359,8 +359,8 @@ describe("renderShareSvg", () => {
 
   /** Where the last band of the app's mark is drawn: the brand's lowest edge. */
   const markBottom = (svg: string): number => {
-    const band = /<(?:rect|path)\b[^>]*fill="#3c6e99"[^>]*>/.exec(svg)?.[0];
-    assert.ok(band !== undefined, "the brand's mark is drawn");
+    const band = /<image\b[^>]*href="data:image\/svg\+xml[^>]*>/.exec(svg)?.[0];
+    assert.ok(band !== undefined, "the brand's icon is drawn");
     const y = Number(/\by="([\d.]+)"/.exec(band)?.[1]);
     const height = Number(/\bheight="([\d.]+)"/.exec(band)?.[1]);
     const x = Number(/\bx="([\d.]+)"/.exec(band)?.[1]);
