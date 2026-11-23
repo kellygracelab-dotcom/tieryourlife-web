@@ -114,6 +114,36 @@ export const itemsOf = (items: unknown): PublishedItem[] =>
 export const pictureOf = (value: unknown): string | null =>
   typeof value === "string" && value.startsWith("https://") ? value : null;
 
+/** The site's hosts, each answering /img/collage/ with the same picture. */
+const COLLAGE_HOSTS: ReadonlySet<string> = new Set([
+  "tieryourlife.com",
+  "www.tieryourlife.com",
+  "tieryourlife.web.app",
+  "tieryourlife.firebaseapp.com",
+]);
+const COLLAGE_PATH = /^\/img\/collage\/[A-Za-z0-9_-]{8,64}\.webp$/;
+
+/**
+ * A list's collage as the site loads it: only the site's own
+ * `/img/collage/{id}.webp` over https, on any of its hosts, given as its path
+ * and query so the page asks its own origin; null for anything else. A path
+ * read before stays as it is, so a list read twice keeps its collage.
+ */
+export function collageSrcOf(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const read = value.startsWith("/") && !value.startsWith("//");
+  if (!read && !value.startsWith("https://")) return null;
+  let url: URL;
+  try {
+    url = new URL(value, "https://tieryourlife.com");
+  } catch {
+    return null;
+  }
+  if (url.port !== "" || url.username !== "" || url.password !== "") return null;
+  if (!COLLAGE_HOSTS.has(url.hostname) || !COLLAGE_PATH.test(url.pathname)) return null;
+  return url.pathname + url.search;
+}
+
 /** The longest source label the backend keeps (CONTRACT, MAX_LIST_SOURCE_LABEL). */
 export const LIST_SOURCE_LABEL_MAX = 120;
 /** The longest source address the backend keeps. */
@@ -157,7 +187,9 @@ export const summaryOf = <T extends ListSummary>(list: T): T => {
   const cover = pictureOf(list.coverImageUrl);
   const focus = cover === null ? null : focusOf(list.coverFocus);
   const source = listSourceOf(list.listSource);
+  const collage = collageSrcOf(list.collageUrl);
   if (
+    (list.collageUrl ?? null) === collage &&
     previews.length === list.previewImages?.length &&
     list.previewFocus === undefined &&
     previewFocus === null &&
@@ -167,9 +199,16 @@ export const summaryOf = <T extends ListSummary>(list: T): T => {
   ) {
     return list;
   }
-  const { coverFocus: _sent, listSource: _source, previewFocus: _previewFocus, ...rest } = list;
+  const {
+    coverFocus: _sent,
+    listSource: _source,
+    previewFocus: _previewFocus,
+    collageUrl: _collage,
+    ...rest
+  } = list;
   return {
     ...rest,
+    ...(collage === null ? {} : { collageUrl: collage }),
     previewImages: previews,
     ...(previewFocus === null ? {} : { previewFocus }),
     coverImageUrl: cover,
