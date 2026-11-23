@@ -7,6 +7,7 @@ import {
   publish,
   recordTake,
   republish,
+  collageSrcOf,
   revisionOf,
   summaryOf,
   unpublish,
@@ -59,6 +60,61 @@ describe("summaryOf", () => {
         summaryOf({ ...list, listSource: wrong as unknown as typeof listSource }),
       ).not.toHaveProperty("listSource");
     }
+  });
+});
+
+describe("collageSrcOf", () => {
+  it("reads the site's own collage on any of its hosts as a path on this origin", () => {
+    const path = "/img/collage/list-0001.webp?v=1700000000000";
+    for (const host of [
+      "tieryourlife.com",
+      "www.tieryourlife.com",
+      "tieryourlife.web.app",
+      "tieryourlife.firebaseapp.com",
+    ]) {
+      expect(collageSrcOf(`https://${host}${path}`)).toBe(path);
+    }
+    // Read once already: kept as it is.
+    expect(collageSrcOf(path)).toBe(path);
+  });
+
+  it("refuses another host, another path, another scheme and anything not an address", () => {
+    for (const wrong of [
+      "https://evil.example/img/collage/list-0001.webp",
+      "https://tieryourlife.com.evil.example/img/collage/list-0001.webp",
+      "http://tieryourlife.com/img/collage/list-0001.webp",
+      "https://tieryourlife.com:8443/img/collage/list-0001.webp",
+      "https://me@tieryourlife.com/img/collage/list-0001.webp",
+      "https://tieryourlife.com/img/original/published/list-0001/p",
+      "https://tieryourlife.com/img/collage/list-0001.png",
+      "https://tieryourlife.com/img/collage/../l/list-0001.webp",
+      "https://tieryourlife.com/img/collage/short.webp",
+      "//evil.example/img/collage/list-0001.webp",
+      "/\\evil.example/img/collage/list-0001.webp",
+      "javascript:alert(1)",
+      "",
+      3,
+      null,
+      undefined,
+    ]) {
+      expect(collageSrcOf(wrong)).toBeNull();
+    }
+  });
+
+  it("goes with a list read, and twice read stays", () => {
+    const list = {
+      id: "list-0001",
+      title: "T",
+      coverImageUrl: null,
+      previewImages: ["https://img/a.jpg", "https://img/b.jpg"],
+      collageUrl: "https://tieryourlife.com/img/collage/list-0001.webp?v=5",
+    } as unknown as Parameters<typeof summaryOf>[0];
+    const once = summaryOf(list);
+    expect(once.collageUrl).toBe("/img/collage/list-0001.webp?v=5");
+    expect(summaryOf(once).collageUrl).toBe("/img/collage/list-0001.webp?v=5");
+    expect(
+      summaryOf({ ...list, collageUrl: "https://evil.example/img/collage/list-0001.webp" }),
+    ).not.toHaveProperty("collageUrl");
   });
 });
 

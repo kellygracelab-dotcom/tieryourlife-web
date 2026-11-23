@@ -72,6 +72,12 @@ export interface ListSummary {
    * Absent when none has one (CONTRACT, previewFocus).
    */
   previewFocus?: (CoverFocus | null)[];
+  /**
+   * The cover collage as one picture, when the card shows a collage (no
+   * cover, two previews or more): `/img/collage/{id}.webp?v=…` on the site,
+   * same-origin once read (CONTRACT, collageUrl; cover-collage, 23.11.2026).
+   */
+  collageUrl?: string;
   tierColors: string[];
   updatedAt: number;
   takeCount: number;

@@ -14,6 +14,12 @@ interface ListArtProps {
   cellFocus?: ReadonlyMap<string, CoverFocus>;
   /** A published list's: where each preview is cut, by its place (null: its default). */
   previewFocus?: readonly (CoverFocus | null)[] | undefined;
+  /**
+   * A published list's collage as one picture (its summary's collageUrl):
+   * drawn instead of the mosaic when there is no cover, the mosaic again if
+   * it fails to load.
+   */
+  collage?: string | null;
   tierColors: string[];
   /** Drawn on the tile when there is no picture at all. */
   title?: string;
@@ -35,6 +41,7 @@ export function ListArt({
   previews,
   cellFocus,
   previewFocus,
+  collage = null,
   tierColors,
   title,
   decorative = false,
@@ -45,6 +52,7 @@ export function ListArt({
   // (the Designer, 23.11). Only when every picture failed does the tile fall
   // back to the title or the colours, as for a list without pictures.
   const [loaded, setLoaded] = useState<ReadonlySet<string>>(() => new Set());
+  const [collageFailed, setCollageFailed] = useState<string | null>(null);
   const [broken, setBroken] = useState<ReadonlySet<string>>(() => new Set());
   const add = (set: typeof setLoaded, key: string) => () =>
     set((seen) => (seen.has(key) ? seen : new Set(seen).add(key)));
@@ -72,6 +80,24 @@ export function ListArt({
           loading="lazy"
           onLoad={add(setLoaded, key)}
           onError={add(setBroken, key)}
+        />
+      </div>
+    );
+  }
+  // One picture for the whole collage, drawn by the site's server, coming in
+  // the same way; the pictures one by one only if it will not load.
+  if (collage !== null && collage !== collageFailed) {
+    const key = `collage-${collage}`;
+    return (
+      <div className={waiting([key]) ? "art art--collage art--waiting" : "art art--collage"}>
+        <FocusedPicture
+          key={key}
+          className={cellClass(key, "art__picture")}
+          src={collage}
+          focus={null}
+          loading="lazy"
+          onLoad={add(setLoaded, key)}
+          onError={() => setCollageFailed(collage)}
         />
       </div>
     );

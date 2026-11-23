@@ -76,6 +76,7 @@ export function ListCard({
           focus={list.coverFocus}
           previews={list.previewImages}
           previewFocus={list.previewFocus}
+          collage={list.collageUrl ?? null}
           tierColors={list.tierColors}
           decorative
         />
