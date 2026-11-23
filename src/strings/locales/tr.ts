@@ -1410,6 +1410,7 @@ const tr: Translation = {
     publication: "Yayın",
     publishedStatus: "Yayımlandı",
     notPublishedYet: "Değişiklikler henüz yayımlanmadı",
+    changesNotPublished: { other: "{n} değişiklik yayımlanmadı" },
     publishedShort: "Yayımlandı",
     updatedShort: "Güncellendi",
     rankedShort: "Sıralamalarda",

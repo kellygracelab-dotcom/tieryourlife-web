@@ -1370,6 +1370,7 @@ export const en = {
     publication: "Publication",
     publishedStatus: "Published",
     notPublishedYet: "Changes not published yet",
+    changesNotPublished: { one: "{n} change not published", other: "{n} changes not published" },
     // Under the board once it went out from its header, with View (Danylo, 16.11.2026).
     publishedShort: "Published",
     updatedShort: "Updated",

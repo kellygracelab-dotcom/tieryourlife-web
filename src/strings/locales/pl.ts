@@ -1579,6 +1579,12 @@ const pl: Translation = {
     publication: "Publikacja",
     publishedStatus: "Opublikowana",
     notPublishedYet: "Zmiany jeszcze nieopublikowane",
+    changesNotPublished: {
+      one: "{n} zmiana nieopublikowana",
+      few: "{n} zmiany nieopublikowane",
+      many: "{n} zmian nieopublikowanych",
+      other: "{n} zmiany nieopublikowane",
+    },
     publishedShort: "Opublikowano",
     updatedShort: "Zaktualizowano",
     rankedShort: "W rankingach",

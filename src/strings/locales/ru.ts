@@ -1588,6 +1588,12 @@ const ru: Translation = {
     publication: "Публикация",
     publishedStatus: "Опубликован",
     notPublishedYet: "Изменения ещё не опубликованы",
+    changesNotPublished: {
+      one: "{n} изменение не опубликовано",
+      few: "{n} изменения не опубликованы",
+      many: "{n} изменений не опубликовано",
+      other: "{n} изменения не опубликованы",
+    },
     publishedShort: "Опубликовано",
     updatedShort: "Обновлено",
     rankedShort: "В рейтингах",

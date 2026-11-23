@@ -187,7 +187,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--tier-b);
 }
 
 /* A phone's head is the name and its buttons (artboard 13); the count is a wider window's. */

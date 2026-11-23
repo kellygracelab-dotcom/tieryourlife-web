@@ -1456,6 +1456,10 @@ const de: Translation = {
     publication: "Veröffentlichung",
     publishedStatus: "Veröffentlicht",
     notPublishedYet: "Änderungen noch nicht veröffentlicht",
+    changesNotPublished: {
+      one: "{n} Änderung nicht veröffentlicht",
+      other: "{n} Änderungen nicht veröffentlicht",
+    },
     publishedShort: "Veröffentlicht",
     updatedShort: "Aktualisiert",
     rankedShort: "In den Ranglisten",

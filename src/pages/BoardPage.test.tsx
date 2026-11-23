@@ -78,6 +78,7 @@ const noPublishing: PublishingDeps = {
   publish: () => Promise.reject(new Error("no publishing here")),
   republish: () => Promise.reject(new Error("no publishing here")),
   unpublish: () => Promise.reject(new Error("no publishing here")),
+  loadOriginal: () => Promise.reject(new Error("no lists here")),
 };
 const member: Session["account"] = {
   kind: "signedIn",
@@ -1520,6 +1521,25 @@ describe("BoardPage: Publish beside Play", () => {
     open(repository, "/b/empty", { account: member });
     expect(screen.getByRole("button", { name: /^Play/ })).toBeInTheDocument();
     expect(headerPublish()).toBeNull();
+  });
+
+  it("counts the cards the published list shows otherwise, under the title", async () => {
+    const repository = boardsRepository(memoryStore());
+    const board = { ...filmBoard(), category: "film_tv", publishedId: "L1", publishedEditedAt: 50 };
+    repository.save(board);
+    // The list shows none of the board's cards and one it no longer has.
+    const loadOriginal = vi.fn(() =>
+      Promise.resolve({
+        items: [{ title: "Gone", imageUrl: null, tierIndex: 0 }],
+      } as unknown as PublishedList),
+    );
+    open(repository, "/b/films", {
+      publishing: { ...noPublishing, loadOriginal },
+      account: member,
+    });
+    const cards = liveItems(board).length;
+    expect(await screen.findByText(`${cards + 1} changes not published`)).toBeInTheDocument();
+    expect(loadOriginal).toHaveBeenCalledWith("L1");
   });
 
   it("says Update when the published list is behind the board, and sends it from the header at once", async () => {

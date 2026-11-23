@@ -73,7 +73,9 @@ import {
   publish as publishList,
   republish as republishList,
   unpublish as unpublishList,
+  loadListAsWritten,
 } from "../lib/api";
+import { usePublishedChanges } from "../features/boards/publishedChanges";
 import { houseBoards, type BoardsRepository } from "../features/boards/repository";
 import { boards as site } from "../features/boards/owners";
 import { takenDown, unpublished } from "../features/boards/takeDown";
@@ -647,6 +649,12 @@ function OpenBoard({
     else openPublish();
   });
 
+  // How many cards the link's list shows otherwise, while the board is ahead of it.
+  const changes = usePublishedChanges(
+    board,
+    board !== null && publishKindOf(board, house !== null) === "update",
+    publishing.loadOriginal ?? loadListAsWritten,
+  );
   if (board === null || view === null) return <NotFound />;
   // Not a board to edit while it is in the trash: an edit would be kept on a
   // list Your lists no longer shows.
@@ -1137,7 +1145,9 @@ function OpenBoard({
           {publishKind === "update" && (
             <p className="list-head__behind">
               <span className="list-head__behind-dot" aria-hidden="true" />
-              {strings.boards.notPublishedYet}
+              {changes === null || changes === 0
+                ? strings.boards.notPublishedYet
+                : plural(strings.boards.changesNotPublished, changes)}
             </p>
           )}
         </div>

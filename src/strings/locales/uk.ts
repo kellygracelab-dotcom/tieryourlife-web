@@ -1580,6 +1580,12 @@ const uk: Translation = {
     publication: "Публікація",
     publishedStatus: "Опублікований",
     notPublishedYet: "Зміни ще не опубліковані",
+    changesNotPublished: {
+      one: "{n} зміна не опублікована",
+      few: "{n} зміни не опубліковані",
+      many: "{n} змін не опубліковано",
+      other: "{n} зміни не опубліковані",
+    },
     publishedShort: "Опубліковано",
     updatedShort: "Оновлено",
     rankedShort: "У рейтингах",

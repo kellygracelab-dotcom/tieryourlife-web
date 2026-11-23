@@ -54,7 +54,7 @@ export function PublishButton({ kind, main, busy = false, onClick }: PublishButt
       : main && kind === "publish"
         ? "btn--filled publish-button--main"
         : kind === "update"
-          ? "btn--outlined publish-button--update"
+          ? "btn--filled publish-button--update"
           : "btn--tonal";
   return (
     <button

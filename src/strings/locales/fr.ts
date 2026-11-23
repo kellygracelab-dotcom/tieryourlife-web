@@ -1531,6 +1531,11 @@ const fr: Translation = {
     publication: "Publication",
     publishedStatus: "Publiée",
     notPublishedYet: "Modifications pas encore publiées",
+    changesNotPublished: {
+      one: "{n} modification non publiée",
+      many: "{n} modifications non publiées",
+      other: "{n} modifications non publiées",
+    },
     publishedShort: "Publiée",
     updatedShort: "Mise à jour",
     rankedShort: "Dans les classements",
