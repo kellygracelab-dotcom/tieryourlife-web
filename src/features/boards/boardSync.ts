@@ -60,5 +60,6 @@ export const publishedEntryOf = (list: MyList): PublishedEntry => ({
   id: list.id,
   boardUid: typeof list.boardUid === "string" && list.boardUid !== "" ? list.boardUid : null,
   updatedAt: list.updatedAt,
+  itemCount: list.itemCount,
   underReview: list.underReview === true,
 });

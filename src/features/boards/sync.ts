@@ -12,6 +12,7 @@ import { fingerprintOf as digest } from "./fingerprint";
 import {
   beyondAccount,
   coverFocusOf,
+  liveItems,
   setHeld,
   setPublished,
   trashBoard,
@@ -56,6 +57,8 @@ export interface PublishedEntry {
   boardUid: string | null;
   /** When it last went out. */
   updatedAt: number;
+  /** How many cards went out; left out where the answer does not say. */
+  itemCount?: number;
   /** Kept, but out of the feed until a moderator looks; left out or false when it is not. */
   underReview?: boolean;
 }
@@ -810,6 +813,28 @@ async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
     const held = board.heldForReview === true;
     if (held !== (asked.heldForReview === true)) continue;
     if (held !== (entry.underReview === true)) changed.push(setHeld(board, !held));
+  }
+  // A board that came from the account knows its list but not when it went
+  // out (boardOf leaves that empty): the list's own time tells, as for a board
+  // getting its list back. Without it the board read as sent for ever, and a
+  // change made since never offered Update (Danylo's games, 176 cards to 149, 23.11).
+  for (const asked of claimed) {
+    const entry = byId.get(asked.publishedId ?? "");
+    if (entry === undefined) continue;
+    const at = changed.findIndex((one) => one.uid === asked.uid);
+    const board = at === -1 ? deps.repository.get(asked.uid) : changed[at]!;
+    if (board === null || board.publishedId !== entry.id || board.publishedEditedAt !== null) {
+      continue;
+    }
+    // Other cards than went out are a change to send whenever the list went
+    // out: someone may have put the list out again since from its old cards.
+    const differs = entry.itemCount !== undefined && entry.itemCount !== liveItems(board).length;
+    const dated = {
+      ...board,
+      publishedEditedAt: differs ? board.editedAt - 1 : Math.min(board.editedAt, entry.updatedAt),
+    };
+    if (at === -1) changed.push(dated);
+    else changed[at] = dated;
   }
   for (const [uid, entry] of relinks(unlinked, theirs, deps.repository.all())) {
     const board = deps.repository.get(uid);
