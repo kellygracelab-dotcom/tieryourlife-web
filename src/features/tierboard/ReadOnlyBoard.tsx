@@ -12,6 +12,7 @@ import type { BoardSize } from "./nameFit";
 import "./board.css";
 import { sizedFor } from "../../lib/pictureSize";
 import { shownLight } from "../../lib/tierColour";
+import { cardLabel } from "../../lib/cardText";
 
 interface ReadOnlyBoardProps {
   label: string;
@@ -47,7 +48,7 @@ function Tile({
         <FocusedPicture
           {...sizedFor(item.imageUrl, 64)}
           focus={item.pictureFocus}
-          alt={item.title}
+          alt={cardLabel(item.title)}
           loading="lazy"
           onError={onBroken}
         />
@@ -61,7 +62,7 @@ function Tile({
       <button
         type="button"
         data-item={position}
-        aria-label={item.title}
+        aria-label={cardLabel(item.title)}
         aria-haspopup="dialog"
         className={`${className} tile--credit`}
         onContextMenu={(event) => {
@@ -86,7 +87,7 @@ function Tile({
       </button>
       {menuAt !== null && (
         <PictureMenu
-          name={item.title}
+          name={cardLabel(item.title)}
           at={menuAt}
           onAbout={knows ? () => setOpen({ anchor: menuAt, large: false }) : undefined}
           onOpenPage={page === null ? undefined : () => openPage(page)}
@@ -95,7 +96,7 @@ function Tile({
       )}
       {open !== null && (
         <AboutPicture
-          name={item.title}
+          name={cardLabel(item.title)}
           attribution={item.attribution}
           credit={item.credit}
           anchor={open.anchor}

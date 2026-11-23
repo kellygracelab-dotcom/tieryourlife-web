@@ -334,7 +334,6 @@ const ptBR: Translation = {
     pickHint:
       "Clique em um resultado para adicioná-lo. Enter adiciona “{name}” como cartão só com o nome.",
     add: "Adicionar",
-    unnamed: "Cartão sem título",
     noCardsYet: "Nenhum cartão ainda. Pesquise no catálogo ou digite um nome e aperte Enter.",
     tiers: "Níveis",
     addTier: "Adicionar nível",
@@ -704,7 +703,8 @@ const ptBR: Translation = {
       many: "Dê nomes às {n} imagens que você enviou",
       other: "Dê nomes às {n} imagens que você enviou",
     },
-    nameHint: "Se ficar vazio, o cartão se chama “{untitled}”.",
+    unnamed: "Cartão",
+    nameHint: "Se ficar vazio, o cartão mostra só a imagem.",
     nameDone: "Concluído",
   },
   android: {

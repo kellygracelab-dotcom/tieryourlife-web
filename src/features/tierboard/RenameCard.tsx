@@ -7,15 +7,19 @@ import "./board.css";
 
 /**
  * Rename in a card's menu on one's own list (night pass W22): its name in a
- * field, chosen whole. Save or Enter keeps it; a name emptied, Cancel or
- * Escape leave the old one, as a list's name does.
+ * field, chosen whole. Save or Enter keeps it; Cancel or Escape leave the old
+ * one. A card with a picture may be left with no name and show the picture
+ * alone (Danylo, 23.11); one without keeps the old name when it is emptied.
  */
 export function RenameCard({
   name,
+  pictured,
   onRename,
   onClose,
 }: {
   name: string;
+  /** Whether the card has a picture, so may go without a name. */
+  pictured: boolean;
   onRename: (title: string) => void;
   onClose: () => void;
 }) {
@@ -31,7 +35,7 @@ export function RenameCard({
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     const next = value.trim();
-    if (next !== "" && next !== name) onRename(next);
+    if (next !== name.trim() && (next !== "" || pictured)) onRename(next);
     onClose();
   };
 

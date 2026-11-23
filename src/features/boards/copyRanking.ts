@@ -5,6 +5,7 @@ import { listIn } from "../../lib/translated";
 import { fill, strings } from "../../strings";
 import { failureText } from "../editor/failureText";
 import { itemsIn, liveItems, poolTier, rankedTiers, type Board, type BoardItem } from "./model";
+import { cardLabel } from "../../lib/cardText";
 
 /**
  * A board saved from somebody else's list, as one's ranking of that list
@@ -129,7 +130,8 @@ export function copyRankingOf(board: Board, source: PublishedList): CopyRanking 
 export function rankingFailureText(error: ApiError, added: readonly AddedCard[] = []): string {
   switch (error.kind) {
     case "pictureRefused": {
-      const title = error.addedIndex === undefined ? undefined : added[error.addedIndex]?.title;
+      const card = error.addedIndex === undefined ? undefined : added[error.addedIndex];
+      const title = card === undefined ? undefined : cardLabel(card.title ?? "");
       return title === undefined
         ? strings.new.failedPictureRefused
         : fill(strings.new.failedPictureRefusedCard, { title });

@@ -71,6 +71,7 @@ import "./board.css";
 import "./ranking.css";
 import { sizedFor } from "../../lib/pictureSize";
 import { shownLight } from "../../lib/tierColour";
+import { cardLabel } from "../../lib/cardText";
 
 /** The board as the owner's editor: it starts from what is saved, and Save writes it back. */
 export interface EditMode {
@@ -323,7 +324,7 @@ const Tile = memo(function Tile({
         type="button"
         className={classes}
         aria-pressed={selected}
-        aria-label={card.title}
+        aria-label={cardLabel(card.title)}
         aria-haspopup={coarse ? "dialog" : "menu"}
         aria-keyshortcuts="Shift+F10"
         disabled={locked && !knows}
@@ -387,7 +388,7 @@ const Tile = memo(function Tile({
       </button>
       {about !== null && (
         <AboutPicture
-          name={card.title}
+          name={cardLabel(card.title)}
           attribution={card.attribution}
           credit={card.credit}
           anchor={about}
@@ -408,7 +409,7 @@ const Tile = memo(function Tile({
       )}
       {moving !== null && !showCredits && !locked && moving.sheet && (
         <MoveSheet
-          name={card.title}
+          name={cardLabel(card.title)}
           onAdjust={adjust === undefined ? undefined : close(adjust)}
           onAbout={openCredits}
           onOpenPage={openItsPage === undefined ? undefined : close(openItsPage)}
@@ -423,7 +424,7 @@ const Tile = memo(function Tile({
       )}
       {moving !== null && !showCredits && !locked && !moving.sheet && (
         <CardMenu
-          name={card.title}
+          name={cardLabel(card.title)}
           onAdjust={adjust === undefined ? undefined : close(adjust)}
           onAbout={openCredits}
           onOpenPage={openItsPage === undefined ? undefined : close(openItsPage)}
@@ -441,6 +442,7 @@ const Tile = memo(function Tile({
       {renaming && onRename !== undefined && (
         <RenameCard
           name={card.title}
+          pictured={card.imageUrl !== null}
           onRename={(title) => onRename(item, title)}
           onClose={() => {
             setRenaming(false);
@@ -1779,8 +1781,8 @@ function useMoveFollowing(
       const tier = list.tiers[rowOf(nowIn, moved)];
       announcer.current.textContent =
         tier === undefined
-          ? fill(strings.rank.cardInPool, { name: card.title })
-          : fill(strings.rank.cardIn, { name: card.title, tier: tier.label });
+          ? fill(strings.rank.cardInPool, { name: cardLabel(card.title) })
+          : fill(strings.rank.cardIn, { name: cardLabel(card.title), tier: tier.label });
     }
     const active = document.activeElement;
     if (focused.current === null || (active !== null && active !== document.body)) return;

@@ -132,8 +132,8 @@ describe("a picture's link in the add field", () => {
       "src",
       "https://storage.test/users/u1/pictures/p1",
     );
-    // Ready, but nameless: not yet.
-    expect(within(draft()).getByRole("button", { name: "Add card" })).toBeDisabled();
+    // Ready: the picture is enough, a name is for the person to give or not (Danylo, 23.11).
+    expect(within(draft()).getByRole("button", { name: "Add card" })).toBeEnabled();
     await userEvent.type(nameField(), "Dune");
     await userEvent.type(
       within(draft()).getByRole("textbox", { name: "Page it’s from" }),

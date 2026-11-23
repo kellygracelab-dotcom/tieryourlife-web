@@ -324,7 +324,6 @@ const ja: Translation = {
     pickHint:
       "結果をクリックして追加します。Enter で「{name}」を名前だけのカードとして追加します。",
     add: "追加",
-    unnamed: "無題のカード",
     noCardsYet:
       "カードはまだありません。カタログを検索するか、名前を入力して Enter を押してください。",
     tiers: "ティア",
@@ -677,7 +676,8 @@ const ja: Translation = {
     nameLabel: "カード名",
     renameSave: "保存",
     nameUploads: { other: "アップロードした画像（{n}枚）に名前を付ける" },
-    nameHint: "空欄のままだと、カード名は「{untitled}」になります。",
+    unnamed: "カード",
+    nameHint: "空欄のままだと、カードには画像だけが表示されます。",
     nameDone: "完了",
   },
   android: {

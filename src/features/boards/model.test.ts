@@ -133,6 +133,9 @@ describe("cards", () => {
     expect(b.editedAt).toBe(2000);
     expect(poolCount(b)).toBe(2);
     expect(rankedCount(b)).toBe(0);
+    // A picture is enough for a card: it keeps no name (Danylo, 23.11).
+    const pictured = addToPool(b0, [{ title: "  ", imageUrl: "https://x/garden.jpg" }], 2001, next);
+    expect(titlesIn(pictured, poolTier(pictured)!.uid)).toEqual([""]);
   });
 
   it("refuse to go past the account's ceiling", () => {
@@ -930,8 +933,14 @@ describe("a card's focus", () => {
     expect(long.items.find((item) => item.uid === card!.uid)?.title).toHaveLength(
       BOARD_LIMITS.title,
     );
-    // An empty name, the same name, a card thrown away or none at all leave the board as it is.
-    expect(renameItem(named, card!.uid, "   ", 9)).toBe(named);
+    // A card with a picture may lose its name: it shows the picture alone (Danylo, 23.11).
+    const nameless = renameItem(named, card!.uid, "   ", 9);
+    expect(nameless.items.find((item) => item.uid === card!.uid)?.title).toBe("");
+    expect(nameless.editedAt).toBe(9);
+    // One without a picture keeps its name; the same name, a card thrown away or none leave it be.
+    const words = addToPool(b, [{ title: "Dune", imageUrl: null }], 2, next);
+    const [word] = liveItems(words);
+    expect(renameItem(words, word!.uid, "   ", 9)).toBe(words);
     expect(renameItem(named, card!.uid, "Grandma's garden", 9)).toBe(named);
     expect(renameItem(named, "nobody", "New", 9)).toBe(named);
     const gone = removeItem(named, card!.uid, 9);

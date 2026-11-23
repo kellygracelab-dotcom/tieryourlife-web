@@ -341,7 +341,6 @@ const pl: Translation = {
     addAsName: "Dodaj „{name}” jako kartę",
     pickHint: "Kliknij wynik, aby go dodać. Enter doda „{name}” jako kartę z samą nazwą.",
     add: "Dodaj",
-    unnamed: "Karta bez tytułu",
     noCardsYet: "Jeszcze nie ma kart. Poszukaj w katalogu albo wpisz nazwę i naciśnij Enter.",
     tiers: "Poziomy",
     addTier: "Dodaj poziom",
@@ -731,7 +730,8 @@ const pl: Translation = {
       many: "Nazwij {n} przesłanych obrazów",
       other: "Nazwij {n} przesłanego obrazu",
     },
-    nameHint: "Gdy pole zostanie puste, karta nazywa się „{untitled}”.",
+    unnamed: "Karta",
+    nameHint: "Gdy pole zostanie puste, karta pokazuje tylko obrazek.",
     nameDone: "Gotowe",
   },
   android: {

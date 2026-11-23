@@ -119,7 +119,7 @@ interface Unnamed {
 /**
  * Pictures just uploaded without a name, each beside a field for one (night
  * pass W22). A name goes on its card as the field is left or Enter pressed;
- * a field left empty keeps the card's "Untitled card". Done puts it away.
+ * a field left empty leaves the card its picture alone. Done puts it away.
  */
 function NameUploads({
   cards,
@@ -154,7 +154,6 @@ function NameUploads({
             <input
               className="draft__input cards__name-field"
               type="text"
-              placeholder={strings.new.unnamed}
               aria-label={many ? `${strings.card.nameLabel} ${index + 1}` : strings.card.nameLabel}
               maxLength={LIMITS.title}
               autoComplete="off"
@@ -176,9 +175,7 @@ function NameUploads({
           </li>
         ))}
       </ul>
-      <p className="cards__note">
-        {fill(strings.card.nameHint, { untitled: strings.new.unnamed })}
-      </p>
+      <p className="cards__note">{strings.card.nameHint}</p>
       <Button variant="tonal" onClick={onDone}>
         {strings.card.nameDone}
       </Button>
@@ -524,8 +521,8 @@ export function AddCardBox({
   // The card goes first in the pool, and the page says so with an Undo.
   const addDraft = () => {
     if (draft === null || draft.picture.status !== "ready" || full()) return;
+    // The picture is enough: a name left empty is none (cardText).
     const title = draft.name.trim();
-    if (title === "") return;
     const { picture } = draft.picture;
     const page = draft.source.kind === "link" ? pageLinkOf(draft.page) : null;
     const attribution =

@@ -3,6 +3,7 @@ import { ownPictureRef } from "../../lib/privatePictureRef";
 import { attributionField, editorCreditOf } from "../../api/pictureAttribution";
 import { MAX_PLAY_ANSWERS, type SyncedPlay } from "../../api/boards";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
+import { cardTitleOf, hasPicture } from "../../lib/cardText";
 import {
   creditOf,
   BOARD_LIMITS,
@@ -213,6 +214,8 @@ function itemOf(
   if (title === null) return null;
   const source = item.source;
   const imageUrl = localPicture(text(item.imageUrl), text(item.pictureId), owner);
+  // An old default name on a card with a picture is none (cardText).
+  const named = cardTitleOf(title, hasPicture({ imageUrl, pictureId: text(item.pictureId) }));
   return {
     uid,
     ...(isInt(item.sourceIndex) && item.sourceIndex >= 0 && item.sourceIndex < BOARD_LIMITS.items
@@ -221,7 +224,7 @@ function itemOf(
     pictureId: text(item.pictureId),
     tierUid,
     position: typeof item.position === "number" ? item.position : position,
-    title,
+    title: named,
     imageUrl,
     credit: creditOf(item.credit),
     // Boards kept before attributions travelled have none, and load as they were.

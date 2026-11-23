@@ -254,6 +254,42 @@ describe("parseBoard", () => {
     expect(board?.items[0]?.pictureId).toBe("pic");
   });
 
+  it("reads a card with a picture and the old default name as one with no name (Danylo, 23.11)", () => {
+    const board = parseBoard({
+      uid: "b1",
+      title: "Games",
+      tiers: [
+        {
+          uid: "pool",
+          label: "Unranked",
+          colorLight: "#000000",
+          colorDark: "#ffffff",
+          isPool: true,
+        },
+      ],
+      items: [
+        {
+          uid: "i1",
+          tierUid: "pool",
+          position: 0,
+          title: "Untitled card",
+          imageUrl: "https://x/a.jpg",
+        },
+        {
+          uid: "i2",
+          tierUid: "pool",
+          position: 1,
+          title: "Карточка без названия",
+          imageUrl: null,
+          pictureId: "p2",
+        },
+        { uid: "i3", tierUid: "pool", position: 2, title: "Untitled card", imageUrl: null },
+        { uid: "i4", tierUid: "pool", position: 3, title: "", imageUrl: "https://x/d.jpg" },
+      ],
+    });
+    expect(board?.items.map((item) => item.title)).toEqual(["", "", "Untitled card", ""]);
+  });
+
   it("gives a board without a pool one, and refuses what is not a board", () => {
     const board = parseBoard({
       uid: "b1",

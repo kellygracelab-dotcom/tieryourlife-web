@@ -335,7 +335,6 @@ const es: Translation = {
     pickHint:
       "Haz clic en un resultado para añadirlo. Enter añade «{name}» como tarjeta solo con el nombre.",
     add: "Añadir",
-    unnamed: "Tarjeta sin título",
     noCardsYet: "Todavía no hay tarjetas. Busca en el catálogo o escribe un nombre y pulsa Intro.",
     tiers: "Niveles",
     addTier: "Añadir nivel",
@@ -707,7 +706,8 @@ const es: Translation = {
       many: "Ponles nombre a las {n} imágenes que subiste",
       other: "Ponles nombre a las {n} imágenes que subiste",
     },
-    nameHint: "Si lo dejas vacío, la tarjeta se llama «{untitled}».",
+    unnamed: "Tarjeta",
+    nameHint: "Si lo dejas vacío, la tarjeta muestra solo su imagen.",
     nameDone: "Listo",
   },
   android: {
