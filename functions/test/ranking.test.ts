@@ -164,7 +164,7 @@ describe("snapshotOf", () => {
   it("keeps no name of an editorial list, and never the author's uid", () => {
     const snapshot = snapshotOf({
       title: "Pixar",
-      authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+      authorUid: "tyl-editorial",
       authorName: "Danylo Petrov",
       authorPhotoUrl: "https://lh3/face.jpg",
       category: "film_tv",
@@ -195,7 +195,7 @@ describe("snapshotOf", () => {
       authorName: "",
       authorPhotoUrl: null,
     });
-    assert.deepEqual(shownSnapshot(kept, { authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2" }), {
+    assert.deepEqual(shownSnapshot(kept, { authorUid: "tyl-editorial" }), {
       ...kept,
       editorial: true,
       authorName: "",
@@ -206,7 +206,7 @@ describe("snapshotOf", () => {
   it("keeps the pictures' credits and a house list's words, only those it shows", () => {
     const snapshot = snapshotOf({
       title: "Best sci-fi films",
-      authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+      authorUid: "tyl-editorial",
       tiers: [{ label: "S", caption: "Masterpiece", colorLight: "#f00", colorDark: "#a00" }],
       items: [
         { title: "Arrival", imageUrl: "https://img/a.jpg", credit: " Jane Doe, CC BY 2.0 " },

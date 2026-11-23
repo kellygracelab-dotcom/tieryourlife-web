@@ -702,7 +702,7 @@ describe("ListPage", () => {
   it("stands without an author when the list is editorial", async () => {
     mocks.loadList.mockResolvedValue({
       ...list,
-      authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+      authorUid: "tyl-editorial",
       authorName: "Danylo Petrov",
     });
     open();
@@ -723,7 +723,7 @@ describe("ListPage", () => {
   it("tells about a house list's cover picture, as its editor credited it", async () => {
     mocks.loadList.mockResolvedValue({
       ...list,
-      authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+      authorUid: "tyl-editorial",
       coverImageUrl: "https://img.test/cover.jpg",
       coverAttribution: {
         author: "Jane",
@@ -1100,10 +1100,7 @@ describe("ListPage based on", () => {
   it.each([
     ["an original without an author", { authorName: null }],
     ["an original whose author's name is empty", { authorName: "" }],
-    [
-      "an editorial original",
-      { authorName: "Danylo Petrov", authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2" },
-    ],
+    ["an editorial original", { authorName: "Danylo Petrov", authorUid: "tyl-editorial" }],
   ])("credits nobody for %s", async (_, credit) => {
     mocks.loadList.mockResolvedValue({
       ...list,

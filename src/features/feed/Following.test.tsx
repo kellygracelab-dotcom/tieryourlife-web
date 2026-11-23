@@ -120,7 +120,7 @@ beforeEach(() => {
   loadSuggestions.mockResolvedValue({
     authors: [
       { uid: "u2", name: "someone", photoUrl: null, takeCount: 12 },
-      { uid: "85RRieyLyUPCEqHjdYCdxVlWxHx2", name: "TierYourLife", photoUrl: null, takeCount: 99 },
+      { uid: "tyl-editorial", name: "TierYourLife", photoUrl: null, takeCount: 99 },
     ],
   });
   loadFollowing.mockReset();

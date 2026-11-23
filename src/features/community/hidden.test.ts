@@ -35,17 +35,15 @@ describe("hidden", () => {
 
   it("keeps editorial lists in sight for somebody who once hid the account behind them", () => {
     const hidden = withAuthor(NOTHING_HIDDEN, {
-      uid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+      uid: "tyl-editorial",
       name: "Danylo",
     });
-    expect(isOutOfSight(hidden, { id: "l1", authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2" })).toBe(
-      false,
-    );
+    expect(isOutOfSight(hidden, { id: "l1", authorUid: "tyl-editorial" })).toBe(false);
     // The list itself can still be hidden, like any other.
     expect(
       isOutOfSight(withList(hidden, { id: "l1", title: "One" }), {
         id: "l1",
-        authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+        authorUid: "tyl-editorial",
       }),
     ).toBe(true);
   });

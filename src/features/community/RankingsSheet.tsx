@@ -3,7 +3,7 @@ import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from "re
 import { createPortal } from "react-dom";
 import type { ReaderRanking } from "../../api/community";
 import type { PublishedList } from "../../api/types";
-import { isEditorial, isEditorialAuthor } from "../../lib/editorial";
+import { isEditorial } from "../../lib/editorial";
 import { currentLocale, fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -234,8 +234,8 @@ export function RankingsSheet({
   const signedIn = account?.kind === "signedIn";
   // The first row's name, as the app gives it (20.11.2026): the house's lists
   // are TierYourLife's, with the app's mark; one with no name is Anonymous.
-  const house = isEditorialAuthor(list.authorUid);
-  const unnamed = !house && (isEditorial(list) || list.authorName.trim() === "");
+  const house = isEditorial(list);
+  const unnamed = !house && list.authorName.trim() === "";
   // A list its author placed nothing on is nobody's ranking: its row would
   // show an empty board (the Designer's rule, 20.11.2026; the app's too).
   const authorRow = list.items.some((item) => item.tierIndex != null);

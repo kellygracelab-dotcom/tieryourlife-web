@@ -276,7 +276,7 @@ describe("rankingVersion", () => {
 // A house list is read in its reader's language on the site; its link's
 // preview speaks it too, and a newer section is named as its document names it.
 describe("a link's preview", () => {
-  const HOUSE = "85RRieyLyUPCEqHjdYCdxVlWxHx2";
+  const HOUSE = "tyl-editorial";
   const house = {
     title: "Best sci-fi films",
     authorUid: HOUSE,

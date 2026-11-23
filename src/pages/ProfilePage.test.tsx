@@ -106,7 +106,7 @@ describe("ProfilePage", () => {
         <RouterProvider
           router={createMemoryRouter(
             [{ path: "/u/:uid", element: <ProfilePage load={load} follow={follow} /> }],
-            { initialEntries: ["/u/85RRieyLyUPCEqHjdYCdxVlWxHx2"] },
+            { initialEntries: ["/u/tyl-editorial"] },
           )}
         />
       </SessionContext.Provider>,

@@ -50,11 +50,25 @@ describe("ListCard", () => {
   });
 
   it("stands without an author when the list is editorial", () => {
-    renderCard({ authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2", authorName: "Danylo Petrov" });
+    renderCard({ authorUid: "tyl-editorial", authorName: "Danylo Petrov" });
     expect(screen.getByRole("link", { name: /Every A24 film, ranked/ })).toBeInTheDocument();
     expect(screen.queryByText(/Danylo Petrov/)).toBeNull();
     expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(screen.getByText("34 cards")).toBeInTheDocument();
+  });
+
+  // His own lists are his, under his name (Danylo, 23.11); the house's are the house's.
+  it("names Danylo on his own list, and nobody on a list the backend calls the house's", () => {
+    renderCard({ authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2", authorName: "Danylo Petrov" });
+    expect(screen.getByRole("link", { name: "Danylo Petrov" })).toHaveAttribute(
+      "href",
+      "/u/85RRieyLyUPCEqHjdYCdxVlWxHx2",
+    );
+  });
+
+  it("stands without an author when the backend says the list is the house's", () => {
+    renderCard({ authorUid: "", authorName: "", anonymous: true });
+    expect(screen.getAllByRole("link")).toHaveLength(1);
   });
 
   it("shows the author's face when there is one", () => {
