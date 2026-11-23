@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ListSummary } from "../../api/types";
 import { FeedGrid } from "./FeedGrid";
 import type { FeedState } from "./useFeed";
@@ -81,6 +81,28 @@ describe("FeedGrid", () => {
     const { more } = show(ready("c1"));
     await userEvent.click(screen.getByRole("button", { name: "Show more" }));
     expect(more).toHaveBeenCalledTimes(1);
+  });
+
+  describe("in a grid three across", () => {
+    afterEach(() => vi.restoreAllMocks());
+    const twenty = Array.from({ length: 20 }, (_, n) => summary(`l${n}`, `List ${n}`));
+    const threeAcross = () =>
+      vi.spyOn(window, "getComputedStyle").mockReturnValue({
+        gridTemplateColumns: "300px 300px 300px",
+      } as CSSStyleDeclaration);
+
+    it("shows whole rows only while more are to come", () => {
+      threeAcross();
+      show(ready("c1", "idle", twenty));
+      expect(screen.getAllByRole("listitem")).toHaveLength(18);
+      expect(screen.queryByText("List 18")).toBeNull();
+    });
+
+    it("shows every card on the last page", () => {
+      threeAcross();
+      show(ready(null, "idle", twenty));
+      expect(screen.getAllByRole("listitem")).toHaveLength(20);
+    });
   });
 
   it("shows the next page coming, and names a failure", () => {

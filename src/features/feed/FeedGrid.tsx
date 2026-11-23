@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { ListSummary } from "../../api/types";
 import { titleIn } from "../../lib/translated";
 import { currentLocale, fill, plural, strings } from "../../strings";
@@ -10,6 +10,7 @@ import { Skeleton } from "../../ui/Skeleton";
 import { isOutOfSight } from "../community/hidden";
 import { FeedTroubleText } from "./FeedTrouble";
 import { useHidden } from "../community/useHidden";
+import { fullRows, useGridColumns } from "./fullRows";
 import type { FeedState } from "./useFeed";
 import { useYours } from "./yours";
 import "../community/report.css";
@@ -142,7 +143,15 @@ export function FeedGrid({
   const yours = useYours();
   // A card hidden from its own menu becomes the tile with Undo, which takes
   // the focus the menu's button had: the button is gone with the card.
-  const grid = useRef<HTMLUListElement>(null);
+  const grid = useRef<HTMLUListElement | null>(null);
+  const [measure, columns] = useGridColumns();
+  const keepGrid = useCallback(
+    (element: HTMLUListElement | null) => {
+      grid.current = element;
+      measure(element);
+    },
+    [measure],
+  );
   const justHid = useRef<string | null>(null);
   useEffect(() => {
     const id = justHid.current;
@@ -183,6 +192,8 @@ export function FeedGrid({
     else if (!isOutOfSight(hidden, list)) slots.push({ kind: "card", list });
   }
   const omitted = state.lists.length - slots.length;
+  // While more are to come, only whole rows: the rest wait for Show more.
+  const shown = slots.slice(0, fullRows(slots.length, columns, state.next !== null));
 
   return (
     <>
@@ -201,8 +212,8 @@ export function FeedGrid({
         <p className="feed__omitted">{plural(strings.feed.omitted, omitted)}</p>
       )}
       {slots.length > 0 && (
-        <ul className="feed" aria-label={label} ref={grid}>
-          {slots.map(({ kind, list }) => (
+        <ul className="feed" aria-label={label} ref={keepGrid}>
+          {shown.map(({ kind, list }) => (
             <li key={list.id} data-list={list.id}>
               {kind === "card" ? (
                 <ListCard
