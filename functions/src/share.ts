@@ -4,6 +4,7 @@
  * Pure: shareImage.ts fetches the pictures and turns the tree into pixels.
  */
 
+import { SITE_LOGO_SRC } from "./siteLogo";
 import { categoryLabel, SITE_NAME } from "./og";
 import { AS_WRITTEN, say, wordsFor } from "./previewWords";
 
@@ -309,46 +310,9 @@ const heading = (card: ShareCard, line: Byline): Node =>
         ),
   ]);
 
-const MARK_BANDS = ["#b03a32", "#c06a25", "#a98b1f", "#3f7f55", "#3c6e99"];
-
-/** The app's icon at the size of a line of text: five tier bands behind a dark tile with the S. */
+/** The site's own icon (public/favicon.svg) at the size of a line of text. */
 const mark = (size: number): Node =>
-  el(
-    "div",
-    {
-      display: "flex",
-      flexDirection: "column",
-      position: "relative",
-      width: size,
-      height: size,
-      borderRadius: Math.round(size * 0.22),
-      overflow: "hidden",
-      flexShrink: 0,
-    },
-    [
-      ...MARK_BANDS.map((color) => el("div", { display: "flex", flex: 1, background: color })),
-      el(
-        "div",
-        {
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          position: "absolute",
-          left: Math.round(size * 0.21),
-          top: Math.round(size * 0.21),
-          width: Math.round(size * 0.58),
-          height: Math.round(size * 0.58),
-          borderRadius: Math.round(size * 0.17),
-          background: "#121318",
-          color: "#f7f5fa",
-          fontSize: Math.round(size * 0.46),
-          fontWeight: 500,
-          lineHeight: 1,
-        },
-        "S",
-      ),
-    ],
-  );
+  el("img", { width: size, height: size, flexShrink: 0 }, undefined, { src: SITE_LOGO_SRC });
 
 const brand = (): Node =>
   el("div", { display: "flex", alignItems: "center", gap: 10, color: INK_FAINT, fontSize: 18 }, [
@@ -797,7 +761,7 @@ function authorCard(
               fontSize: 23,
               fontWeight: 500,
             },
-            [mark(34), SITE_ADDRESS],
+            [mark(38), SITE_ADDRESS],
           ),
         ],
       ),

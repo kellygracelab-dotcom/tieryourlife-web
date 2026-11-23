@@ -1,3 +1,4 @@
+import { SITE_LOGO_SRC } from "../src/siteLogo";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { renderShareSvg } from "../src/shareImage";
@@ -61,10 +62,12 @@ function textOf(node: Node | string): string[] {
   return (Array.isArray(children) ? children : [children]).flatMap(textOf);
 }
 
+/** How many nodes of a type; for "img", the pictures, the site's icon left out. */
 function count(node: Node | string, type: string): number {
   if (typeof node === "string") return 0;
   const children = node.props.children;
-  const own = node.type === type ? 1 : 0;
+  const logo = (node.props as { src?: unknown }).src === SITE_LOGO_SRC;
+  const own = node.type === type && !logo ? 1 : 0;
   if (children === undefined) return own;
   return (
     own + (Array.isArray(children) ? children : [children]).reduce((n, c) => n + count(c, type), 0)
@@ -122,11 +125,9 @@ describe("shareCardOf", () => {
     assert.ok(text.includes("TierYourLife"));
     // At the bottom right, as on a ranking's card.
     assert.ok(JSON.stringify(tree).includes('"justifyContent":"flex-end"'));
-    // The name stands beside the app's icon: five tier bands behind the S.
-    assert.match(text, /S \| TierYourLife$/);
-    for (const band of ["#b03a32", "#c06a25", "#a98b1f", "#3f7f55", "#3c6e99"]) {
-      assert.ok(JSON.stringify(tree).includes(`"background":"${band}"`), band);
-    }
+    // The name stands beside the site's own icon, public/favicon.svg.
+    assert.match(text, /TierYourLife$/);
+    assert.ok(JSON.stringify(tree).includes(SITE_LOGO_SRC));
   });
 
   it("draws a ranking row by row, with a +N tile and the tiers it left out", () => {
