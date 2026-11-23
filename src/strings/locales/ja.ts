@@ -1853,6 +1853,16 @@ const ja: Translation = {
     meta: "できあがったリスト · {cards}",
     try: "試してみる",
   },
+  share: {
+    updated: "{date} 更新",
+    button: "共有",
+    hook: "私の{tier}ランク：{names}。あなたは？",
+    question: "あなたは？",
+    copyByHand: "アドレスを手動でコピーしてください：",
+    address: "リストのアドレス",
+    openInCommunity: "コミュニティで開く",
+    settings: "公開設定",
+  },
 };
 
 export default ja;

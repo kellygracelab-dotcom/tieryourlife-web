@@ -2312,6 +2312,16 @@ const ar: Translation = {
     meta: "قائمة جاهزة · {cards}",
     try: "جرّبها",
   },
+  share: {
+    updated: "حُدّثت {date}",
+    button: "مشاركة",
+    hook: "مستواي {tier}: {names}. وأنت؟",
+    question: "وأنت، كيف ترتّبها؟",
+    copyByHand: "انسخ العنوان يدويًا:",
+    address: "عنوان القائمة",
+    openInCommunity: "افتح في المجتمع",
+    settings: "إعدادات النشر",
+  },
 };
 
 export default ar;
