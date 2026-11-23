@@ -28,6 +28,7 @@ import {
   putBack,
   removeItem,
   restoreBoard,
+  sentAsItIs,
   restoreTier,
   setCardCredit,
   setPictureFocus,
@@ -651,11 +652,24 @@ function OpenBoard({
   });
 
   // How many cards the link's list shows otherwise, while the board is ahead of it.
-  const changes = usePublishedChanges(
+  const published = usePublishedChanges(
     board,
     board !== null && publishKindOf(board, house !== null) === "update",
     publishing.loadOriginal ?? loadListAsWritten,
   );
+  const changes = published.count;
+  // A sending time guessed for a board from the account, and its list shows
+  // it as it is: nothing to Update after all (the board saved after a
+  // publish is seconds later than its list: QA, 23.11).
+  const sameAt = board?.publishedEditedAtGuessed === true ? published.sameAt : null;
+  useEffect(() => {
+    if (sameAt === null) return;
+    // The board as it was compared, not an edit made since.
+    const current = repository.get(uid);
+    if (current?.publishedEditedAtGuessed === true && current.editedAt === sameAt) {
+      repository.save(sentAsItIs(current));
+    }
+  }, [sameAt, repository, uid]);
   if (board === null || view === null) return <NotFound />;
   // Not a board to edit while it is in the trash: an edit would be kept on a
   // list Your lists no longer shows.
