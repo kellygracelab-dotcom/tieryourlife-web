@@ -48,13 +48,11 @@ export function ListArt({
   const [broken, setBroken] = useState<ReadonlySet<string>>(() => new Set());
   const add = (set: typeof setLoaded, key: string) => () =>
     set((seen) => (seen.has(key) ? seen : new Set(seen).add(key)));
-  const cells = previews
-    .slice(0, MOSAIC_MAX)
-    .map((url, at) => ({
-      url,
-      key: `${at}-${url}`,
-      focus: cellFocus?.get(url) ?? previewFocus?.[at] ?? null,
-    }));
+  const cells = previews.slice(0, MOSAIC_MAX).map((url, at) => ({
+    url,
+    key: `${at}-${url}`,
+    focus: cellFocus?.get(url) ?? previewFocus?.[at] ?? null,
+  }));
   const waiting = (keys: readonly string[]) =>
     keys.some((key) => !loaded.has(key) && !broken.has(key));
   const named = (label: string) =>
