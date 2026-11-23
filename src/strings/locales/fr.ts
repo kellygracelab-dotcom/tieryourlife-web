@@ -206,6 +206,8 @@ const fr: Translation = {
     categories: "Rubriques",
     popular: "Populaires",
     popularNote: "Ouvrez-en une et commencez à glisser. Aucun compte nécessaire.",
+    fresh: "Nouveautés de la communauté",
+    freshNote: "Des listes publiées récemment.",
     source: "Quelles listes afficher",
     everyone: "Toutes",
     following: "Abonnements",

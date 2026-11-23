@@ -22,6 +22,7 @@ export function apiStubs() {
     preloadHidesAuthor: vi.fn(() => false),
     listAtHand: vi.fn(() => undefined),
     loadFeed: pending(),
+    loadFresh: pending(),
     embeddedRanking: vi.fn(() => null),
     loadRanking: pending(),
     rearrangeRanking: pending(),

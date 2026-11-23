@@ -196,6 +196,8 @@ const ja: Translation = {
     categories: "セクション",
     popular: "人気",
     popularNote: "開いてドラッグするだけ。アカウントは要りません。",
+    fresh: "コミュニティの新着",
+    freshNote: "最近公開されたリスト。",
     source: "表示するリスト",
     everyone: "すべて",
     following: "フォロー中",
