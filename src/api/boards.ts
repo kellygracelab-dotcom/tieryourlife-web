@@ -71,6 +71,13 @@ export interface KeptBoardEntry {
   fingerprint: string | null;
   title: string;
   itemCount: number;
+  /**
+   * The star (CONTRACT, Favourites, Proxy #194): when the board was starred,
+   * null once unstarred, and when that last changed. Both present or both
+   * absent; absent while no device has sent a star for the board.
+   */
+  favouritedAt?: number | null;
+  favouriteChangedAt?: number;
 }
 
 /**
@@ -130,6 +137,13 @@ export interface KeptBoard {
   play?: SyncedPlay | Readonly<Record<string, unknown>> | null;
   tiers: KeptTier[];
   items: KeptItem[];
+  /**
+   * The star (CONTRACT, Favourites, Proxy #194): when the board was starred,
+   * null once unstarred, and when that last changed. Both present or both
+   * absent; absent while no device has sent a star for the board.
+   */
+  favouritedAt?: number | null;
+  favouriteChangedAt?: number;
 }
 
 /** A write says what it was based on; the account refuses one that has moved on since, handing the stored board back. */
@@ -158,6 +172,13 @@ export interface KeepBoardRequest {
   play?: SyncedPlay | Readonly<Record<string, unknown>> | null;
   tiers: KeptTier[];
   items: KeptItem[];
+  /**
+   * The star, sent together and only by a device that knows when it last
+   * changed: the account keeps the later change, and keeps both out of the
+   * fingerprint. Left out, the account keeps the star it has.
+   */
+  favouritedAt?: number | null;
+  favouriteChangedAt?: number;
 }
 
 export interface KeptBoardIndex {

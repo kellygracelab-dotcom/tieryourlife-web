@@ -1154,7 +1154,7 @@
     top: 0;
     z-index: 20;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto auto;
     grid-template-rows: auto auto auto;
     align-items: center;
     column-gap: 4px;
@@ -1206,15 +1206,51 @@
     grid-column: 3;
   }
 
-  .board-page .list-head__tools > .play-button {
+  /* Share, once out: an icon in the row, beside Update when there is one (the Designer, 23.11). */
+  .board-page .list-head__tools > .share-anchor {
     grid-row: 1;
     grid-column: 4;
+  }
+
+  .board-page .list-head__tools > .play-button {
+    grid-row: 1;
+    grid-column: 5;
   }
 
   /* ⋮, the last of the tools. */
   .board-page .list-head__tools > .menu:last-child {
     grid-row: 1;
-    grid-column: 5;
+    grid-column: 6;
+  }
+
+  .board-page .list-head__tools .btn.share-button {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .board-page .list-head__tools .btn.share-button .btn__icon {
+    margin: 0;
+  }
+
+  /* Its word stays for a screen reader. */
+  .board-page .list-head__tools .share-button__word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Where there is no share sheet the card comes up under the head, the window's width. */
+  .board-page .share-card {
+    position: fixed;
+    top: 64px;
+    inset-inline: 16px;
+    width: auto;
   }
 
   /* Scrolled: one row, 64 high, the name cut short with the count under it (artboard 18). */
@@ -1226,6 +1262,7 @@
 
   .board-page .list-head--tight > .list-head__back,
   .board-page .list-head--tight .list-head__tools > .publish-button,
+  .board-page .list-head--tight .list-head__tools > .share-anchor,
   .board-page .list-head--tight .list-head__tools > .play-button,
   .board-page .list-head--tight .list-head__tools > .menu:last-child {
     grid-row: 1 / 3;

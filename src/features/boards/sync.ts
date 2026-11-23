@@ -12,9 +12,11 @@ import { fingerprintOf as digest } from "./fingerprint";
 import {
   beyondAccount,
   coverFocusOf,
+  favouriteChangedAtOf,
   liveItems,
   setHeld,
   setPublished,
+  takeFavourite,
   trashBoard,
   type BeyondAccount,
   type Board,
@@ -135,6 +137,7 @@ const request = (
   ...(board.takenFrom === null ? {} : { takenFrom: board.takenFrom }),
   ...(board.origin ? { origin: board.origin } : {}),
   ...(board.rankingChoice ? { rankingChoice: board.rankingChoice } : {}),
+  ...starSent(board),
   play: board.play ?? board.otherPlay ?? null,
   tiers: board.tiers.map((tier) => ({
     uid: tier.uid,
@@ -165,6 +168,90 @@ const request = (
     deletedAt: item.deletedAt,
   })),
 });
+
+/**
+ * The star goes with every write once it has a time it changed at: the
+ * account keeps the later change, so sending it again does no harm, and a
+ * board that never had one says nothing and keeps the account's.
+ */
+function starSent(board: Board): Pick<KeepBoardRequest, "favouritedAt" | "favouriteChangedAt"> {
+  const changedAt = favouriteChangedAtOf(board);
+  return changedAt === null
+    ? {}
+    : { favouritedAt: board.favouritedAt, favouriteChangedAt: changedAt };
+}
+
+/** The star the account sent, read with care: both fields or nothing. */
+interface AccountStar {
+  favouritedAt: number | null;
+  favouriteChangedAt: number;
+}
+
+const isTime = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && value > 0;
+
+function starOf(source: {
+  favouritedAt?: unknown;
+  favouriteChangedAt?: unknown;
+}): AccountStar | null {
+  const { favouritedAt, favouriteChangedAt } = source;
+  if (!isTime(favouriteChangedAt)) return null;
+  if (favouritedAt !== null && !isTime(favouritedAt)) return null;
+  return { favouritedAt, favouriteChangedAt };
+}
+
+/** The board with the account's star when it changed later; as it is otherwise. */
+function withStarOf(board: Board, source: KeptBoard): Board {
+  const star = starOf(source);
+  return star === null ? board : takeFavourite(board, star.favouritedAt, star.favouriteChangedAt);
+}
+
+/** Whether the star here changed later than the one the account sent: then it has to go up. */
+function starAheadOf(board: Board | null, source: KeptBoard): boolean {
+  const here = board === null ? null : favouriteChangedAtOf(board);
+  if (here === null) return false;
+  const theirs = starOf(source);
+  return theirs === null || here > theirs.favouriteChangedAt;
+}
+
+/** What an agreement remembers of the star: when the one both sides now have last changed. */
+function starAgreed(board: Board): Pick<SyncedBoard, "favouriteChangedAt"> {
+  const changedAt = favouriteChangedAtOf(board);
+  return changedAt === null ? {} : { favouriteChangedAt: changedAt };
+}
+
+/**
+ * The account's star written over the one here, where it changed later, on
+ * the board as it is now: only the star moves, so an edit made meanwhile
+ * stays, and the board does not read as changed here, the star being outside
+ * the fingerprint. No wait between the read and the write.
+ */
+function takeStarOf(deps: SyncDeps, uid: string, source: KeptBoard): void {
+  const board = deps.repository.get(uid);
+  if (board === null) return;
+  const starred = withStarOf(board, source);
+  if (starred === board) return;
+  check(deps);
+  deps.repository.save(starred);
+}
+
+/**
+ * Every star the index says changed later on another device comes down
+ * before the run plans anything: the row carries it, so the board itself
+ * need not be read. The rest of each board stays as it is here.
+ */
+function takeStars(deps: SyncDeps, remote: ReadonlyMap<string, IndexRow>): void {
+  const changed: Board[] = [];
+  for (const board of deps.repository.all()) {
+    const row = remote.get(board.uid);
+    if (row === undefined || row.deleted || row.star === null) continue;
+    const starred = takeFavourite(board, row.star.favouritedAt, row.star.favouriteChangedAt);
+    if (starred !== board) changed.push(starred);
+  }
+  if (changed.length === 0) return;
+  check(deps);
+  deps.repository.saveAll(changed);
+}
 
 /** A board held back before it was sent, since the account would refuse it as it is. */
 class HeldBack extends Error {
@@ -225,12 +312,15 @@ export async function syncBoards(deps: SyncDeps): Promise<SyncReport> {
 
     check(deps);
     const remote = await readIndex(api);
+    takeStars(deps, remote);
     const steps = planSync(
       local.map((board) => ({
         uid: board.uid,
         fingerprint: fingerprints.get(board.uid) ?? "",
         legacyFingerprint: legacyCopies.get(board.uid),
         inTrash: board.deletedAt !== null,
+        // As it is once the stars came down, which moved nothing else.
+        favouriteChangedAt: favouriteChangedAtOf(repository.get(board.uid) ?? board),
       })),
       [...remote.values()],
       records.all(),
@@ -308,18 +398,26 @@ export async function forgetAccountCopies(
   records.clear();
 }
 
-async function readIndex(api: BoardsApi): Promise<Map<string, RemoteBoard>> {
-  const found = new Map<string, RemoteBoard>();
+/** A row of the index: what the plan reads, and the star it carries. */
+interface IndexRow extends RemoteBoard {
+  star: AccountStar | null;
+}
+
+async function readIndex(api: BoardsApi): Promise<Map<string, IndexRow>> {
+  const found = new Map<string, IndexRow>();
   let after: string | null = null;
   do {
     const page: { boards: KeptBoardEntry[]; next: string | null } = await api.index(after);
     for (const entry of page.boards) {
+      const star = starOf(entry);
       found.set(entry.uid, {
         uid: entry.uid,
         revision: entry.revision,
         deleted: entry.deleted,
         forever: entry.deleted && entry.removal === "forever",
         fingerprint: entry.fingerprint,
+        star,
+        ...(star === null ? {} : { favouriteChangedAt: star.favouriteChangedAt }),
       });
     }
     after = page.next;
@@ -352,11 +450,21 @@ async function carry(
       const theirs = await api.board(step.uid);
       await adopt(theirs, true, deps, fingerprintOf);
       sawTheirs(deps, theirs);
+      // The star is no part of what conflicts: the later change goes up with ours.
+      takeStarOf(deps, step.uid, theirs);
       await send(step.uid, step.basedOn, deps, fingerprintOf);
       return "carried";
     }
-    case "restore":
-      return takeOver(await api.board(step.uid), planned.get(step.uid), deps, fingerprintOf);
+    case "restore": {
+      const incoming = await api.board(step.uid);
+      const done = await takeOver(incoming, planned.get(step.uid), deps, fingerprintOf);
+      // Theirs came down, but the star here changed later: it goes up on the
+      // revision just taken, or the other devices would never see it.
+      if (done === "carried" && starAheadOf(repository.get(step.uid), incoming)) {
+        await send(step.uid, incoming.revision, deps, fingerprintOf);
+      }
+      return done;
+    }
     case "adopt":
       await adopt(await api.board(step.uid), false, deps, fingerprintOf);
       return "carried";
@@ -382,7 +490,7 @@ async function carry(
       // computed once more only if it was not. No wait between the check and the write.
       const fingerprint = planned.get(step.uid) ?? (await fingerprintOf(board));
       check(deps);
-      agree(deps, { uid: step.uid, revision: step.revision, fingerprint });
+      agree(deps, { uid: step.uid, revision: step.revision, fingerprint, ...starAgreed(board) });
       return "carried";
     }
   }
@@ -414,11 +522,23 @@ async function send(
     const theirs = conflictBoard(reason);
     if (theirs === null) throw reason;
     check(deps);
+    // The star is outside the fingerprint and never conflicts: the later
+    // change wins, here and in whatever goes up again.
+    takeStarOf(deps, uid, theirs);
+    const starred = withStarOf(board, theirs);
     // Our own board coming back: the last write's answer never arrived. Same
     // content, so take the missed number and stop; otherwise a copy of your
-    // own board appears every time.
+    // own board appears every time. Unless the star here changed later: the
+    // account refuses a write behind it even then, and it goes up again.
     if (theirs.fingerprint !== null && theirs.fingerprint === fingerprint) {
-      agree(deps, { uid, revision: theirs.revision, fingerprint });
+      if (!starAheadOf(starred, theirs)) {
+        agree(deps, { uid, revision: theirs.revision, fingerprint, ...starAgreed(starred) });
+        return;
+      }
+      const again = await api.keep(uid, request(starred, fingerprint, theirs.revision, deviceName));
+      check(deps);
+      agree(deps, { uid, revision: again.revision, fingerprint, ...starAgreed(starred) });
+      await takeCopies(uid, again, deps, fingerprintOf);
       return;
     }
     // The board as last agreed, written again by another device: nothing in
@@ -433,14 +553,14 @@ async function send(
       sawTheirs(deps, theirs);
     }
     check(deps);
-    const second = await api.keep(uid, request(board, fingerprint, theirs.revision, deviceName));
+    const second = await api.keep(uid, request(starred, fingerprint, theirs.revision, deviceName));
     check(deps);
-    agree(deps, { uid, revision: second.revision, fingerprint });
+    agree(deps, { uid, revision: second.revision, fingerprint, ...starAgreed(starred) });
     await takeCopies(uid, second, deps, fingerprintOf);
     return;
   }
   check(deps);
-  agree(deps, { uid, revision: answer.revision, fingerprint });
+  agree(deps, { uid, revision: answer.revision, fingerprint, ...starAgreed(board) });
   await takeCopies(uid, answer, deps, fingerprintOf);
 }
 
@@ -491,7 +611,7 @@ async function takeCopies(
   const latest = deps.repository.get(uid);
   if (latest === null) return;
   keep(deps, sameBoard(latest, current) ? moved : withCopies(latest, copies));
-  agree(deps, { uid, revision: again.revision, fingerprint });
+  agree(deps, { uid, revision: again.revision, fingerprint, ...starAgreed(moved) });
 }
 
 /**
@@ -502,11 +622,13 @@ async function takeCopies(
  */
 function sawTheirs(deps: SyncDeps, theirs: KeptBoard): void {
   check(deps);
+  const star = starOf(theirs);
   agree(deps, {
     uid: theirs.uid,
     revision: theirs.revision,
     fingerprint: theirs.fingerprint ?? "",
     ...serverFingerprint(theirs),
+    ...(star === null ? {} : { favouriteChangedAt: star.favouriteChangedAt }),
   });
 }
 
@@ -530,7 +652,7 @@ async function trashHere(
   const latest = deps.repository.get(uid);
   if (latest === null || !sameBoard(latest, board) || now !== plannedFingerprint) return "deferred";
   if (trashed !== board) keep(deps, trashed);
-  agree(deps, { uid, revision, fingerprint });
+  agree(deps, { uid, revision, fingerprint, ...starAgreed(board) });
   return "carried";
 }
 
@@ -582,24 +704,29 @@ function serverFingerprint(incoming: KeptBoard): Pick<SyncedBoard, "remoteFinger
     : {};
 }
 
-/** A kept board as one of ours: the account's fields, and this device's own set afresh. */
+/**
+ * A kept board as one of ours: the account's fields, its star among them
+ * when it keeps one, and this device's own set afresh.
+ */
 function boardOf(incoming: KeptBoard, now: number): Board | null {
   const parsed = parseBoard({ ...incoming, editedAt: incoming.updatedAt || now });
-  return parsed === null
-    ? null
-    : {
-        ...parsed,
-        favouritedAt: null,
-        arrivedFrom: null,
-        publishedEditedAt: null,
-        topic: null,
-        rankingOf: null,
-      };
+  if (parsed === null) return null;
+  const { favouriteChangedAt: _read, ...rest } = parsed;
+  const star = starOf(incoming);
+  return {
+    ...rest,
+    favouritedAt: star?.favouritedAt ?? null,
+    ...(star === null ? {} : { favouriteChangedAt: star.favouriteChangedAt }),
+    arrivedFrom: null,
+    publishedEditedAt: null,
+    topic: null,
+    rankingOf: null,
+  };
 }
 
 /**
- * The account's copy replaces what is here, uid and all; the star stays, it
- * is this device's. Not when the board here moved while the copy was on its
+ * The account's copy replaces what is here, uid and all; of the two stars,
+ * the one changed later stays. Not when the board here moved while the copy was on its
  * way: writing then would put the account's older version over an edit made
  * a moment ago. The step waits for the next run, where both changes meet.
  */
@@ -633,10 +760,16 @@ async function takeOver(
   ) {
     return "deferred";
   }
+  // The star changed later wins; a copy that says nothing of it keeps this one.
+  const { favouriteChangedAt: _theirs, ...theirs } = board;
+  const starred = withStarOf(latest, incoming);
   // Keep presentation settings local. Older backups may omit a copy's provenance.
   keep(deps, {
-    ...board,
-    favouritedAt: latest.favouritedAt,
+    ...theirs,
+    favouritedAt: starred.favouritedAt,
+    ...(starred.favouriteChangedAt === undefined
+      ? {}
+      : { favouriteChangedAt: starred.favouriteChangedAt }),
     arrivedFrom: latest.arrivedFrom,
     topic: latest.topic,
     ...(latest.topicOff === true ? { topicOff: true } : {}),
@@ -656,6 +789,7 @@ async function takeOver(
     revision: incoming.revision,
     fingerprint,
     ...serverFingerprint(incoming),
+    ...starAgreed(board),
   });
   return "carried";
 }
@@ -711,6 +845,7 @@ async function adopt(
     revision: incoming.revision,
     fingerprint,
     ...serverFingerprint(incoming),
+    ...starAgreed(board),
   });
 }
 
@@ -737,6 +872,9 @@ function renamed(board: Board, from: string | null, nextUid: NextUid): Board {
     arrivedFrom: from,
     publishedId: null,
     rankingOf: null,
+    // The star stays with the board kept under the uid it was given for.
+    favouritedAt: null,
+    favouriteChangedAt: undefined,
     tiers: board.tiers.map((tier) => ({ ...tier, uid: tierUids.get(tier.uid) ?? tier.uid })),
     items: board.items.map((item) => ({
       ...item,

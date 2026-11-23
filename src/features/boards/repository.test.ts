@@ -42,6 +42,22 @@ describe("parseBoard", () => {
     expect(parseBoard({ ...board, play: { kind: 7 } })).not.toHaveProperty("otherPlay");
   });
 
+  it("reads when the star last changed, and none for anything but a time", () => {
+    const board = newBoard("b1", "Films", 1, uids());
+    expect(parseBoard({ ...board, favouritedAt: 5, favouriteChangedAt: 6 })).toMatchObject({
+      favouritedAt: 5,
+      favouriteChangedAt: 6,
+    });
+    expect(parseBoard({ ...board, favouritedAt: null, favouriteChangedAt: 6 })).toMatchObject({
+      favouritedAt: null,
+      favouriteChangedAt: 6,
+    });
+    expect(parseBoard(board)).not.toHaveProperty("favouriteChangedAt");
+    expect(parseBoard({ ...board, favouriteChangedAt: "6" })).not.toHaveProperty(
+      "favouriteChangedAt",
+    );
+  });
+
   it("reads an anonymous board from the account, and takes anything but true for no", () => {
     const board = newBoard("b1", "Films", 1, () => "t");
     expect(parseBoard({ ...board, anonymous: true })?.anonymous).toBe(true);

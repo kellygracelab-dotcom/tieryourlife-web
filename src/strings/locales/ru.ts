@@ -2114,6 +2114,16 @@ const ru: Translation = {
     meta: "Готовый список · {cards}",
     try: "Попробовать",
   },
+  share: {
+    updated: "обновлён {date}",
+    button: "Поделиться",
+    hook: "Мой {tier}-ранг: {names}. А твой?",
+    question: "А у тебя как?",
+    copyByHand: "Скопируйте адрес вручную:",
+    address: "Адрес списка",
+    openInCommunity: "Открыть в сообществе",
+    settings: "Настройки публикации",
+  },
 };
 
 export default ru;

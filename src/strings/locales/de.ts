@@ -1930,6 +1930,16 @@ const de: Translation = {
     meta: "Eine fertige Liste · {cards}",
     try: "Ausprobieren",
   },
+  share: {
+    updated: "aktualisiert am {date}",
+    button: "Teilen",
+    hook: "Meine {tier}-Stufe: {names}. Und deine?",
+    question: "Und deine?",
+    copyByHand: "Kopiere die Adresse von Hand:",
+    address: "Adresse der Liste",
+    openInCommunity: "In der Community öffnen",
+    settings: "Veröffentlichung",
+  },
 };
 
 export default de;

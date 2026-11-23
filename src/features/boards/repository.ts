@@ -289,6 +289,7 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
   const coverImageUrl = localPicture(originalCover, coverPictureId, owner);
   const coverCredit = coverCreditOf(source.coverCredit);
   const coverFocus = focusOf(source.coverFocus);
+  const favouriteChangedAt = time(source.favouriteChangedAt);
   const covers = Array.isArray(source.coverImageUrls)
     ? source.coverImageUrls.filter((url): url is string => typeof url === "string")
     : [];
@@ -319,6 +320,7 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
     items,
     editedAt: time(source.editedAt) ?? 0,
     favouritedAt: time(source.favouritedAt),
+    ...(favouriteChangedAt === null ? {} : { favouriteChangedAt }),
     arrivedFrom: text(source.arrivedFrom),
     publishedEditedAt: time(source.publishedEditedAt),
     topic: topicOf(source.topic),

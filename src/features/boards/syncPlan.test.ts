@@ -163,6 +163,51 @@ describe("planSync", () => {
     });
   });
 
+  it("sends a star changed here on its own over the revision the account has, and only once", () => {
+    const starred = [{ uid: board, fingerprint: "aaa", inTrash: false, favouriteChangedAt: 9 }];
+    const at = (favouriteChangedAt?: number): RemoteBoard[] => [
+      {
+        uid: board,
+        revision: 3,
+        deleted: false,
+        fingerprint: "aaa",
+        ...(favouriteChangedAt === undefined ? {} : { favouriteChangedAt }),
+      },
+    ];
+    const agreed = (favouriteChangedAt?: number): SyncedBoard[] => [
+      {
+        uid: board,
+        revision: 3,
+        fingerprint: "aaa",
+        ...(favouriteChangedAt === undefined ? {} : { favouriteChangedAt }),
+      },
+    ];
+    const update = [{ kind: "update", uid: board, basedOn: 3 }];
+    // Nothing else changed, on either side: the star alone is reason to write.
+    expect(planSync(starred, at(), agreed())).toEqual(update);
+    expect(planSync(starred, at(8), agreed(8))).toEqual(update);
+    // The same with no agreement at all, which reads as "the same board".
+    expect(planSync(starred, at(), [])).toEqual(update);
+    // Sent already, or the account's is as late or later: nothing to send.
+    expect(planSync(starred, at(), agreed(9))).toEqual([
+      { kind: "remember", uid: board, revision: 3 },
+    ]);
+    expect(planSync(starred, at(9), agreed(8))).toEqual([
+      { kind: "remember", uid: board, revision: 3 },
+    ]);
+    expect(planSync(starred, at(10), agreed(8))).toEqual([
+      { kind: "remember", uid: board, revision: 3 },
+    ]);
+    // A board whose star never changed has none to send.
+    expect(planSync(local("aaa"), at(), agreed())).toEqual([
+      { kind: "remember", uid: board, revision: 3 },
+    ]);
+    // A marker is not written over for a star.
+    expect(
+      planSync(starred, [{ uid: board, revision: 4, deleted: true, fingerprint: null }], agreed()),
+    ).toEqual([{ kind: "trashLocal", uid: board, revision: 4 }]);
+  });
+
   it("gives every board its own step", () => {
     const steps = planSync(
       [

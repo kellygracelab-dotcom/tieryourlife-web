@@ -2109,6 +2109,16 @@ const pl: Translation = {
     meta: "Gotowa lista · {cards}",
     try: "Wypróbuj",
   },
+  share: {
+    updated: "zaktualizowano {date}",
+    button: "Udostępnij",
+    hook: "Mój poziom {tier}: {names}. A twój?",
+    question: "A twój?",
+    copyByHand: "Skopiuj adres ręcznie:",
+    address: "Adres listy",
+    openInCommunity: "Otwórz w społeczności",
+    settings: "Ustawienia publikacji",
+  },
 };
 
 export default pl;

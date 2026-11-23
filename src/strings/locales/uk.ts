@@ -2101,6 +2101,16 @@ const uk: Translation = {
     meta: "Готовий список · {cards}",
     try: "Спробувати",
   },
+  share: {
+    updated: "оновлено {date}",
+    button: "Поділитися",
+    hook: "Мій {tier}-рівень: {names}. А твій?",
+    question: "А в тебе як?",
+    copyByHand: "Скопіюйте адресу вручну:",
+    address: "Адреса списку",
+    openInCommunity: "Відкрити у спільноті",
+    settings: "Налаштування публікації",
+  },
 };
 
 export default uk;
