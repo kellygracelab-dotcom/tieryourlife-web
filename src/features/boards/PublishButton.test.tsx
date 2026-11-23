@@ -92,7 +92,7 @@ describe("PublishButton", () => {
       </>,
     );
     const update = screen.getByRole("button", { name: "Update" });
-    expect(update).toHaveClass("btn--outlined", "publish-button--update");
+    expect(update).toHaveClass("btn--filled", "publish-button--update");
     expect(update.querySelector(".publish-button__dot")).not.toBeNull();
     const published = screen.getByRole("button", { name: "Published" });
     expect(published).toHaveClass("btn--text", "publish-button--quiet");

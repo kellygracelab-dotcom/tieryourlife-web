@@ -18,7 +18,7 @@ import { useVisit } from "../app/visitMemory";
 import { useSession } from "../app/session";
 import { boards as site } from "../features/boards/owners";
 import { boardOfList, seenAsCommunity } from "../features/boards/ownList";
-import type { Board } from "../features/boards/model";
+import { isBehind, type Board } from "../features/boards/model";
 import type { BoardsRepository } from "../features/boards/repository";
 import { AuthorLine } from "../features/community/AuthorLine";
 import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
@@ -360,6 +360,10 @@ function OpenList({
   // see the list as they published it, and the way to change it.
   const own = account?.kind === "signedIn" && isOwnList(list, account.uid);
   const editorial = isEditorial(list);
+  // The author's board, when it has changes the list does not show yet: the
+  // link shows this list, so the page says so and leads to Update (23.11).
+  const ownBoard = own ? boardOfList(repository ?? site, list.id) : null;
+  const behindBoard = ownBoard !== null && isBehind(ownBoard) ? ownBoard : null;
   // The sections' names as last known here; the nine stand in until the backend answered.
   const knownSections = useSyncExternalStore(
     sectionsStore.subscribe,
@@ -869,6 +873,14 @@ function OpenList({
                 notify={setNotice}
               />
             </div>
+          )}
+          {behindBoard !== null && (
+            <p className="list-head__behind">
+              <span className="list-head__behind-dot" aria-hidden="true" />
+              {strings.boards.notPublishedYet}
+              {" · "}
+              <Link to={`/b/${encodeURIComponent(behindBoard.uid)}`}>{strings.boards.update}</Link>
+            </p>
           )}
           {list.basedOn != null && <BasedOnLine basedOn={list.basedOn} />}
           {list.listSource !== undefined && <SourceLine source={list.listSource} />}

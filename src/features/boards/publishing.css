@@ -511,7 +511,8 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent);
+  /* Amber, as the Designer has it (23.11): it reads on the filled button and beside the line. */
+  background: var(--tier-b);
 }
 
 /* How the board is shown: a button with the mode's name, the three in a popover. */

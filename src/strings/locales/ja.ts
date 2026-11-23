@@ -1395,6 +1395,8 @@ const ja: Translation = {
     photoBy: "写真: {credit}",
     publication: "公開",
     publishedStatus: "公開中",
+    notPublishedYet: "未公開の変更があります",
+    changesNotPublished: { other: "未公開の変更 {n} 件" },
     publishedShort: "公開しました",
     updatedShort: "更新しました",
     rankedShort: "ランキングに表示中",

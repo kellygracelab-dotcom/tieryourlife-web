@@ -1232,6 +1232,50 @@ describe("syncBoards", () => {
     expect(account.keeps).toHaveLength(sent);
   });
 
+  // A board brought down from the account has its list but not when it went out:
+  // the list's own time tells whether a change since is still to send (23.11).
+  it("dates the publication of a board from the account by its list, so Update offers a later change", async () => {
+    const { repository, run } = setUp([
+      { id: "p-games", boardUid: "a", updatedAt: 800 },
+      { id: "p-films", boardUid: "b", updatedAt: 800 },
+      { id: "p-held", boardUid: "c", updatedAt: 800, underReview: true },
+    ]);
+    repository.saveAll([
+      { ...films("a", "A"), publishedId: "p-games", publishedEditedAt: null, editedAt: 900 },
+      { ...films("b", "B"), publishedId: "p-films", publishedEditedAt: null, editedAt: 700 },
+      { ...films("c", "C"), publishedId: "p-held", publishedEditedAt: null, editedAt: 900 },
+    ]);
+    expect(isBehind(repository.get("a")!)).toBe(false);
+    await run();
+    // Changed after the list went out: Update has that change to send.
+    expect(repository.get("a")).toMatchObject({ editedAt: 900, publishedEditedAt: 800 });
+    expect(isBehind(repository.get("a")!)).toBe(true);
+    // Not changed since: as sent.
+    expect(repository.get("b")).toMatchObject({ editedAt: 700, publishedEditedAt: 700 });
+    expect(isBehind(repository.get("b")!)).toBe(false);
+    // Held and dated at once.
+    expect(repository.get("c")).toMatchObject({ heldForReview: true, publishedEditedAt: 800 });
+  });
+
+  it("offers Update for a board from the account whose cards are not the ones that went out, whenever they went", async () => {
+    const { repository, run } = setUp([
+      // Put out again later from its old cards: newer than the board, and fewer cards.
+      { id: "p-games", boardUid: "a", updatedAt: 5000, itemCount: 1 },
+      { id: "p-films", boardUid: "b", updatedAt: 5000, itemCount: 2 },
+    ]);
+    const a = films("a", "A");
+    const b = films("b", "B");
+    repository.saveAll([
+      { ...a, publishedId: "p-games", publishedEditedAt: null, editedAt: 900 },
+      { ...b, publishedId: "p-films", publishedEditedAt: null, editedAt: 900 },
+    ]);
+    expect(liveItems(a)).toHaveLength(2);
+    await run();
+    // Two cards here, one went out: Update. The same two: as sent.
+    expect(isBehind(repository.get("a")!)).toBe(true);
+    expect(isBehind(repository.get("b")!)).toBe(false);
+  });
+
   it("holds a board that gets its list back when the account says that list waits", async () => {
     const { repository, run } = setUp([
       { id: "p-lost", boardUid: "a", updatedAt: 800, underReview: true },

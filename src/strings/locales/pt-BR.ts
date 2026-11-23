@@ -1504,6 +1504,12 @@ const ptBR: Translation = {
     photoBy: "Foto: {credit}",
     publication: "Publicação",
     publishedStatus: "Publicada",
+    notPublishedYet: "Alterações ainda não publicadas",
+    changesNotPublished: {
+      one: "{n} alteração não publicada",
+      many: "{n} alterações não publicadas",
+      other: "{n} alterações não publicadas",
+    },
     publishedShort: "Publicada",
     updatedShort: "Atualizada",
     rankedShort: "Nas classificações",

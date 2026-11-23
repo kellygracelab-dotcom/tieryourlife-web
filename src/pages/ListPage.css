@@ -172,6 +172,24 @@
   color: var(--ink-dim);
 }
 
+/* The board has changes its link does not show yet: said on every width, the dot Update's own. */
+.list-head__behind {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.list-head__behind-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tier-b);
+}
+
 /* A phone's head is the name and its buttons (artboard 13); the count is a wider window's. */
 @media (max-width: 599px) {
   .list-head__count {
@@ -414,6 +432,21 @@
    * as the board is: on a wide window a title at its edge over a board in its
    * middle read as two pages.
    */
+  /*
+   * The author's own list is a bare board with its pool under it, no column
+   * beside: head and rows one column, the board's own width, so both share
+   * their edges at every width (the Designer, 23.11).
+   */
+  .list-page:has(> .board) {
+    --board-w: var(--board-max);
+  }
+
+  .list-page > .board {
+    width: 100%;
+    max-width: var(--board-max);
+    margin-inline: auto;
+  }
+
   .list-head {
     --head-inset: max(0px, calc((100% - var(--board-w, 100%)) / 2));
 
