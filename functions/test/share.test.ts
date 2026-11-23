@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { renderShareSvg } from "../src/shareImage";
 import {
+  authorTop,
   BAND_FLOOR,
   bandLabel,
   LIST_TILES,
   picturesWanted,
+  rankedCount,
   ROW_TILES,
   SHARE_PICTURES,
   SHARE_TIERS,
@@ -13,6 +16,7 @@ import {
   shareImagePath,
   shareImageUrl,
   tileSizeOf,
+  TOP_TILES,
   type Node,
   type ShareList,
   type ShareRanking,
@@ -223,16 +227,16 @@ describe("addresses", () => {
   it("points a chat at a versioned picture and keeps one copy per version", () => {
     assert.equal(
       shareImageUrl("tieryourlife.web.app", "l", "abc def", 17),
-      "https://tieryourlife.web.app/og/l/abc%20def.png?v=17.6",
+      "https://tieryourlife.web.app/og/l/abc%20def.png?v=17.7",
     );
     // A house list's picture in its reader's language is asked for in that language.
     assert.equal(
       shareImageUrl("tieryourlife.web.app", "l", "abc", "17", "pt-BR"),
-      "https://tieryourlife.web.app/og/l/abc.png?v=17.6&hl=pt-BR",
+      "https://tieryourlife.web.app/og/l/abc.png?v=17.7&hl=pt-BR",
     );
-    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.6.png");
+    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.7.png");
     // A ranking whose list is gone is kept and fetched apart from the one with the name.
-    assert.equal(shareImagePath("r", "xfruzbap", "0-gone"), "share/r/xfruzbap/0-gone.6.png");
+    assert.equal(shareImagePath("r", "xfruzbap", "0-gone"), "share/r/xfruzbap/0-gone.7.png");
     // The folder ends in a slash, or tidying `abc` would reach into `abcd`.
     assert.equal(shareImageFolder("r", "xfruzbap"), "share/r/xfruzbap/");
     assert.ok(shareImagePath("l", "abc", 5).startsWith(shareImageFolder("l", "abc")));
@@ -241,5 +245,139 @@ describe("addresses", () => {
       "https://image.tmdb.org/t/p/w185/a.jpg",
     );
     assert.equal(tileSizeOf("https://img/a.jpg"), "https://img/a.jpg");
+  });
+});
+
+describe("a person's list card", () => {
+  const dark = ["#F1948C", "#E9A867", "#D8C05A", "#7FC393", "#86B8DE"];
+  const ranked = (places: (number | null)[], more: Partial<ShareList> = {}): ShareList => ({
+    kind: "list",
+    title: "Video games I've played: my tier list",
+    authorName: "Danylo Petrov",
+    category: "games",
+    section: "Games",
+    itemCount: places.length,
+    tiers: ["S", "A", "B", "C", "D"].map((label, i) => ({
+      label,
+      caption: null,
+      colorLight: "#b03a32",
+      colorDark: dark[i]!,
+    })),
+    items: places.map((tierIndex, i) => ({
+      title: `Game ${i}`,
+      imageUrl: i === 1 ? null : `https://image.tmdb.org/t/p/w500/${i}.jpg`,
+      tierIndex,
+    })),
+    ...more,
+  });
+  const drawn = (card: ShareList) => {
+    const pictures = new Map(
+      picturesWanted(card).map((url) => [url, "data:image/png;base64,AA=="]),
+    );
+    const tree = shareCardOf(card, pictures);
+    return { tree, text: textOf(tree).join(" | "), json: JSON.stringify(tree) };
+  };
+
+  it("draws the author's S row on the dark page, with the author and the ranked count", () => {
+    // Three in S, two in A, one unplaced.
+    const card = ranked([0, 0, 1, 0, 1, null]);
+    const { tree, text, json } = drawn(card);
+    assert.deepEqual(authorTop(card), {
+      row: { tier: 0, items: [0, 1, 3] },
+      next: { tier: 1, items: [2, 4] },
+    });
+    assert.match(text, /Video games I've played: my tier list/);
+    assert.match(textOf(tree).join(""), /by Danylo Petrov · 5 games ranked/);
+    assert.ok(json.includes('"backgroundColor":"#12151c"'));
+    assert.ok(json.includes("radial-gradient(circle at 100% 0%"));
+    // The S cell in its dark colour, with dark letters.
+    assert.ok(json.includes('"background":"#F1948C","color":"#12151c"'));
+    // Two pictures and one card named on its cell: no picture of A is asked for.
+    assert.deepEqual(picturesWanted(card), [
+      "https://image.tmdb.org/t/p/w500/0.jpg",
+      "https://image.tmdb.org/t/p/w500/3.jpg",
+    ]);
+    assert.equal(count(tree, "img"), 2);
+    assert.match(text, /Game 1/);
+    assert.match(text, /My S tier\. What’s yours\?/);
+    assert.match(text, /tieryourlife\.com/);
+  });
+
+  it("takes the first tier with cards when S is empty, and names it on the pill", () => {
+    const card = ranked([null, 2, 2, 4]);
+    assert.deepEqual(authorTop(card), {
+      row: { tier: 2, items: [1, 2] },
+      next: { tier: 4, items: [3] },
+    });
+    const { text, json } = drawn(card);
+    assert.match(text, /My B tier\. What’s yours\?/);
+    assert.ok(!text.includes("My S tier"));
+    assert.ok(json.includes('"background":"#D8C05A"'));
+    // D's cell on the strip.
+    assert.ok(json.includes('"background":"#86B8DE"'));
+  });
+
+  it("shows six and a +N cell beyond seven, and asks for those six pictures only", () => {
+    const seven = ranked(Array.from({ length: 7 }, () => 0));
+    assert.ok(!drawn(seven).text.includes("+"));
+    assert.equal(picturesWanted(seven).length, 6); // Game 1 has no picture.
+
+    const twenty = ranked(Array.from({ length: 20 }, () => 0));
+    const { tree, text } = drawn(twenty);
+    assert.match(text, /\+14/);
+    assert.equal(picturesWanted(twenty).length, TOP_TILES - 2);
+    assert.equal(count(tree, "img"), TOP_TILES - 2);
+    assert.ok(!text.includes("Game 6"));
+  });
+
+  it("names the next tier's first four on the strip, or only invites without one", () => {
+    const card = ranked([0, 1, 1, 1, 1, 1, 1, 3]);
+    assert.match(
+      drawn(card).text,
+      /Game 1, Game 2, Game 3, Game 4 \|  — open the list to see all 8/,
+    );
+    const alone = drawn(ranked([0, 0, null]));
+    assert.match(alone.text, /open the list to see all 3/);
+    assert.ok(!alone.text.includes("—"));
+  });
+
+  it("keeps a house list, and a list that places nothing, a list to rank", () => {
+    const house = drawn(ranked([0, 0, 1], { editorial: true }));
+    assert.equal(authorTop(ranked([0, 0, 1], { editorial: true })), null);
+    assert.match(house.text, /\| 3 cards · Games/);
+    assert.ok(!house.json.includes("#12151c"));
+    assert.ok(!house.text.includes("What’s yours"));
+    const unplaced = ranked([null, null]);
+    assert.equal(authorTop(unplaced), null);
+    assert.match(drawn(unplaced).text, /by  \| Danylo Petrov \|  · 2 cards · Games/);
+    // A tier the list does not have places nothing.
+    assert.equal(authorTop(ranked([9, null])), null);
+  });
+
+  it("lays the dark card out inside 1200×630, the footer and the row's last cell included", async () => {
+    const offline = () => Promise.reject(new Error("offline"));
+    const card = ranked(Array.from({ length: 20 }, (_, i) => (i < 12 ? 0 : 1)));
+    const svg = await renderShareSvg(card, new Map(), offline);
+    assert.match(svg, /^<svg[^>]*width="1200"[^>]*height="630"/);
+    // Every box but the page's own ends inside its 52 px margins: the +N cell too.
+    const boxes = [
+      ...svg.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g),
+    ].filter(([, , , w]) => w !== "1200");
+    assert.ok(boxes.length > 10);
+    for (const [, x, y, w, h] of boxes) {
+      const right = Number(x) + Number(w);
+      const bottom = Number(y) + Number(h);
+      assert.ok(right <= 1148.5 && bottom <= 600.5, `${right},${bottom}`);
+    }
+  });
+
+  it("counts by the section's own noun, cards when it has none", () => {
+    assert.equal(rankedCount("games", "Games", 149), "149 games");
+    assert.equal(rankedCount("books", "Books", 1), "1 book");
+    assert.equal(rankedCount("film_tv", "Film & TV", 12), "12 films & shows");
+    assert.equal(rankedCount("cars", "Cars", 3), "3 cars");
+    assert.equal(rankedCount("x1", "Albums", 2), "2 albums");
+    assert.equal(rankedCount("food", "Food", 2400), "2,400 cards");
+    assert.equal(rankedCount("x2", null, 1), "1 card");
   });
 });

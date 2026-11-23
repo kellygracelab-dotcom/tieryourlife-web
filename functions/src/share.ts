@@ -35,11 +35,15 @@ export interface ShareTier {
   label: string;
   caption: string | null;
   colorLight: string;
+  /** The tier's colour on a dark page, as the list keeps it; a person's list's card is dark. */
+  colorDark?: string;
 }
 
 export interface ShareItem {
   title: string;
   imageUrl: string | null;
+  /** The author's tier for the card on a published list; null or absent, unplaced. */
+  tierIndex?: number | null;
 }
 
 export interface ShareList {
@@ -101,7 +105,11 @@ export function picturesWanted(card: ShareCard): string[] {
       wanted.push(item.imageUrl);
     }
   };
-  if (card.kind === "list") {
+  const top = card.kind === "list" ? authorTop(card) : null;
+  if (top !== null) {
+    // Only the top row's cells are drawn with pictures: seven at most.
+    topCells(top.row.items).shown.forEach((index) => take(card.items[index]));
+  } else if (card.kind === "list") {
     card.items
       .filter((item) => item.imageUrl !== null)
       .slice(0, LIST_TILES)
@@ -399,6 +407,404 @@ function listCard(card: ShareList, pictures: Pictures): Node {
   ]);
 }
 
+/*
+ * A person's list (Designer, 23.11.2026): the author's own top row on the
+ * app's dark page, so the picture reads as their ranking, not a list to rank.
+ */
+
+/** Cells in a person's top row; past it, the last cell counts the rest. */
+export const TOP_TILES = 7;
+
+/** The site's address, as pages.ts names it; written here so the card needs no page code. */
+const SITE_ADDRESS = "tieryourlife.com";
+const NIGHT = "#12151c";
+const NIGHT_PANEL = "#1b1f29";
+const NIGHT_CELL = "#2a2f3b";
+const NIGHT_INK = "#f4f5f8";
+const NIGHT_DIM = "#a3a8b5";
+const PILL = "#a8c7fa";
+const PILL_INK = "#0b1d3a";
+const TOP = { width: 134, height: 188, gap: 8, pad: 12, label: 92 } as const;
+const STRIP = { height: 56, label: 92 } as const;
+
+/** One of the author's tiers with the positions of its cards, in the list's order. */
+export interface AuthorRow {
+  tier: number;
+  items: number[];
+}
+
+/**
+ * The author's top row, the first ranked tier with cards (S, unless S is
+ * empty), and the next tier with cards after it; null when the list places
+ * nothing, as one published before arrangements travelled.
+ */
+export function authorTop(card: ShareList): { row: AuthorRow; next: AuthorRow | null } | null {
+  if (card.editorial === true) return null;
+  const rows: number[][] = card.tiers.map(() => []);
+  card.items.forEach((item, position) => {
+    const index = item.tierIndex;
+    if (typeof index === "number") rows[index]?.push(position);
+  });
+  const filled = rows.map((items, tier) => ({ tier, items })).filter((row) => row.items.length > 0);
+  const [row, next] = filled;
+  return row === undefined ? null : { row, next: next ?? null };
+}
+
+/** The cells drawn: every card when they fit, else one fewer and a cell for the rest. */
+export function topCells(row: readonly number[]): { shown: number[]; more: number } {
+  if (row.length <= TOP_TILES) return { shown: [...row], more: 0 };
+  return { shown: row.slice(0, TOP_TILES - 1), more: row.length - (TOP_TILES - 1) };
+}
+
+/**
+ * What the count says the cards are, by section, in English: a person's list
+ * is drawn as written. A section with no clear noun says "cards".
+ */
+const NOUNS: Record<string, readonly [string, string]> = {
+  games: ["game", "games"],
+  "video games": ["game", "games"],
+  "board games": ["game", "games"],
+  film_tv: ["film or show", "films & shows"],
+  films: ["film", "films"],
+  movies: ["film", "films"],
+  shows: ["show", "shows"],
+  "tv shows": ["show", "shows"],
+  series: ["series", "series"],
+  anime: ["anime", "anime"],
+  manga: ["manga", "manga"],
+  books: ["book", "books"],
+  albums: ["album", "albums"],
+  songs: ["song", "songs"],
+  artists: ["artist", "artists"],
+  people: ["person", "people"],
+  cars: ["car", "cars"],
+  countries: ["country", "countries"],
+  cities: ["city", "cities"],
+  animals: ["animal", "animals"],
+};
+
+/** "149 games", "1 book", "12 cards": the count with the section's own noun. */
+export function rankedCount(category: string, section: string | null | undefined, n: number) {
+  const noun = NOUNS[category] ?? NOUNS[(section ?? "").trim().toLowerCase()] ?? ["card", "cards"];
+  return `${new Intl.NumberFormat("en").format(n)} ${n === 1 ? noun[0] : noun[1]}`;
+}
+
+/** The colour a tier is drawn in on the dark card: its dark one, else its light one. */
+const nightColour = (tier: ShareTier): string =>
+  typeof tier.colorDark === "string" && /^#[0-9a-f]{6}$/i.test(tier.colorDark.trim())
+    ? tier.colorDark.trim()
+    : shownLight(tier.colorLight);
+
+/** Dark letters on a light tier colour, light ones on a dark colour (a list's own or a light fallback). */
+function inkOn(hex: string): string {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
+  if (match === null) return NIGHT;
+  const [r, g, b] = match.slice(1).map((part) => {
+    const c = parseInt(part, 16) / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  }) as [number, number, number];
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.3 ? NIGHT : NIGHT_INK;
+}
+
+/** The largest size, down to the floor, at which a tier's name fits its cell whole. */
+export function cellLabel(label: string, width: number, height: number, most: number) {
+  const room = width - 12;
+  for (let at = most; at > BAND_FLOOR; at--) {
+    // widthOf errs wide enough for the bold letters as well.
+    if (wordsOf(label).some((word) => widthOf(word, at) > room)) continue;
+    const lines = lineCount(label, room, at);
+    if (lines * at * LABEL_LINE <= height - 8) return { size: at, lines };
+  }
+  return { size: BAND_FLOOR, lines: Math.max(1, Math.floor((height - 8) / (BAND_FLOOR * 1.1))) };
+}
+
+const tierCell = (tier: ShareTier, width: number, height: number, most: number): Node => {
+  const colour = nightColour(tier);
+  const fit = cellLabel(tier.label, width, height, most);
+  return el(
+    "div",
+    {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      boxSizing: "border-box",
+      width,
+      height,
+      padding: 6,
+      flexShrink: 0,
+      background: colour,
+      color: inkOn(colour),
+      overflow: "hidden",
+    },
+    el(
+      "div",
+      {
+        display: "block",
+        maxWidth: "100%",
+        fontSize: fit.size,
+        fontWeight: 700,
+        lineHeight: LABEL_LINE,
+        textAlign: "center",
+        wordBreak: "break-word",
+        lineClamp: fit.lines,
+      },
+      tier.label,
+    ),
+  );
+};
+
+const topTile = (item: ShareItem, pictures: Pictures): Node => {
+  const { width, height } = TOP;
+  const src = item.imageUrl === null ? undefined : pictures.get(item.imageUrl);
+  if (src !== undefined) {
+    return el("img", { width, height, borderRadius: 8, objectFit: "cover" }, undefined, { src });
+  }
+  // No picture, or none in time: the card's name on a dark cell, as a tile without one.
+  return el(
+    "div",
+    {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      boxSizing: "border-box",
+      width,
+      height,
+      padding: 10,
+      borderRadius: 8,
+      background: NIGHT_CELL,
+      color: NIGHT_INK,
+      overflow: "hidden",
+      flexShrink: 0,
+    },
+    el(
+      "div",
+      {
+        display: "block",
+        fontSize: 18,
+        lineHeight: 1.25,
+        textAlign: "center",
+        wordBreak: "break-word",
+        lineClamp: 6,
+      },
+      item.title.trim().slice(0, 60),
+    ),
+  );
+};
+
+const moreTile = (more: number): Node =>
+  el(
+    "div",
+    {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: TOP.width,
+      height: TOP.height,
+      borderRadius: 8,
+      background: NIGHT_CELL,
+      color: NIGHT_INK,
+      fontSize: 34,
+      fontWeight: 700,
+      flexShrink: 0,
+    },
+    `+${new Intl.NumberFormat("en").format(more)}`,
+  );
+
+/** «A, B, C, D — open the list to see all 176»: the next tier's first names, or the invitation alone. */
+export function stripText(
+  card: ShareList,
+  next: AuthorRow | null,
+): { names: string; rest: string } {
+  const all = `open the list to see all ${new Intl.NumberFormat("en").format(card.itemCount)}`;
+  const names = (next?.items ?? [])
+    .map((index) => card.items[index]?.title.trim() ?? "")
+    .filter((title) => title.length > 0)
+    .slice(0, 4)
+    .join(", ");
+  return names === "" ? { names: "", rest: all } : { names, rest: ` — ${all}` };
+}
+
+/** «My S tier. What's yours?», with the label of the row shown. */
+export const pillText = (tier: ShareTier): string => {
+  const label = tier.label.trim();
+  const short = label.length > 24 ? `${label.slice(0, 23)}…` : label;
+  return `My ${short} tier. What’s yours?`;
+};
+
+function authorCard(
+  card: ShareList,
+  top: { row: AuthorRow; next: AuthorRow | null },
+  pictures: Pictures,
+): Node {
+  const author = card.authorName.trim() || "someone";
+  const tier = card.tiers[top.row.tier] as ShareTier;
+  const placed = card.items.filter(
+    (item) => typeof item.tierIndex === "number" && card.tiers[item.tierIndex] !== undefined,
+  ).length;
+  const { shown, more } = topCells(top.row.items);
+  const nextTier = top.next === null ? undefined : card.tiers[top.next.tier];
+  const strip = stripText(card, top.next);
+  const panelHeight = TOP.height + 2 * TOP.pad;
+
+  return el(
+    "div",
+    {
+      display: "flex",
+      flexDirection: "column",
+      boxSizing: "border-box",
+      width: SHARE_WIDTH,
+      height: SHARE_HEIGHT,
+      padding: "40px 52px 30px",
+      backgroundColor: NIGHT,
+      // A soft light in the top right corner.
+      backgroundImage:
+        "radial-gradient(circle at 100% 0%, rgba(150, 170, 220, 0.2) 0%, rgba(18, 21, 28, 0) 55%)",
+      fontFamily: FONT,
+      color: NIGHT_INK,
+    },
+    [
+      el(
+        "div",
+        { fontSize: 46, fontWeight: 800, lineHeight: 1.15, color: NIGHT_INK, lineClamp: 2 },
+        card.title.trim() || wordsFor(AS_WRITTEN).untitled,
+      ),
+      el(
+        "div",
+        {
+          display: "flex",
+          alignItems: "baseline",
+          marginTop: 10,
+          fontSize: 24,
+          color: NIGHT_DIM,
+          whiteSpace: "pre",
+        },
+        [
+          "by ",
+          el(
+            "div",
+            {
+              flexShrink: 1,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              fontWeight: 700,
+              color: NIGHT_INK,
+            },
+            author,
+          ),
+          ` · ${rankedCount(card.category, card.section, placed)} ranked`,
+        ],
+      ),
+      el(
+        "div",
+        {
+          display: "flex",
+          alignItems: "center",
+          marginTop: 30,
+          height: panelHeight,
+          borderRadius: 14,
+          background: NIGHT_PANEL,
+          overflow: "hidden",
+        },
+        [
+          tierCell(tier, TOP.label, panelHeight, 64),
+          el("div", { display: "flex", gap: TOP.gap, paddingLeft: 10 }, [
+            ...shown.flatMap((index) => {
+              const item = card.items[index];
+              return item === undefined ? [] : [topTile(item, pictures)];
+            }),
+            ...(more > 0 ? [moreTile(more)] : []),
+          ]),
+        ],
+      ),
+      el(
+        "div",
+        {
+          display: "flex",
+          alignItems: "center",
+          marginTop: 10,
+          height: STRIP.height,
+          borderRadius: 12,
+          background: NIGHT_PANEL,
+          overflow: "hidden",
+        },
+        [
+          ...(nextTier === undefined ? [] : [tierCell(nextTier, STRIP.label, STRIP.height, 30)]),
+          el(
+            "div",
+            {
+              display: "flex",
+              flexGrow: 1,
+              minWidth: 0,
+              paddingLeft: 18,
+              paddingRight: 18,
+              fontSize: 21,
+              fontWeight: 500,
+              color: NIGHT_DIM,
+              whiteSpace: "pre",
+            },
+            [
+              ...(strip.names === ""
+                ? []
+                : [
+                    el(
+                      "div",
+                      {
+                        flexShrink: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      },
+                      strip.names,
+                    ),
+                  ]),
+              el("div", { flexShrink: 0 }, strip.rest),
+            ],
+          ),
+        ],
+      ),
+      el(
+        "div",
+        {
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: "auto",
+        },
+        [
+          el(
+            "div",
+            {
+              display: "flex",
+              alignItems: "center",
+              height: 46,
+              padding: "0 22px",
+              borderRadius: 23,
+              background: PILL,
+              color: PILL_INK,
+              fontSize: 21,
+              fontWeight: 500,
+            },
+            pillText(tier),
+          ),
+          el(
+            "div",
+            {
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              color: NIGHT_INK,
+              fontSize: 23,
+              fontWeight: 500,
+            },
+            [mark(34), SITE_ADDRESS],
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
 function rankingCard(card: ShareRanking, pictures: Pictures): Node {
   const author = card.authorName.trim() || "someone";
   const locale = card.locale ?? AS_WRITTEN;
@@ -456,10 +862,14 @@ function rankingCard(card: ShareRanking, pictures: Pictures): Node {
 }
 
 /** The card as a tree satori can draw, given the pictures that came. */
-export const shareCardOf = (card: ShareCard, pictures: Pictures): Node =>
-  card.kind === "list" ? listCard(card, pictures) : rankingCard(card, pictures);
+export function shareCardOf(card: ShareCard, pictures: Pictures): Node {
+  if (card.kind === "ranking") return rankingCard(card, pictures);
+  // A person's list shows its own ranking; a house list, or one that places
+  // nothing, stays a list to rank.
+  const top = authorTop(card);
+  return top === null ? listCard(card, pictures) : authorCard(card, top, pictures);
+}
 
-/** Where a chat fetches the picture from; versioned, so a republish gets a new one. */
 /**
  * The look of the card. A copy is kept for good per version of a list, and a
  * chat keeps a picture by its address, so a change in the drawing has to
@@ -468,10 +878,11 @@ export const shareCardOf = (card: ShareCard, pictures: Pictures): Node =>
  * "Other" for a section approved after the first nine. 6: a newer section by
  * its own name, a house list's card in its reader's language, and a tier's
  * whole name on its band, smaller and between words, not its first three
- * letters.
+ * letters. 7: a person's list as their own top row on the app's dark page.
  */
-export const SHARE_LOOK = 6;
+export const SHARE_LOOK = 7;
 
+/** Where a chat fetches the picture from; versioned, so a republish (?v=its updatedAt) gets a new one. */
 export const shareImageUrl = (
   host: string,
   kind: "l" | "r",
