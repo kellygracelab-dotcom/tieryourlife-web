@@ -171,7 +171,11 @@ const shareButton = () => document.querySelector<HTMLButtonElement>(".list-head 
 /** The Publish window of a list that is out: Share's card, then Publishing settings. */
 const openSettings = async () => {
   await userEvent.click(shareButton()!);
-  await userEvent.click(screen.getByRole("button", { name: "Publishing settings" }));
+  await userEvent.click(
+    within(screen.getByRole("dialog", { name: "Share" })).getByRole("button", {
+      name: "Publishing settings",
+    }),
+  );
 };
 /** The page's snackbar, where a publish is said, with View on it. */
 const said = () => document.querySelector<HTMLElement>(".snackbar");
