@@ -138,6 +138,16 @@ describe("ListCard", () => {
     );
   });
 
+  it("shows a published list's collage as one picture, from its summary", () => {
+    const { container } = renderCard({
+      previewImages: ["https://img/a.jpg", "https://img/b.jpg"],
+      collageUrl: "/img/collage/list-0001.webp?v=5",
+    });
+    const art = container.querySelector(".art--collage img");
+    expect(art).toHaveAttribute("src", "/img/collage/list-0001.webp?v=5");
+    expect(container.querySelector(".art--mosaic")).toBeNull();
+  });
+
   it("names a house list in the reader's language when it has one", () => {
     renderCard({ names: { en: "Ramen, everywhere", ru: "Рамен" } });
     expect(screen.getByText("Ramen, everywhere")).toBeInTheDocument();

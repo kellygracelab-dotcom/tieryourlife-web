@@ -16,6 +16,10 @@ describe("ListArt", () => {
       "https://img/cover.jpg",
     );
     expect(container.querySelectorAll("img")).toHaveLength(1);
+    expect(container.querySelector(".art--collage")).toHaveClass("art--waiting");
+    fireEvent.load(images[0]!);
+    expect(container.querySelector(".art--collage")).not.toHaveClass("art--waiting");
+    expect(images[0]!.parentElement).toHaveClass("art__shown");
   });
 
   it("falls back to a mosaic of at most six pictures", () => {
@@ -132,6 +136,55 @@ describe("ListArt", () => {
     fireEvent.error(container.querySelector("img")!);
     expect(art()).not.toHaveClass("art--waiting");
     expect(container.querySelector(".art__shown")).toBeNull();
+  });
+
+  it("draws a published list's collage as one picture when there is no cover", () => {
+    const { container } = render(
+      <ListArt
+        cover={null}
+        previews={["https://img/a.jpg", "https://img/b.jpg", "https://img/c.jpg"]}
+        collage="/img/collage/list-0001.webp?v=5"
+        tierColors={["#000"]}
+      />,
+    );
+    expect(container.querySelector(".art--mosaic")).toBeNull();
+    const images = container.querySelectorAll(".art--collage img");
+    expect(images).toHaveLength(1);
+    expect(images[0]).toHaveAttribute("src", "/img/collage/list-0001.webp?v=5");
+    expect(container.querySelectorAll("img")).toHaveLength(1);
+  });
+
+  it("still shows the cover over a collage", () => {
+    const { container } = render(
+      <ListArt
+        cover="https://img/cover.jpg"
+        previews={["https://img/a.jpg", "https://img/b.jpg"]}
+        collage="/img/collage/list-0001.webp?v=5"
+        tierColors={[]}
+      />,
+    );
+    expect(container.querySelector(".art--collage")).toBeNull();
+    expect(container.querySelector(".art--cover img")).toHaveAttribute(
+      "src",
+      "https://img/cover.jpg",
+    );
+  });
+
+  it("goes back to the pictures one by one when the collage will not load", () => {
+    const { container } = render(
+      <ListArt
+        cover={null}
+        previews={["https://img/a.jpg", "https://img/b.jpg"]}
+        collage="/img/collage/list-0001.webp?v=5"
+        tierColors={[]}
+      />,
+    );
+    fireEvent.error(container.querySelector(".art--collage img")!);
+    expect(container.querySelector(".art--collage")).toBeNull();
+    expect(container.querySelector(".art--mosaic")).toHaveAttribute("data-count", "2");
+    expect(Array.from(container.querySelectorAll("img"), (img) => img.getAttribute("src"))).toEqual(
+      ["https://img/a.jpg", "https://img/b.jpg"],
+    );
   });
 
   it("falls back to a titled tile with at most five tier colours along the bottom", () => {

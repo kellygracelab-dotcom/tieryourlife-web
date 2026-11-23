@@ -304,26 +304,34 @@ export function pinnedFetch(lookupImpl: LookupFunction = publicOnlyLookup()): Fe
 
 const pictureFetch = pinnedFetch();
 
+/** A picture's bytes and what they are, as fetched or read. */
+export interface FetchedPicture {
+  type: string;
+  bytes: Buffer;
+}
+
 /**
- * One picture as a data URI, or nothing: a tile with the name is fine. Every
- * hop of a redirect is checked like the first address, a declared size over
- * the limit is not read at all, and an undeclared one stops at the limit.
+ * One picture's bytes, or nothing. Every hop of a redirect is checked like
+ * the first address, a declared size over the limit is not read at all, and
+ * an undeclared one stops at the limit. [sized] picks the catalogue's size to
+ * ask for: a card's tile by default.
  */
-export async function fetchPicture(
+export async function fetchPictureBytes(
   url: string,
   fetchImpl: Fetcher = pictureFetch,
   resolve: Resolver = resolveHost,
   readPublic?: PictureDeps["read"],
-): Promise<string | null> {
+  sized: (url: string) => string = tileSizeOf,
+): Promise<FetchedPicture | null> {
   const signal = AbortSignal.timeout(PICTURE_TIMEOUT_MS);
-  const attempt = async (): Promise<string | null> => {
+  const attempt = async (): Promise<FetchedPicture | null> => {
     const path = storedPublicMedia(url);
     if (path !== null && readPublic) {
       const bytes = await readPublic(path, PICTURE_MAX_BYTES);
       const type = bytes && rasterType(bytes);
-      return bytes && type ? `data:${type};base64,${bytes.toString("base64")}` : null;
+      return bytes && type ? { type, bytes } : null;
     }
-    let address = new URL(tileSizeOf(url));
+    let address = new URL(sized(url));
     for (let hop = 0; ; hop++) {
       if (!(await mayFetchPicture(address, resolve))) return null;
       const response = await fetchImpl(address.href, { signal, redirect: "manual" });
@@ -339,7 +347,7 @@ export async function fetchPicture(
       if (!type.startsWith("image/")) return null;
       const bytes = await readCapped(response, PICTURE_MAX_BYTES);
       if (bytes === null || bytes.length === 0) return null;
-      return `data:${type.split(";")[0]};base64,${bytes.toString("base64")}`;
+      return { type: type.split(";")[0] ?? type, bytes };
     }
   };
   // The name lookup takes no signal: the clock covers it as well as the fetch.
@@ -347,6 +355,17 @@ export async function fetchPicture(
     signal.addEventListener("abort", () => done(null), { once: true }),
   );
   return Promise.race([attempt().catch(() => null), late]);
+}
+
+/** One picture as a data URI, or nothing: a tile with the name is fine. */
+export async function fetchPicture(
+  url: string,
+  fetchImpl: Fetcher = pictureFetch,
+  resolve: Resolver = resolveHost,
+  readPublic?: PictureDeps["read"],
+): Promise<string | null> {
+  const found = await fetchPictureBytes(url, fetchImpl, resolve, readPublic);
+  return found === null ? null : `data:${found.type};base64,${found.bytes.toString("base64")}`;
 }
 
 export async function fetchPictures(

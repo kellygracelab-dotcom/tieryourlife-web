@@ -132,6 +132,7 @@ function HouseRow({
           focus={list.coverFocus}
           previews={list.previewImages}
           previewFocus={list.previewFocus}
+          collage={list.collageUrl ?? null}
           tierColors={list.tierColors}
         />
       </span>

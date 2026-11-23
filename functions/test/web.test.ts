@@ -944,6 +944,97 @@ describe("the router", () => {
     assert.equal((await call(withPictures, "POST", "/img/480/sections/anime/p-1")).status, 404);
   });
 
+  it("draws a published list's collage as one WebP at /img/collage/{id}.webp, HEAD too", async () => {
+    const { default: sharp } = await import("sharp");
+    const { deps, table } = setup(null);
+    const red = await sharp({
+      create: { width: 60, height: 90, channels: 3, background: { r: 255, g: 0, b: 0 } },
+    })
+      .png()
+      .toBuffer();
+    const asked: string[] = [];
+    const withCollage: WebDeps = {
+      ...deps,
+      collage: {
+        load: async (url) => {
+          asked.push(url);
+          return url.endsWith("broken.jpg") ? null : red;
+        },
+      },
+    };
+    const previews = [1, 2, 3].map((n) => `https://image.tmdb.org/t/p/w500/${n}.jpg`);
+    table("publishedLists").set(LIST_ID, { ...LIST, coverImageUrl: null, previewImages: previews });
+
+    const get = await call(withCollage, "GET", `/img/collage/${LIST_ID}.webp`);
+    assert.equal(get.status, 200);
+    assert.equal(get.headers["Content-Type"], "image/webp");
+    assert.equal(get.headers["Cache-Control"], "public, max-age=31536000, s-maxage=60, immutable");
+    const meta = await sharp(get.body as Buffer).metadata();
+    assert.deepEqual([meta.format, meta.width, meta.height], ["webp", 480, 300]);
+    assert.deepEqual(asked, previews);
+
+    const head = await call(withCollage, "HEAD", `/img/collage/${LIST_ID}.webp`);
+    assert.equal(head.status, 200);
+    assert.equal(head.body, undefined);
+    assert.equal(head.headers["Content-Type"], "image/webp");
+    assert.equal(head.headers["Content-Length"], String((get.body as Buffer).length));
+
+    // A picture that does not load is left out; one that loads is not enough.
+    table("publishedLists").set(LIST_ID, {
+      ...LIST,
+      previewImages: [previews[0], "https://x.example/broken.jpg", previews[1]],
+    });
+    assert.equal((await call(withCollage, "GET", `/img/collage/${LIST_ID}.webp`)).status, 200);
+    table("publishedLists").set(LIST_ID, {
+      ...LIST,
+      previewImages: [previews[0], "https://x.example/broken.jpg"],
+    });
+    const short = await call(withCollage, "GET", `/img/collage/${LIST_ID}.webp`);
+    assert.equal(short.status, 404);
+    assert.equal(short.headers["Cache-Control"], "no-store");
+  });
+
+  it("draws no collage for a list missing, under review, with a cover or with one preview", async () => {
+    const { deps, table } = setup(null);
+    let loads = 0;
+    const withCollage: WebDeps = {
+      ...deps,
+      collage: {
+        load: async () => {
+          loads++;
+          return null;
+        },
+      },
+    };
+    const previews = [
+      "https://image.tmdb.org/t/p/w500/1.jpg",
+      "https://image.tmdb.org/t/p/w500/2.jpg",
+    ];
+    const nothing = async (path: string) => {
+      const answer = await call(withCollage, "GET", path);
+      assert.equal(answer.status, 404, path);
+      assert.equal(answer.headers["Cache-Control"], "no-store", path);
+    };
+    await nothing("/img/collage/missing-list.webp");
+    await nothing("/img/collage/bad.webp");
+    await nothing(`/img/collage/${LIST_ID}.png`);
+    table("publishedLists").set(LIST_ID, { ...LIST, previewImages: previews, underReview: true });
+    await nothing(`/img/collage/${LIST_ID}.webp`);
+    table("publishedLists").set(LIST_ID, {
+      ...LIST,
+      previewImages: previews,
+      coverImageUrl: "https://image.tmdb.org/t/p/w500/cover.jpg",
+    });
+    await nothing(`/img/collage/${LIST_ID}.webp`);
+    table("publishedLists").set(LIST_ID, { ...LIST, previewImages: previews.slice(0, 1) });
+    await nothing(`/img/collage/${LIST_ID}.webp`);
+    assert.equal(loads, 0);
+    // Only GET and HEAD.
+    table("publishedLists").set(LIST_ID, { ...LIST, previewImages: previews });
+    assert.equal((await call(withCollage, "POST", `/img/collage/${LIST_ID}.webp`)).status, 404);
+    assert.equal(loads, 0);
+  });
+
   it("deletes the ranking even when its pictures cannot be taken off the shelf", async () => {
     const { deps, table } = setup(PERSON);
     table("rankings").set("abcdefgh", ranking("person", false));

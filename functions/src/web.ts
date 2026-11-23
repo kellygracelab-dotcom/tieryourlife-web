@@ -21,7 +21,8 @@ import {
   withdrawnByModeration,
 } from "./pages";
 import { sendPicture, storagePictures, type PictureDeps } from "./pictures";
-import { discardOlderCopies } from "./shareImage";
+import { collageSizeOf, sendCollage, type CollageDeps } from "./collage";
+import { discardOlderCopies, fetchPictureBytes } from "./shareImage";
 import {
   APP_CHECK_TOKEN_KEPT_MS,
   appCheckKeyOf,
@@ -113,9 +114,19 @@ export interface WebDeps {
   forgetPictures: (code: string) => Promise<unknown>;
   /** Section and topic pictures from the bucket, shrunk; the bucket's own when left out. */
   pictures?: PictureDeps;
+  /** A published list's collage pictures: fetched safely, or read from the bucket's published/. */
+  collage?: CollageDeps;
 }
 
 const bucketPictures = storagePictures(() => getStorage().bucket());
+
+// The same guarded fetch the link previews use: public addresses only, every
+// redirect checked, sizes capped; the list's own uploads straight from the bucket.
+const collagePictures: CollageDeps = {
+  load: async (url) =>
+    (await fetchPictureBytes(url, undefined, undefined, bucketPictures.read, collageSizeOf))
+      ?.bytes ?? null,
+};
 
 const production: WebDeps = {
   db: () => getFirestore(),
@@ -127,6 +138,7 @@ const production: WebDeps = {
   random: (max) => randomInt(max),
   forgetPictures: (code) => discardOlderCopies(getStorage().bucket(), "r", code, ""),
   pictures: bucketPictures,
+  collage: collagePictures,
 };
 
 export const web = onRequest(
@@ -174,6 +186,16 @@ export async function route(
       if (segments[1] === "l") return await listShareImage(response, id, hl);
       if (segments[1] === "r") return await rankingShareImage(response, id, hl, deps.db);
       return notFound(response, "No such address");
+    }
+    // A published list's cover collage as one picture: /img/collage/{listId}.webp.
+    if (reading && segments.length === 3 && segments[0] === "img" && segments[1] === "collage") {
+      return await sendCollage(
+        response,
+        segments[2] ?? "",
+        request.method === "HEAD",
+        deps.db,
+        deps.collage ?? collagePictures,
+      );
     }
     // A section's or topic's picture at a page's width: /img/{width}/{kind}/{id}/{picture}.
     if (reading && segments[0] === "img") {
