@@ -135,8 +135,20 @@ export interface Board {
   items: BoardItem[];
   /** This device's: when the board last changed, for the order of the list. Never sent. */
   editedAt: number;
-  /** This device's: when it was starred, so starred boards keep an order among themselves. Never sent. */
+  /**
+   * When it was starred, so starred boards keep an order among themselves;
+   * null when it is not. Kept in the account with `favouriteChangedAt`, so the
+   * star follows a signed-in person between devices (23.11.2026). Never part
+   * of the fingerprint and never an edit: the edit time and Update stay.
+   */
   favouritedAt: number | null;
+  /**
+   * When the star last changed, starred or not, on whichever device changed
+   * it: the later change wins between devices. Absent on a board whose star
+   * never changed since the account kept it; one starred before then counts
+   * from its `favouritedAt` (favouriteChangedAtOf).
+   */
+  favouriteChangedAt?: number;
   /** This device's: the device a copy came from after a conflict, or null. Never sent. */
   arrivedFrom: string | null;
   /** This device's: the edit time the published copy was sent at, so "behind" can be told. Never sent. */
@@ -468,9 +480,37 @@ export const settleTopic = (board: Board, topic: BoardTopic | null): Board =>
 export const setDisplayMode = (board: Board, displayMode: DisplayMode, now: number): Board =>
   displayMode === board.displayMode ? board : touched({ ...board, displayMode }, now);
 
-/** Starring is a time rather than a flag, so starred boards keep an order; it is this device's business, so the edit time stays. */
-export const setFavourite = (board: Board, at: number | null): Board =>
-  at === board.favouritedAt ? board : { ...board, favouritedAt: at };
+/**
+ * Starring is a time rather than a flag, so starred boards keep an order.
+ * `now` is when the star changed, so the later change wins between devices.
+ * Not an edit of the list: the edit time stays, and Update with it.
+ */
+export const setFavourite = (board: Board, at: number | null, now: number): Board =>
+  at === board.favouritedAt ? board : { ...board, favouritedAt: at, favouriteChangedAt: now };
+
+/**
+ * When the star last changed, as it goes to the account; null when it never
+ * did. A star from before the account kept it counts from when it was given,
+ * so it goes up once and a later change on another device still wins over it.
+ */
+export const favouriteChangedAtOf = (board: Board): number | null =>
+  board.favouriteChangedAt ?? board.favouritedAt;
+
+/**
+ * The star as the account has it, taken only when it changed later than the
+ * one here; a copy that says nothing of the star leaves this one alone. Only
+ * the star moves: not the edit time, not the fingerprint.
+ */
+export function takeFavourite(
+  board: Board,
+  favouritedAt: number | null,
+  changedAt: number | undefined,
+): Board {
+  if (changedAt === undefined) return board;
+  const own = favouriteChangedAtOf(board);
+  if (own !== null && changedAt <= own) return board;
+  return { ...board, favouritedAt, favouriteChangedAt: changedAt };
+}
 
 /**
  * The own photo a cover of these pictures shows, by id: only a cover of one

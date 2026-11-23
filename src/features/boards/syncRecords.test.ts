@@ -27,6 +27,26 @@ describe("the sync records", () => {
     expect(store.read(syncKey("me"))).toBeNull();
   });
 
+  it("keep when the star last agreed on had changed, and only a number for it", () => {
+    const store = memoryStore();
+    syncRecords(store, "me").remember({
+      uid: "a",
+      revision: 1,
+      fingerprint: "x",
+      favouriteChangedAt: 9,
+    });
+    expect(syncRecords(store, "me").all()).toEqual([
+      { uid: "a", revision: 1, fingerprint: "x", favouriteChangedAt: 9 },
+    ]);
+    store.write(
+      syncKey("me"),
+      JSON.stringify({
+        records: { a: { revision: 1, fingerprint: "x", favouriteChangedAt: "9" } },
+      }),
+    );
+    expect(syncRecords(store, "me").all()).toEqual([{ uid: "a", revision: 1, fingerprint: "x" }]);
+  });
+
   it("shrug off what does not parse", () => {
     const store = memoryStore();
     store.write(syncKey("me"), "{nope");

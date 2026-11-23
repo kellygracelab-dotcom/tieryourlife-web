@@ -7,6 +7,8 @@ import {
   BOARD_LIMITS,
   coverFocusOf,
   editTier,
+  favouriteChangedAtOf,
+  isBehind,
   isNarrowed,
   isSavedCopy,
   itemsIn,
@@ -37,6 +39,7 @@ import {
   setFavourite,
   setTopic,
   shouldGroup,
+  takeFavourite,
   tierShares,
   trashBoard,
   trashEntriesOf,
@@ -686,13 +689,45 @@ describe("the list of boards", () => {
     expect(setTopic(withTopic, null, 5).topic).toBeNull();
   });
 
-  it("stars and unstars without touching the edit time", () => {
+  it("stars and unstars without touching the edit time, and says when the star changed", () => {
     const b = at("x", 1);
-    const starred = setFavourite(b, 9);
-    expect(starred.favouritedAt).toBe(9);
-    expect(starred.editedAt).toBe(1);
-    expect(setFavourite(starred, 9)).toBe(starred);
-    expect(setFavourite(starred, null).favouritedAt).toBeNull();
+    const starred = setFavourite(b, 9, 9);
+    expect(starred).toMatchObject({ favouritedAt: 9, favouriteChangedAt: 9, editedAt: 1 });
+    expect(setFavourite(starred, 9, 12)).toBe(starred);
+    expect(setFavourite(starred, null, 12)).toMatchObject({
+      favouritedAt: null,
+      favouriteChangedAt: 12,
+      editedAt: 1,
+    });
+    // Not an edit: the fingerprint stays, and a published list is not behind for it.
+    const out = { ...b, publishedId: "p1", publishedEditedAt: 1 };
+    expect(fingerprintText(setFavourite(out, 9, 9))).toBe(fingerprintText(out));
+    expect(isBehind(setFavourite(out, 9, 9))).toBe(false);
+  });
+
+  it("counts a star from before the account kept it from when it was given", () => {
+    expect(favouriteChangedAtOf(at("x", 1))).toBeNull();
+    expect(favouriteChangedAtOf(at("x", 1, { favouritedAt: 7 }))).toBe(7);
+    expect(favouriteChangedAtOf(at("x", 1, { favouritedAt: null, favouriteChangedAt: 8 }))).toBe(8);
+  });
+
+  it("takes the account's star only when it changed later, and nothing else with it", () => {
+    const starred = at("x", 1, { favouritedAt: 7, favouriteChangedAt: 7 });
+    // Unstarred later on another device.
+    expect(takeFavourite(starred, null, 9)).toEqual({
+      ...starred,
+      favouritedAt: null,
+      favouriteChangedAt: 9,
+    });
+    // Older, or the same moment, or not said at all: the star here stays.
+    expect(takeFavourite(starred, null, 5)).toBe(starred);
+    expect(takeFavourite(starred, null, 7)).toBe(starred);
+    expect(takeFavourite(starred, null, undefined)).toBe(starred);
+    // A star from before the account kept it counts from when it was given.
+    const old = at("x", 1, { favouritedAt: 7 });
+    expect(takeFavourite(old, null, 6)).toBe(old);
+    expect(takeFavourite(old, 8, 8)).toMatchObject({ favouritedAt: 8, favouriteChangedAt: 8 });
+    expect(takeFavourite(at("x", 1), 4, 4)).toMatchObject({ favouritedAt: 4, editedAt: 1 });
   });
 
   it("keeps up to six chosen pictures for the cover, one alone being the cover itself", () => {
