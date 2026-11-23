@@ -364,34 +364,32 @@ function OpenList({
   // The author's board, when it has changes the list does not show yet: the
   // link shows this list, so the page says so and leads to Update (23.11).
   const ownBoard = own ? boardOfList(repository ?? site, list.id) : null;
-  // A sending time guessed for a board from the account, and this list shows
-  // the board as it is: nothing to Update after all (QA, 23.11). Told once
-  // the pictures are compared by their source; until then, as it reads.
+  // A board that reads as ahead of its list while the list shows it as it is:
+  // nothing to Update after all, whatever made it read so, a sending time
+  // guessed for a board from the account above all (QA, Coordinator, 23.11).
+  // Told once the pictures are compared by their source; until then, as it reads.
   const boards = repository ?? site;
-  const guessedUid =
-    ownBoard !== null && ownBoard.publishedEditedAtGuessed === true && isBehind(ownBoard)
-      ? ownBoard.uid
-      : null;
-  const guessedAt = guessedUid === null ? null : (ownBoard?.editedAt ?? null);
+  const behindUid = ownBoard !== null && isBehind(ownBoard) ? ownBoard.uid : null;
+  const behindAt = behindUid === null ? null : (ownBoard?.editedAt ?? null);
   const [settledAt, setSettledAt] = useState<number | null>(null);
   useEffect(() => {
-    if (guessedUid === null || guessedAt === null) return;
-    const board = boards.get(guessedUid);
-    if (board === null || board.editedAt !== guessedAt) return;
+    if (behindUid === null || behindAt === null) return;
+    const board = boards.get(behindUid);
+    if (board === null || board.editedAt !== behindAt) return;
     let current = true;
     void sameAsPublished(board, list).then((same) => {
       if (!current || !same) return;
       // The board as it was compared, not an edit made since.
-      const now = boards.get(guessedUid);
-      if (now?.publishedEditedAtGuessed === true && now.editedAt === guessedAt) {
+      const now = boards.get(behindUid);
+      if (now !== null && isBehind(now) && now.editedAt === behindAt) {
         boards.save(sentAsItIs(now));
-        setSettledAt(guessedAt);
+        setSettledAt(behindAt);
       }
     });
     return () => {
       current = false;
     };
-  }, [guessedUid, guessedAt, list, boards]);
+  }, [behindUid, behindAt, list, boards]);
   const behindBoard =
     ownBoard !== null && isBehind(ownBoard) && settledAt !== ownBoard.editedAt ? ownBoard : null;
   // The sections' names as last known here; the nine stand in until the backend answered.

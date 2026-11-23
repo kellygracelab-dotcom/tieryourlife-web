@@ -80,12 +80,16 @@ const published = async (b: Board): Promise<PublishedList> => {
             ? null
             : storage(`published/L1/${await copyName(item.imageUrl)}_p_3250b2c8`),
       tierIndex: item.tierIndex,
+      ...(item.pictureFocus ? { pictureFocus: item.pictureFocus } : {}),
+      ...(item.credit === undefined ? {} : { credit: item.credit }),
     })),
   );
   return {
     title: request.title,
     category: request.category,
     coverImageUrl: null,
+    ...(request.coverFocus ? { coverFocus: request.coverFocus } : {}),
+    ...(request.topicId ? { topicId: request.topicId } : {}),
     tiers: request.tiers,
     items,
   } as unknown as PublishedList;
@@ -175,6 +179,36 @@ describe("sameAsPublished", () => {
       tiers: b.tiers.map((tier) => (tier.uid === s ? { ...tier, label: "Best" } : tier)),
     };
     expect(await sameAsPublished(relabelled, list)).toBe(false);
+  });
+
+  // Coordinator, 23.11: told for every board that reads as behind, so all a publish sends counts.
+  it("does not when only a picture's focus, a credit or the topic changed", async () => {
+    const pictured = withPictures(out(), (title) => ({
+      imageUrl: `https://elsewhere/${title}.jpg`,
+      ...(title === "Heat" ? { pictureFocus: { x: 0.5, y: 0.2, zoom: 1.5 } } : {}),
+      ...(title === "Dune" ? { credit: "Photo: Ann" } : {}),
+    }));
+    const list = await published(pictured);
+    expect(await sameAsPublished(pictured, list)).toBe(true);
+    const refocused = withPictures(pictured, (title) =>
+      title === "Heat" ? { pictureFocus: { x: 0.5, y: 0.6, zoom: 1.5 } } : {},
+    );
+    expect(await sameAsPublished(refocused, list)).toBe(false);
+    const unfocused = withPictures(pictured, (title) =>
+      title === "Heat" ? { pictureFocus: undefined } : {},
+    );
+    expect(await sameAsPublished(unfocused, list)).toBe(false);
+    const recredited = withPictures(pictured, (title) =>
+      title === "Dune" ? { credit: "Photo: Bo" } : {},
+    );
+    expect(await sameAsPublished(recredited, list)).toBe(false);
+    const topical: Board = { ...pictured, topic: { id: "t1", name: "Sci-fi" } };
+    expect(await sameAsPublished(topical, list)).toBe(false);
+    expect(await sameAsPublished(topical, await published(topical))).toBe(true);
+    const named: Board = { ...pictured, topic: { id: null, name: "Heists" } };
+    expect(await sameAsPublished(named, list)).toBe(false);
+    const off: Board = { ...topical, topic: null, topicOff: true };
+    expect(await sameAsPublished(off, await published(topical))).toBe(false);
   });
 });
 

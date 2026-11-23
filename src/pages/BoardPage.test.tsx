@@ -1555,42 +1555,46 @@ describe("BoardPage: Publish beside Play", () => {
 
   // QA, 23.11: a board from the account is saved seconds after its list went
   // out, so the time guessed from the list read as behind with nothing to send.
-  it("puts Update away for a board from the account whose list shows it as it is", async () => {
-    const repository = boardsRepository(memoryStore());
-    const board = {
-      ...filmBoard(),
-      category: "film_tv",
-      publishedId: "L1",
-      authorName: "Danylo",
-      editedAt: 6500,
-      publishedEditedAt: 1000,
-      publishedEditedAtGuessed: true as const,
-    };
-    repository.save(board);
-    const request = publishRequestOf(board)!;
-    const asItIs = {
-      title: request.title,
-      category: request.category,
-      tiers: request.tiers,
-      items: request.items.map(({ title, imageUrl, tierIndex }) => ({
-        title,
-        imageUrl,
-        tierIndex,
-      })),
-    } as unknown as PublishedList;
-    const loadOriginal = vi.fn(() => Promise.resolve(asItIs));
-    open(repository, "/b/films", {
-      publishing: { ...noPublishing, loadOriginal },
-      account: member,
-    });
-    expect(headerPublish()).toHaveAccessibleName("Update");
-    await waitFor(() => expect(headerPublish()).toBeNull());
-    expect(screen.queryByText(/not published/)).toBeNull();
-    expect(repository.get("films")).toMatchObject({ editedAt: 6500, publishedEditedAt: 6500 });
-    expect(repository.get("films")?.publishedEditedAtGuessed).toBeUndefined();
+  // Coordinator, 23.11: a time guessed before the guess was marked reads the same.
+  it("puts Update away for a board whose list shows it as it is, its time guessed or not", async () => {
+    for (const guessed of [true, false]) {
+      const repository = boardsRepository(memoryStore());
+      const board = {
+        ...filmBoard(),
+        category: "film_tv",
+        publishedId: "L1",
+        authorName: "Danylo",
+        editedAt: 6500,
+        publishedEditedAt: 1000,
+        ...(guessed ? { publishedEditedAtGuessed: true as const } : {}),
+      };
+      repository.save(board);
+      const request = publishRequestOf(board)!;
+      const asItIs = {
+        title: request.title,
+        category: request.category,
+        tiers: request.tiers,
+        items: request.items.map(({ title, imageUrl, tierIndex }) => ({
+          title,
+          imageUrl,
+          tierIndex,
+        })),
+      } as unknown as PublishedList;
+      const loadOriginal = vi.fn(() => Promise.resolve(asItIs));
+      open(repository, "/b/films", {
+        publishing: { ...noPublishing, loadOriginal },
+        account: member,
+      });
+      expect(headerPublish()).toHaveAccessibleName("Update");
+      await waitFor(() => expect(headerPublish()).toBeNull());
+      expect(screen.queryByText(/not published/)).toBeNull();
+      expect(repository.get("films")).toMatchObject({ editedAt: 6500, publishedEditedAt: 6500 });
+      expect(repository.get("films")?.publishedEditedAtGuessed).toBeUndefined();
+      cleanup();
+    }
   });
 
-  it("keeps Update when the guessed time is behind for real, or the time is the board's own", async () => {
+  it("keeps Update when the list is behind for real, its time guessed or not", async () => {
     for (const guessed of [true, false]) {
       const repository = boardsRepository(memoryStore());
       const board = {
@@ -1603,9 +1607,8 @@ describe("BoardPage: Publish beside Play", () => {
       };
       repository.save(board);
       const request = publishRequestOf(board)!;
-      // Guessed: the list has another name. Known: the same list, a change made here and undone.
       const list = {
-        title: guessed ? "Older name" : request.title,
+        title: "Older name",
         category: request.category,
         tiers: request.tiers,
         items: request.items.map(({ title, imageUrl, tierIndex }) => ({
