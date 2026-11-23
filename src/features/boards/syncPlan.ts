@@ -12,6 +12,8 @@ export interface LocalBoard {
   legacyFingerprint?: string;
   /** In this device's trash. */
   inTrash: boolean;
+  /** When the star last changed here (favouriteChangedAtOf); null when it never did. */
+  favouriteChangedAt?: number | null;
 }
 
 /** A board as the account has it, from the index. */
@@ -28,6 +30,8 @@ export interface RemoteBoard {
   forever?: boolean;
   /** The fingerprint of whichever device wrote it last, if it sent one. */
   fingerprint: string | null;
+  /** When the star the account keeps last changed; absent while no device sent one. */
+  favouriteChangedAt?: number;
 }
 
 /** What this device knew last time it and the account agreed about a board. */
@@ -37,6 +41,8 @@ export interface SyncedBoard {
   fingerprint: string;
   /** Server content hash when a legacy client saved a board without its large game. */
   remoteFingerprint?: string;
+  /** When the star last agreed on had changed; absent when none was. */
+  favouriteChangedAt?: number;
 }
 
 export type SyncStep =
@@ -83,7 +89,43 @@ export type SyncStep =
 export const isServerFingerprint = (hash: string | null): hash is string =>
   hash?.startsWith("game-v1:") === true || hash?.startsWith("state-v1:") === true;
 
+/**
+ * The star changed here later than the account's and than the last
+ * agreement. It is kept out of the fingerprint, so this is the only way a
+ * star changed on its own is seen at all; the agreement keeps it from going
+ * up every run to an account that says nothing of it.
+ */
+function starAhead(
+  local: LocalBoard,
+  remote: RemoteBoard,
+  synced: SyncedBoard | undefined,
+): boolean {
+  const here = local.favouriteChangedAt ?? null;
+  if (here === null) return false;
+  if (remote.favouriteChangedAt !== undefined && here <= remote.favouriteChangedAt) return false;
+  return synced?.favouriteChangedAt === undefined || here > synced.favouriteChangedAt;
+}
+
 function stepFor(
+  local: LocalBoard,
+  remote: RemoteBoard | undefined,
+  synced: SyncedBoard | undefined,
+): SyncStep | null {
+  const step = contentStepFor(local, remote, synced);
+  // A star given or taken off here, and nothing else to send: the contents go
+  // up as they are, over the revision the account has, with the star on them.
+  if (
+    remote !== undefined &&
+    !remote.deleted &&
+    (step === null || step.kind === "remember") &&
+    starAhead(local, remote, synced)
+  ) {
+    return { kind: "update", uid: local.uid, basedOn: remote.revision };
+  }
+  return step;
+}
+
+function contentStepFor(
   local: LocalBoard,
   remote: RemoteBoard | undefined,
   synced: SyncedBoard | undefined,
