@@ -116,7 +116,7 @@ export function ShareButton({ board, listId, filled, onShareImage, onSettings }:
         onClick={press}
       >
         <Icon name="share" className="btn__icon" />
-        <span>{strings.share.button}</span>
+        <span className="share-button__word">{strings.share.button}</span>
       </button>
       {open !== null && (
         <div className="share-card" role="dialog" aria-label={strings.share.button}>

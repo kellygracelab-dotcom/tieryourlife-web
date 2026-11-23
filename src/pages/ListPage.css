@@ -515,7 +515,8 @@
   }
 
   .list-head > .list-head__tools > .play-button,
-  .list-head > .list-head__tools > .publish-button {
+  .list-head > .list-head__tools > .publish-button,
+  .list-head > .list-head__tools > .share-anchor {
     order: 2;
   }
 
@@ -523,7 +524,7 @@
     order: 3;
   }
 
-  .list-head > .list-head__tools > :not(.play-button, .publish-button) {
+  .list-head > .list-head__tools > :not(.play-button, .publish-button, .share-anchor) {
     order: 4;
   }
 }
