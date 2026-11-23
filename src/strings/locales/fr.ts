@@ -206,6 +206,8 @@ const fr: Translation = {
     categories: "Rubriques",
     popular: "Populaires",
     popularNote: "Ouvrez-en une et commencez à glisser. Aucun compte nécessaire.",
+    fresh: "Nouveautés de la communauté",
+    freshNote: "Des listes publiées récemment.",
     source: "Quelles listes afficher",
     everyone: "Toutes",
     following: "Abonnements",
@@ -2010,6 +2012,16 @@ const fr: Translation = {
     eyebrow: "Nouveau ici ?",
     meta: "Une liste toute prête · {cards}",
     try: "Essayer",
+  },
+  share: {
+    updated: "mise à jour le {date}",
+    button: "Partager",
+    hook: "Mon niveau {tier} : {names}. Et le tien ?",
+    question: "Et le tien ?",
+    copyByHand: "Copie l’adresse à la main :",
+    address: "Adresse de la liste",
+    openInCommunity: "Ouvrir dans la communauté",
+    settings: "Réglages de publication",
   },
 };
 
