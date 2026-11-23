@@ -16,10 +16,6 @@ describe("ListArt", () => {
       "https://img/cover.jpg",
     );
     expect(container.querySelectorAll("img")).toHaveLength(1);
-    expect(container.querySelector(".art--collage")).toHaveClass("art--waiting");
-    fireEvent.load(images[0]!);
-    expect(container.querySelector(".art--collage")).not.toHaveClass("art--waiting");
-    expect(images[0]!.parentElement).toHaveClass("art__shown");
   });
 
   it("falls back to a mosaic of at most six pictures", () => {
@@ -152,6 +148,10 @@ describe("ListArt", () => {
     expect(images).toHaveLength(1);
     expect(images[0]).toHaveAttribute("src", "/img/collage/list-0001.webp?v=5");
     expect(container.querySelectorAll("img")).toHaveLength(1);
+    expect(container.querySelector(".art--collage")).toHaveClass("art--waiting");
+    fireEvent.load(images[0]!);
+    expect(container.querySelector(".art--collage")).not.toHaveClass("art--waiting");
+    expect(images[0]!.parentElement).toHaveClass("art__shown");
   });
 
   it("still shows the cover over a collage", () => {
