@@ -29,6 +29,7 @@ import {
   removeItem,
   restoreBoard,
   sentAsItIs,
+  isBehind,
   restoreTier,
   setCardCredit,
   setPictureFocus,
@@ -658,15 +659,16 @@ function OpenBoard({
     publishing.loadOriginal ?? loadListAsWritten,
   );
   const changes = published.count;
-  // A sending time guessed for a board from the account, and its list shows
-  // it as it is: nothing to Update after all (the board saved after a
-  // publish is seconds later than its list: QA, 23.11).
-  const sameAt = board?.publishedEditedAtGuessed === true ? published.sameAt : null;
+  // The list shows the board as it is: nothing to Update after all, whatever
+  // made it read as ahead, a sending time guessed for a board from the account
+  // above all (the board saved after a publish is seconds later than its
+  // list: QA, 23.11), guessed before the guess was marked too (Coordinator, 23.11).
+  const sameAt = published.sameAt;
   useEffect(() => {
     if (sameAt === null) return;
     // The board as it was compared, not an edit made since.
     const current = repository.get(uid);
-    if (current?.publishedEditedAtGuessed === true && current.editedAt === sameAt) {
+    if (current !== null && isBehind(current) && current.editedAt === sameAt) {
       repository.save(sentAsItIs(current));
     }
   }, [sameAt, repository, uid]);

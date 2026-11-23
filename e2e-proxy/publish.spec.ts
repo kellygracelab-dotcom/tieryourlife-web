@@ -74,13 +74,20 @@ test("publishes, is read by a guest, sends an update and takes it down", async (
   await expect(guest.getByRole("heading", { name: title })).toBeVisible();
   await expect(guest.getByText("Ex Machina")).toBeVisible();
 
-  // A change on the board, then Update: the same list, the new order.
-  await page.getByLabel("Display: Rows").click();
-  await page.getByRole("menuitemradio", { name: /Ranked list/ }).click();
+  // A card added, then Update: the same list, with the new card.
+  const box = page.getByRole("textbox", { name: "Add a card" });
+  await box.fill("Hereditary");
+  await box.press("Enter");
   await expect(word).toHaveText("Update");
   await page.locator(".list-head .publish-button").click();
   await upToDate(page);
   expect(await listsTitled(title)).toHaveLength(1);
+
+  // Another way to show the board sends nothing: the list shows it as it is,
+  // so there is nothing to Update (Coordinator, 23.11).
+  await page.getByLabel("Display: Rows").click();
+  await page.getByRole("menuitemradio", { name: /Ranked list/ }).click();
+  await upToDate(page);
 
   // Taken down: the proxy forgets it and the guest's link stops working.
   await openSettings(page);

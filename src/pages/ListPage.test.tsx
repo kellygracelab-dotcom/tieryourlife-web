@@ -1312,34 +1312,38 @@ describe("ListPage for its author", () => {
 
   // QA, 23.11: the time of a board from the account is guessed from its list,
   // and read as behind though the list shows the board as it is.
-  it("says nothing of changes when the list shows a board from the account as it is", async () => {
-    const made = addToPool(
-      { ...newBoard("b1", "Every A24 film", 1, () => "t"), category: "film_tv" },
-      [{ title: "Heat", imageUrl: null }],
-      1,
-      () => "c1",
-    );
-    const board = {
-      ...made,
-      publishedId: "abc",
-      editedAt: 6500,
-      publishedEditedAt: 1000,
-      publishedEditedAtGuessed: true as const,
-    };
-    boards.save(board);
-    const request = publishRequestOf(board)!;
-    mocks.loadList.mockResolvedValue({
-      ...list,
-      title: request.title,
-      category: request.category,
-      tiers: request.tiers,
-      items: request.items.map(({ title, tierIndex }) => ({ title, imageUrl: null, tierIndex })),
-    });
-    openAs(author, undefined, { pathname: "/l/abc", state: AS_COMMUNITY });
-    await screen.findByRole("heading", { level: 1 });
-    expect(screen.queryByText(/Changes not published yet/)).toBeNull();
-    await waitFor(() => expect(boards.get("b1")?.publishedEditedAt).toBe(6500));
-  });
+  // Coordinator, 23.11: a time guessed before the guess was marked reads the same.
+  it.each([true, false])(
+    "says nothing of changes when the list shows the board as it is (time guessed: %s)",
+    async (guessed) => {
+      const made = addToPool(
+        { ...newBoard("b1", "Every A24 film", 1, () => "t"), category: "film_tv" },
+        [{ title: "Heat", imageUrl: null }],
+        1,
+        () => "c1",
+      );
+      const board = {
+        ...made,
+        publishedId: "abc",
+        editedAt: 6500,
+        publishedEditedAt: 1000,
+        ...(guessed ? { publishedEditedAtGuessed: true as const } : {}),
+      };
+      boards.save(board);
+      const request = publishRequestOf(board)!;
+      mocks.loadList.mockResolvedValue({
+        ...list,
+        title: request.title,
+        category: request.category,
+        tiers: request.tiers,
+        items: request.items.map(({ title, tierIndex }) => ({ title, imageUrl: null, tierIndex })),
+      });
+      openAs(author, undefined, { pathname: "/l/abc", state: AS_COMMUNITY });
+      await screen.findByRole("heading", { level: 1 });
+      expect(screen.queryByText(/Changes not published yet/)).toBeNull();
+      await waitFor(() => expect(boards.get("b1")?.publishedEditedAt).toBe(6500));
+    },
+  );
 
   it("waits to know who is here before it shows a list a board here published", async () => {
     mocks.loadList.mockResolvedValue(list);
