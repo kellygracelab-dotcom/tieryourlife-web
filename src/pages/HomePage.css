@@ -137,18 +137,6 @@
     display: none;
   }
 
-  /* New from the community runs to the screen's edges as the sections do, its cards a phone's width apart. */
-  .home .fresh {
-    margin-inline: -16px;
-    padding-inline: 16px;
-    scroll-padding-inline: 16px;
-    scrollbar-width: none;
-  }
-
-  .home .fresh::-webkit-scrollbar {
-    display: none;
-  }
-
   .home .sections-grid > * {
     scroll-snap-align: start;
   }

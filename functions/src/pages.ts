@@ -416,22 +416,33 @@ const SHARE_SIZE = { width: SHARE_WIDTH, height: SHARE_HEIGHT };
 /** Whatever the stored tiers and items look like, the card gets what it can draw. */
 function shareTiersOf(raw: unknown[] | undefined, word: (text: string) => string): ShareTier[] {
   return (raw ?? []).map((tier) => {
-    const t = (tier ?? {}) as { label?: unknown; caption?: unknown; colorLight?: unknown };
+    const t = (tier ?? {}) as {
+      label?: unknown;
+      caption?: unknown;
+      colorLight?: unknown;
+      colorDark?: unknown;
+    };
     return {
       label: typeof t.label === "string" ? word(t.label) : "",
       caption: typeof t.caption === "string" ? word(t.caption) : null,
       colorLight: typeof t.colorLight === "string" ? t.colorLight : "#5d5c66",
+      ...(typeof t.colorDark === "string" ? { colorDark: t.colorDark } : {}),
     };
   });
 }
 
 function shareItemsOf(raw: unknown[] | undefined, word: (text: string) => string): ShareItem[] {
   return (raw ?? []).map((item) => {
-    const i = (item ?? {}) as { title?: unknown; imageUrl?: unknown };
+    const i = (item ?? {}) as { title?: unknown; imageUrl?: unknown; tierIndex?: unknown };
     return {
       title: typeof i.title === "string" ? word(i.title) : "",
       imageUrl:
         typeof i.imageUrl === "string" && i.imageUrl.startsWith("https://") ? i.imageUrl : null,
+      // The author's arrangement, as the list page reads it (src/features/tierboard/arrange.ts).
+      tierIndex:
+        Number.isInteger(i.tierIndex) && (i.tierIndex as number) >= 0
+          ? (i.tierIndex as number)
+          : null,
     };
   });
 }

@@ -200,8 +200,6 @@ const es: Translation = {
     categories: "Secciones",
     popular: "Populares",
     popularNote: "Abre una y empieza a arrastrar. No hace falta cuenta.",
-    fresh: "Novedades de la comunidad",
-    freshNote: "Listas que la gente publicó hace poco.",
     source: "De quién mostrar las listas",
     everyone: "Todas",
     following: "Siguiendo",
@@ -688,6 +686,7 @@ const es: Translation = {
     home: "Ir a la página principal",
   },
   card: {
+    fresh: "Nuevo",
     by: "de {name}",
     items: { one: "{n} tarjeta", many: "{n} tarjetas", other: "{n} tarjetas" },
     moreTiers: { one: "y {n} nivel más", many: "y {n} niveles más", other: "y {n} niveles más" },

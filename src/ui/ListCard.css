@@ -172,3 +172,22 @@
     row-gap: 2px;
   }
 }
+
+/* "New" on the picture of one of people's newest lists, first in Popular (Marketing, 23.11). */
+.list-card__main {
+  position: relative;
+}
+
+.list-card__new {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  z-index: 2;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font: 500 11px/16px var(--font);
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
