@@ -4,6 +4,7 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { useSession } from "../app/session";
 import { AppCard } from "../features/android/AppCard";
 import { FeedGrid } from "../features/feed/FeedGrid";
+import { FreshRow, type LoadFresh } from "../features/feed/FreshRow";
 import {
   FollowingTab,
   type Follow,
@@ -15,6 +16,7 @@ import { useFeed, type LoadFeed } from "../features/feed/useFeed";
 import { FOLLOWING_PATH } from "../features/sections/model";
 import { SectionGrid } from "../features/sections/SectionGrid";
 import { useSections, type SectionsStore } from "../features/sections/useSections";
+import { loadFresh as siteFresh } from "../lib/api";
 import { wasSignedIn } from "../lib/signedInHint";
 import { strings } from "../strings";
 import { Spinner } from "../ui/Spinner";
@@ -28,6 +30,8 @@ export type HomeTab = "explore" | "following";
 interface HomePageProps {
   tab?: HomeTab;
   load?: LoadFeed;
+  /** "New from the community" over Popular; the site's own unless told otherwise. */
+  loadFresh?: LoadFresh;
   loadSuggestions?: LoadSuggestions;
   loadFollowing?: LoadFollowing;
   follow?: Follow;
@@ -59,9 +63,11 @@ function HomeTabs({ tab }: { tab: HomeTab }) {
 
 function Explore({
   load,
+  loadFresh,
   store,
 }: {
   load: LoadFeed | undefined;
+  loadFresh: LoadFresh;
   store: SectionsStore | undefined;
 }) {
   const popular = useFeed({ sort: "popular" }, load);
@@ -69,6 +75,7 @@ function Explore({
   return (
     <>
       <SectionGrid sections={sections} known={known} />
+      <FreshRow load={loadFresh} />
       <section className="home__popular" aria-labelledby="popular">
         <div className="home__heading">
           <h2 id="popular">{strings.sections.popular}</h2>
@@ -88,6 +95,7 @@ function Explore({
 export function HomePage({
   tab = "explore",
   load,
+  loadFresh = siteFresh,
   loadSuggestions,
   loadFollowing,
   follow,
@@ -147,7 +155,7 @@ export function HomePage({
         />
       ) : (
         <>
-          <Explore load={load} store={store} />
+          <Explore load={load} loadFresh={loadFresh} store={store} />
           {/*
            * The app card after the lists, small: the first screen is for a board
            * one can open, a phone's too, not for an app that is not out yet.

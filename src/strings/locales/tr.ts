@@ -196,6 +196,8 @@ const tr: Translation = {
     categories: "Bölümler",
     popular: "Popüler",
     popularNote: "Birini açın ve sürüklemeye başlayın. Hesap gerekmez.",
+    fresh: "Topluluktan yeni",
+    freshNote: "Kişilerin son yayımladığı listeler.",
     source: "Kimin listeleri gösterilsin",
     everyone: "Tümü",
     following: "Takip",

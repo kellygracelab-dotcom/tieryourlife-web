@@ -200,6 +200,8 @@ const es: Translation = {
     categories: "Secciones",
     popular: "Populares",
     popularNote: "Abre una y empieza a arrastrar. No hace falta cuenta.",
+    fresh: "Novedades de la comunidad",
+    freshNote: "Listas que la gente publicó hace poco.",
     source: "De quién mostrar las listas",
     everyone: "Todas",
     following: "Siguiendo",
