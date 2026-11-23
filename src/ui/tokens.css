@@ -46,6 +46,8 @@
   /* What a tier row's tint is mixed into: the page in Lavender, the palette's lightest surface in a colour (palette.ts). */
   --band-paper: var(--paper);
   --tile-placeholder: #dad7e0;
+  /* The light passing over a cover whose pictures are on their way: barely there. */
+  --art-shimmer: rgb(255 255 255 / 0.38);
   --tile-label: #5d5c66;
 
   /* The app's surface steps, for what the web draws the app's way: feed
@@ -129,6 +131,7 @@
     --band-tint: 20%;
     --band-tint-hover: 32%;
     --tile-placeholder: #26262c;
+    --art-shimmer: rgb(255 255 255 / 0.05);
     --tile-label: #c7c5d0;
 
     --surface-container-low: #1f1f25;
@@ -180,6 +183,7 @@
   --band-tint: 20%;
   --band-tint-hover: 32%;
   --tile-placeholder: #26262c;
+  --art-shimmer: rgb(255 255 255 / 0.05);
   --tile-label: #c7c5d0;
 
   --surface-container-low: #1f1f25;
