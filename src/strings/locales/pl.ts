@@ -212,8 +212,6 @@ const pl: Translation = {
     categories: "Działy",
     popular: "Popularne",
     popularNote: "Otwórz jedną i zacznij przeciągać. Konto nie jest potrzebne.",
-    fresh: "Nowe od społeczności",
-    freshNote: "Listy opublikowane ostatnio.",
     source: "Czyje listy pokazywać",
     everyone: "Wszystkie",
     following: "Obserwowani",
@@ -705,6 +703,7 @@ const pl: Translation = {
     home: "Przejdź na stronę główną",
   },
   card: {
+    fresh: "Nowe",
     by: "od {name}",
     items: { one: "{n} karta", few: "{n} karty", many: "{n} kart", other: "{n} karty" },
     moreTiers: {

@@ -210,8 +210,6 @@ const ru: Translation = {
     categories: "Разделы",
     popular: "Популярные",
     popularNote: "Откройте любой и начинайте перетаскивать. Аккаунт не нужен.",
-    fresh: "Новое от сообщества",
-    freshNote: "Списки, которые недавно опубликовали люди.",
     source: "Чьи списки показывать",
     everyone: "Все",
     following: "Подписки",
@@ -708,6 +706,7 @@ const ru: Translation = {
     home: "На главную",
   },
   card: {
+    fresh: "Новое",
     by: "от {name}",
     items: {
       one: "{n} карточка",

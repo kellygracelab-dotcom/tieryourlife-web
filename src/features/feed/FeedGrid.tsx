@@ -25,6 +25,8 @@ interface FeedGridProps {
   hiddenNote?: boolean;
   /** Why a list is there, for a Following feed. */
   reasonOf?: (list: ListSummary) => string | null;
+  /** The lists that stand first as people's newest, each card marked "New". */
+  freshIds?: ReadonlySet<string>;
   /** Whether each card names its author; not on the author's own page. */
   showAuthor?: boolean;
   /**
@@ -135,6 +137,7 @@ export function FeedGrid({
   more,
   hiddenNote = false,
   reasonOf,
+  freshIds,
   showAuthor = true,
   onReport,
   onWrongTopic,
@@ -219,6 +222,7 @@ export function FeedGrid({
                 <ListCard
                   list={list}
                   reason={reasonOf?.(list) ?? null}
+                  fresh={freshIds?.has(list.id) === true}
                   yours={yours(list)}
                   showAuthor={showAuthor}
                   menu={

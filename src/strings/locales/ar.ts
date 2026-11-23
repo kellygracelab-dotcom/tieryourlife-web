@@ -223,8 +223,6 @@ const ar: Translation = {
     categories: "الأقسام",
     popular: "الأكثر رواجًا",
     popularNote: "افتح واحدة وابدأ السحب. لا حاجة إلى حساب.",
-    fresh: "جديد من المجتمع",
-    freshNote: "قوائم نشرها الناس مؤخرًا.",
     source: "قوائم من تُعرض",
     everyone: "الكل",
     following: "المتابَعون",
@@ -751,6 +749,7 @@ const ar: Translation = {
     home: "إلى الصفحة الرئيسية",
   },
   card: {
+    fresh: "جديد",
     by: "من {name}",
     items: {
       zero: "لا بطاقات",
