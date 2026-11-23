@@ -3,13 +3,17 @@
  * 23.11.2026): /img/collage/{listId}.webp. The feed drew up to six pictures
  * for every list without a cover of its own, each its own request; the
  * shared Proxy now names this address in the list's summary (`collageUrl`),
- * and the card loads one picture instead. Drawn on demand, never stored: the
- * address carries the list's version, so a browser keeps it for good and
- * the CDN for a minute, as a published list's own pictures.
+ * and the card loads one picture instead. Drawn once per set of pictures and
+ * kept in the bucket beside the link cards, so a page of them comes from
+ * there, not drawn again for every visitor (Danylo, 23.11: covers came
+ * slower). The address carries the list's version, so a browser keeps it for
+ * good and the CDN for a minute, as a published list's own pictures.
  */
 
+import { createHash } from "node:crypto";
 import type { Firestore } from "firebase-admin/firestore";
 import type { Response } from "express";
+import { limiter } from "./limit";
 import { PUBLISHED_ORIGINAL, rasterType } from "./pictures";
 
 export const COLLAGE_WIDTH = 480;
@@ -22,6 +26,10 @@ export const COLLAGE_MIN = 2;
 /** Pictures tried in all: the mosaic fills a place a broken one leaves with the next. */
 const COLLAGE_TRIES = 12;
 const QUALITY = 80;
+/** The drawing's own version: a change to how a collage is drawn makes every kept one new. */
+export const COLLAGE_LOOK = 1;
+/** Collages drawn at once in one instance; the others wait, the kept ones go out meanwhile. */
+const DRAWING_AT_ONCE = 3;
 /**
  * A picture bigger than this many pixels is not decoded: one at a time and
  * cut down on loading, but a PNG cannot be, and the function has 512 MiB.
@@ -179,9 +187,35 @@ export function collagePictures(data: StoredList): CollagePicture[] {
 /** The catalogue's poster at a size a collage cell of up to 239×300 shows sharply. */
 export const collageSizeOf = (url: string): string => url.replace("/t/p/w500/", "/t/p/w342/");
 
+/** Where drawn collages are kept: a cache, anything in it can be drawn again. */
+export interface CollageShelf {
+  /** A kept collage, or null when there is none (or it cannot be read). */
+  read: (path: string) => Promise<Buffer | null>;
+  /** Keeps a collage, then lets the list's older ones go. */
+  keep: (path: string, folder: string, webp: Buffer) => Promise<void>;
+}
+
 export interface CollageDeps {
   /** One picture's bytes, or null when it cannot be had: fetched safely, or read from the bucket. */
   load: (url: string) => Promise<Buffer | null>;
+  /** Drawn collages kept between visitors; none draws every time. */
+  shelf?: CollageShelf;
+}
+
+/** Where every kept collage of one list lives, beside its link cards. The slash keeps `abc` out of `abcd`. */
+export const collageFolder = (id: string): string => `share/c/${id}/`;
+
+/**
+ * Where the collage of these pictures is kept: named by the pictures, their
+ * focus and the drawing, so any change to what the card shows is another
+ * name, whatever the list's version says.
+ */
+export function collagePath(id: string, pictures: readonly CollagePicture[]): string {
+  const digest = createHash("sha256")
+    .update(JSON.stringify({ look: COLLAGE_LOOK, pictures }))
+    .digest("hex")
+    .slice(0, 32);
+  return `${collageFolder(id)}${digest}.webp`;
 }
 
 type Sharp = typeof import("sharp");
@@ -224,6 +258,7 @@ async function loadPieces(
   sharp: Sharp,
   pictures: readonly CollagePicture[],
   deps: CollageDeps,
+  missed: () => void,
 ): Promise<Piece[]> {
   const pieces: Piece[] = [];
   let next = 0;
@@ -236,6 +271,7 @@ async function loadPieces(
     for (const [at, bytes] of loaded.entries()) {
       const piece = await pieceOf(sharp, bytes, batch[at]?.focus ?? null);
       if (piece !== null) pieces.push(piece);
+      else missed();
     }
   }
   return pieces.slice(0, COLLAGE_MAX);
@@ -269,9 +305,10 @@ async function cut(sharp: Sharp, piece: Piece, cell: Cell): Promise<Buffer> {
 export async function drawCollage(
   pictures: readonly CollagePicture[],
   deps: CollageDeps,
+  missed: () => void = () => undefined,
 ): Promise<Buffer | null> {
   const sharp = await loadSharp();
-  let pieces = await loadPieces(sharp, pictures, deps);
+  let pieces = await loadPieces(sharp, pictures, deps, missed);
   while (pieces.length >= COLLAGE_MIN) {
     const cells = collageCells(pieces.length);
     const cuts: { input: Buffer; left: number; top: number }[] = [];
@@ -288,6 +325,7 @@ export async function drawCollage(
       }
     }
     if (failed >= 0) {
+      missed();
       pieces = pieces.filter((_, at) => at !== failed);
       continue;
     }
@@ -304,6 +342,35 @@ export async function drawCollage(
       .toBuffer();
   }
   return null;
+}
+
+const drawing = limiter(DRAWING_AT_ONCE);
+
+/**
+ * The collage of these pictures: the kept one, or drawn and kept. One drawn
+ * while a picture would not load still goes out but is not kept, so a
+ * picture that failed for a moment is not left out for good.
+ */
+async function keptOrDrawn(
+  id: string,
+  pictures: readonly CollagePicture[],
+  deps: CollageDeps,
+): Promise<Buffer | null> {
+  const path = collagePath(id, pictures);
+  const kept = await deps.shelf?.read(path).catch(() => null);
+  if (kept) return kept;
+  let whole = true;
+  const webp = await drawing(() =>
+    drawCollage(pictures, deps, () => {
+      whole = false;
+    }),
+  );
+  if (webp !== null && whole && deps.shelf) {
+    await deps.shelf
+      .keep(path, collageFolder(id), webp)
+      .catch((error: unknown) => console.warn("Collage not kept", error));
+  }
+  return webp;
 }
 
 const notFound = (response: Response): void => {
@@ -332,7 +399,7 @@ export async function sendCollage(
   if (data === undefined || data.underReview === true) return notFound(response);
   const pictures = collagePictures(data);
   if (pictures.length < COLLAGE_MIN) return notFound(response);
-  const webp = await drawCollage(pictures, deps);
+  const webp = await keptOrDrawn(id, pictures, deps);
   if (webp === null) return notFound(response);
   response.setHeader("Content-Type", "image/webp");
   response.setHeader("Content-Length", String(webp.length));

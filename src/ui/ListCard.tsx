@@ -22,6 +22,8 @@ interface ListCardProps {
   showAuthor?: boolean;
   /** What a reader can do about the list from its card, at the end of its footer. */
   menu?: ReactNode;
+  /** One of the first cards the page opens on: its picture comes first. */
+  first?: boolean;
 }
 
 /** One's own face, the one this device knows, which a new face reaches first. */
@@ -64,6 +66,7 @@ export function ListCard({
   fresh = false,
   showAuthor = true,
   menu = null,
+  first = false,
 }: ListCardProps) {
   // How many people ranked it is not said: a small count makes the place look
   // empty, a big one is noise (Danylo, 01.11.2026). The cards are the list's own.
@@ -79,6 +82,7 @@ export function ListCard({
           collage={list.collageUrl ?? null}
           tierColors={list.tierColors}
           decorative
+          first={first}
         />
         {fresh && <span className="list-card__new">{strings.card.fresh}</span>}
         <span className="list-card__text">
