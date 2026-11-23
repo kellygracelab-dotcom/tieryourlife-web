@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import type { ListSummary } from "../../api/types";
@@ -53,5 +53,23 @@ describe("FreshRow", () => {
     await Promise.resolve();
     expect(screen.queryByRole("heading", { name: "New from the community" })).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("comes back drawn at once from the last answer, then takes the new one", async () => {
+    show([summary("a", "Games I played"), summary("b", "Anime")]);
+    await screen.findByRole("list", { name: "New from the community" });
+    cleanup();
+    let answer!: (lists: ListSummary[]) => void;
+    render(
+      <MemoryRouter>
+        <FreshRow load={() => new Promise((resolve) => (answer = resolve))} />
+      </MemoryRouter>,
+    );
+    const row = screen.getByRole("list", { name: "New from the community" });
+    expect(within(row).getAllByRole("listitem")).toHaveLength(2);
+    await act(async () =>
+      answer([summary("a", "Games I played"), summary("b", "Anime"), summary("c", "Films")]),
+    );
+    expect(within(row).getAllByRole("listitem")).toHaveLength(3);
   });
 });
