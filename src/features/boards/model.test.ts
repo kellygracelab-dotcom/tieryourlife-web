@@ -40,7 +40,6 @@ import {
   setPublished,
   setRanking,
   sentAsItIs,
-  isBehind,
   setTopic,
   shouldGroup,
   takeFavourite,
