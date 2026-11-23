@@ -365,23 +365,35 @@ function OpenList({
   // link shows this list, so the page says so and leads to Update (23.11).
   const ownBoard = own ? boardOfList(repository ?? site, list.id) : null;
   // A sending time guessed for a board from the account, and this list shows
-  // the board as it is: nothing to Update after all (QA, 23.11).
-  const settles =
-    ownBoard !== null &&
-    ownBoard.publishedEditedAtGuessed === true &&
-    isBehind(ownBoard) &&
-    sameAsPublished(ownBoard, list);
-  const behindBoard = ownBoard !== null && isBehind(ownBoard) && !settles ? ownBoard : null;
+  // the board as it is: nothing to Update after all (QA, 23.11). Told once
+  // the pictures are compared by their source; until then, as it reads.
   const boards = repository ?? site;
-  const settleAt = settles ? ownBoard.editedAt : null;
-  const settleUid = settles ? ownBoard.uid : null;
+  const guessedUid =
+    ownBoard !== null && ownBoard.publishedEditedAtGuessed === true && isBehind(ownBoard)
+      ? ownBoard.uid
+      : null;
+  const guessedAt = guessedUid === null ? null : (ownBoard?.editedAt ?? null);
+  const [settledAt, setSettledAt] = useState<number | null>(null);
   useEffect(() => {
-    if (settleAt === null || settleUid === null) return;
-    const current = boards.get(settleUid);
-    if (current?.publishedEditedAtGuessed === true && current.editedAt === settleAt) {
-      boards.save(sentAsItIs(current));
-    }
-  }, [settleAt, settleUid, boards]);
+    if (guessedUid === null || guessedAt === null) return;
+    const board = boards.get(guessedUid);
+    if (board === null || board.editedAt !== guessedAt) return;
+    let current = true;
+    void sameAsPublished(board, list).then((same) => {
+      if (!current || !same) return;
+      // The board as it was compared, not an edit made since.
+      const now = boards.get(guessedUid);
+      if (now?.publishedEditedAtGuessed === true && now.editedAt === guessedAt) {
+        boards.save(sentAsItIs(now));
+        setSettledAt(guessedAt);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [guessedUid, guessedAt, list, boards]);
+  const behindBoard =
+    ownBoard !== null && isBehind(ownBoard) && settledAt !== ownBoard.editedAt ? ownBoard : null;
   // The sections' names as last known here; the nine stand in until the backend answered.
   const knownSections = useSyncExternalStore(
     sectionsStore.subscribe,

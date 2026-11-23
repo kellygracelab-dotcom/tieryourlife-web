@@ -661,7 +661,7 @@ function OpenBoard({
   // A sending time guessed for a board from the account, and its list shows
   // it as it is: nothing to Update after all (the board saved after a
   // publish is seconds later than its list: QA, 23.11).
-  const sameAt = published.same && board?.publishedEditedAtGuessed === true ? board.editedAt : null;
+  const sameAt = board?.publishedEditedAtGuessed === true ? published.sameAt : null;
   useEffect(() => {
     if (sameAt === null) return;
     // The board as it was compared, not an edit made since.
