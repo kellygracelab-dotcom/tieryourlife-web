@@ -223,6 +223,8 @@ const ar: Translation = {
     categories: "الأقسام",
     popular: "الأكثر رواجًا",
     popularNote: "افتح واحدة وابدأ السحب. لا حاجة إلى حساب.",
+    fresh: "جديد من المجتمع",
+    freshNote: "قوائم نشرها الناس مؤخرًا.",
     source: "قوائم من تُعرض",
     everyone: "الكل",
     following: "المتابَعون",
@@ -2309,6 +2311,16 @@ const ar: Translation = {
     eyebrow: "جديد هنا؟",
     meta: "قائمة جاهزة · {cards}",
     try: "جرّبها",
+  },
+  share: {
+    updated: "حُدّثت {date}",
+    button: "مشاركة",
+    hook: "مستواي {tier}: {names}. وأنت؟",
+    question: "وأنت، كيف ترتّبها؟",
+    copyByHand: "انسخ العنوان يدويًا:",
+    address: "عنوان القائمة",
+    openInCommunity: "افتح في المجتمع",
+    settings: "إعدادات النشر",
   },
 };
 

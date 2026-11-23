@@ -110,6 +110,8 @@ export const loadList = async (id: string, asAccount = false): Promise<Published
 
 export const loadFeed = (query: FeedQuery): Promise<FeedPage> => lists.loadFeed(api, query);
 
+export const loadFresh = (): Promise<ListSummary[]> => lists.loadFresh(api);
+
 export const embeddedRanking = (code: string): Ranking | null => {
   const preloaded = preloadedRanking(code);
   return preloaded === null ? null : rank.rankingOf(preloaded);

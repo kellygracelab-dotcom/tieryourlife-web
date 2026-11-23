@@ -196,6 +196,8 @@ const tr: Translation = {
     categories: "Bölümler",
     popular: "Popüler",
     popularNote: "Birini açın ve sürüklemeye başlayın. Hesap gerekmez.",
+    fresh: "Topluluktan yeni",
+    freshNote: "Kişilerin son yayımladığı listeler.",
     source: "Kimin listeleri gösterilsin",
     everyone: "Tümü",
     following: "Takip",
@@ -1868,6 +1870,16 @@ const tr: Translation = {
     eyebrow: "Yeni misiniz?",
     meta: "Hazır bir liste · {cards}",
     try: "Deneyin",
+  },
+  share: {
+    updated: "{date} güncellendi",
+    button: "Paylaş",
+    hook: "{tier} seviyem: {names}. Seninki?",
+    question: "Seninki nasıl?",
+    copyByHand: "Adresi elle kopyala:",
+    address: "Listenin adresi",
+    openInCommunity: "Toplulukta aç",
+    settings: "Yayın ayarları",
   },
 };
 

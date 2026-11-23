@@ -212,6 +212,8 @@ const pl: Translation = {
     categories: "Działy",
     popular: "Popularne",
     popularNote: "Otwórz jedną i zacznij przeciągać. Konto nie jest potrzebne.",
+    fresh: "Nowe od społeczności",
+    freshNote: "Listy opublikowane ostatnio.",
     source: "Czyje listy pokazywać",
     everyone: "Wszystkie",
     following: "Obserwowani",
@@ -2107,6 +2109,16 @@ const pl: Translation = {
     eyebrow: "Pierwszy raz tutaj?",
     meta: "Gotowa lista · {cards}",
     try: "Wypróbuj",
+  },
+  share: {
+    updated: "zaktualizowano {date}",
+    button: "Udostępnij",
+    hook: "Mój poziom {tier}: {names}. A twój?",
+    question: "A twój?",
+    copyByHand: "Skopiuj adres ręcznie:",
+    address: "Adres listy",
+    openInCommunity: "Otwórz w społeczności",
+    settings: "Ustawienia publikacji",
   },
 };
 

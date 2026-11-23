@@ -166,6 +166,17 @@ const coverDialog = () => screen.getByRole("dialog", { name: "Cover" });
 const publishWindow = (name = "Publish “Films”") => screen.getByRole("dialog", { name });
 /** The header's Publish, Update, Published or Show in Rankings beside Play, if any. */
 const headerPublish = () => document.querySelector<HTMLButtonElement>(".list-head .publish-button");
+/** Share, where Published stood once the list is out (the Designer, 23.11). */
+const shareButton = () => document.querySelector<HTMLButtonElement>(".list-head .share-button");
+/** The Publish window of a list that is out: Share's card, then Publishing settings. */
+const openSettings = async () => {
+  await userEvent.click(shareButton()!);
+  await userEvent.click(
+    within(screen.getByRole("dialog", { name: "Share" })).getByRole("button", {
+      name: "Publishing settings",
+    }),
+  );
+};
 /** The page's snackbar, where a publish is said, with View on it. */
 const said = () => document.querySelector<HTMLElement>(".snackbar");
 /** The board's ⋮ menu, beside the view button's own. */
@@ -1311,8 +1322,8 @@ describe("BoardPage: share and publish", () => {
     expect(vi.mocked(publishing.publish).mock.calls[0]?.[0]).not.toHaveProperty("anonymous");
     expect(repository.get("films")).toMatchObject({ publishedId: "L1", authorName: "Danylo" });
 
-    // The header's button opens the window on the list as it is now.
-    await userEvent.click(headerPublish()!);
+    // Share's card opens the window on the list as it is now.
+    await openSettings();
     const out = within(publishWindow("Films"));
     expect(out.getByRole("link", { name: "See it in Community" })).toHaveAttribute("href", "/l/L1");
     await userEvent.click(out.getByRole("button", { name: "Done" }));
@@ -1468,9 +1479,9 @@ describe("BoardPage: Publish beside Play", () => {
     expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
     expect(said()).toHaveTextContent(/^Published/);
     expect(screen.queryByRole("dialog")).toBeNull();
-    // Out and up to date: the header says Published, quietly.
-    expect(headerPublish()).toHaveAccessibleName("Published");
-    expect(headerPublish()).toHaveClass("btn--text", "publish-button--quiet");
+    // Out and up to date: Share, filled, where Published stood.
+    expect(headerPublish()).toBeNull();
+    expect(shareButton()).toHaveClass("btn--filled");
     await userEvent.click(within(said()!).getByRole("button", { name: "View" }));
     expect(router.state.location.pathname).toBe("/l/L1");
   });
@@ -1568,7 +1579,8 @@ describe("BoardPage: Publish beside Play", () => {
       expect.objectContaining({ title: "Films" }),
       expect.objectContaining({ uid: "me" }),
     );
-    await waitFor(() => expect(headerPublish()).toHaveAccessibleName("Published"));
+    await waitFor(() => expect(headerPublish()).toBeNull());
+    expect(shareButton()).toHaveClass("btn--filled");
     expect(said()).toHaveTextContent(/^Updated/);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -1605,8 +1617,10 @@ describe("BoardPage: Publish beside Play", () => {
       authorName: "Danylo",
     });
     const router = open(repository, "/b/films", { account: member });
-    expect(headerPublish()).toHaveAccessibleName("Published");
-    await userEvent.click(headerPublish()!);
+    expect(headerPublish()).toBeNull();
+    // Its status under the title, quietly: Public.
+    expect(screen.getByText("Public")).toBeInTheDocument();
+    await openSettings();
     const out = within(publishWindow("Films"));
     expect(out.getByText("Published")).toBeInTheDocument();
     expect(out.getByText("Up to date")).toBeInTheDocument();
@@ -1657,7 +1671,7 @@ describe("BoardPage: one's own list from its ⋮ menu", () => {
     await userEvent.keyboard("{Escape}");
 
     // Taken down from the window's out view, asked first, with the cursor on the way back.
-    await userEvent.click(headerPublish()!);
+    await openSettings();
     const out = within(publishWindow("Films"));
     await userEvent.click(out.getByRole("button", { name: "Take it down" }));
     const ask = out.getByRole("group", { name: /Take .* down\?/ });

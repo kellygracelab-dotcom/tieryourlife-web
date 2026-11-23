@@ -12,13 +12,28 @@ async function openPublish(page: Page) {
   await page.locator(".list-head .publish-button").click();
 }
 
+/** The publishing settings of a list out publicly: from Share's card, where Published stood. */
+async function openSettings(page: Page) {
+  await page.locator(".list-head .share-button").click();
+  await page
+    .getByRole("dialog", { name: "Share" })
+    .getByRole("button", { name: "Publishing settings" })
+    .click();
+}
+
+/** Out and up to date: Share, and no Publish or Update beside it. */
+async function upToDate(page: Page) {
+  await expect(page.locator(".list-head .share-button")).toBeVisible();
+  await expect(page.locator(".list-head .publish-button")).toHaveCount(0);
+}
+
 async function setCategory(page: Page) {
   await page.getByRole("dialog").getByRole("radio", { name: "Film & TV" }).click();
 }
 
-/** The published list's own address, from the window Published opens. */
+/** The published list's own address, from its publishing settings. */
 async function listHref(page: Page, title: string): Promise<string> {
-  await openPublish(page);
+  await openSettings(page);
   const out = page.getByRole("dialog", { name: title });
   const href = await out.getByRole("link", { name: "See it in Community" }).getAttribute("href");
   await out.getByRole("button", { name: "Done" }).click();
@@ -43,7 +58,7 @@ test("publishes, is read by a guest, sends an update and takes it down", async (
   const word = page.locator(".list-head .publish-button__word");
   await page.getByRole("dialog").getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.locator(".snackbar")).toContainText("Published");
-  await expect(word).toHaveText("Published");
+  await upToDate(page);
   const href = await listHref(page, title);
 
   // The proxy kept one list, with its section and the board it came from.
@@ -64,11 +79,11 @@ test("publishes, is read by a guest, sends an update and takes it down", async (
   await page.getByRole("menuitemradio", { name: /Ranked list/ }).click();
   await expect(word).toHaveText("Update");
   await page.locator(".list-head .publish-button").click();
-  await expect(word).toHaveText("Published");
+  await upToDate(page);
   expect(await listsTitled(title)).toHaveLength(1);
 
   // Taken down: the proxy forgets it and the guest's link stops working.
-  await openPublish(page);
+  await openSettings(page);
   await page
     .getByRole("dialog", { name: title })
     .getByRole("button", { name: "Take it down" })

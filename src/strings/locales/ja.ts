@@ -196,6 +196,8 @@ const ja: Translation = {
     categories: "セクション",
     popular: "人気",
     popularNote: "開いてドラッグするだけ。アカウントは要りません。",
+    fresh: "コミュニティの新着",
+    freshNote: "最近公開されたリスト。",
     source: "表示するリスト",
     everyone: "すべて",
     following: "フォロー中",
@@ -1850,6 +1852,16 @@ const ja: Translation = {
     eyebrow: "はじめてですか？",
     meta: "できあがったリスト · {cards}",
     try: "試してみる",
+  },
+  share: {
+    updated: "{date} 更新",
+    button: "共有",
+    hook: "私の{tier}ランク：{names}。あなたは？",
+    question: "あなたは？",
+    copyByHand: "アドレスを手動でコピーしてください：",
+    address: "リストのアドレス",
+    openInCommunity: "コミュニティで開く",
+    settings: "公開設定",
   },
 };
 

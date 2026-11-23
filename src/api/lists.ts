@@ -193,6 +193,19 @@ export async function loadFeed(client: ApiClient, query: FeedQuery = {}): Promis
 }
 
 /**
+ * The newest lists of people, for Explore's row over Popular (Proxy #192):
+ * the server picks them (14 days, a picture on most cards, at most 3 a
+ * person, up to 12), one page and never a cursor.
+ */
+export async function loadFresh(client: ApiClient): Promise<ListSummary[]> {
+  const page = await client.request<{ lists?: ListSummary[] }>("GET", "/lists", {
+    query: { fresh: true },
+    appCheckWaitMs: FEED_CHECK_WAIT_MS,
+  });
+  return (page.lists ?? []).map(summaryOf);
+}
+
+/**
  * One of this account's own published lists. Published into a section of
  * one's own still waiting for a moderator, it sits in the section the
  * proposal files under, and says which one it moves to.

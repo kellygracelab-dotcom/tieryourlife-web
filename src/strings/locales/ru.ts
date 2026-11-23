@@ -210,6 +210,8 @@ const ru: Translation = {
     categories: "Разделы",
     popular: "Популярные",
     popularNote: "Откройте любой и начинайте перетаскивать. Аккаунт не нужен.",
+    fresh: "Новое от сообщества",
+    freshNote: "Списки, которые недавно опубликовали люди.",
     source: "Чьи списки показывать",
     everyone: "Все",
     following: "Подписки",
@@ -2112,6 +2114,16 @@ const ru: Translation = {
     eyebrow: "Впервые здесь?",
     meta: "Готовый список · {cards}",
     try: "Попробовать",
+  },
+  share: {
+    updated: "обновлён {date}",
+    button: "Поделиться",
+    hook: "Мой {tier}-ранг: {names}. А твой?",
+    question: "А у тебя как?",
+    copyByHand: "Скопируйте адрес вручную:",
+    address: "Адрес списка",
+    openInCommunity: "Открыть в сообществе",
+    settings: "Настройки публикации",
   },
 };
 

@@ -201,6 +201,8 @@ const ptBR: Translation = {
     categories: "Seções",
     popular: "Populares",
     popularNote: "Abra uma e comece a arrastar. Não precisa de conta.",
+    fresh: "Novidades da comunidade",
+    freshNote: "Listas que as pessoas publicaram há pouco.",
     source: "Listas de quem mostrar",
     everyone: "Todas",
     following: "Seguindo",
@@ -1980,6 +1982,16 @@ const ptBR: Translation = {
     eyebrow: "Novo por aqui?",
     meta: "Uma lista pronta · {cards}",
     try: "Experimentar",
+  },
+  share: {
+    updated: "atualizada em {date}",
+    button: "Compartilhar",
+    hook: "Meu nível {tier}: {names}. E o seu?",
+    question: "E o seu?",
+    copyByHand: "Copie o endereço à mão:",
+    address: "Endereço da lista",
+    openInCommunity: "Abrir na comunidade",
+    settings: "Configurações de publicação",
   },
 };
 
