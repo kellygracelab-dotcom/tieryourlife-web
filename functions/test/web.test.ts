@@ -882,6 +882,39 @@ describe("GET /api/me/rankings", () => {
 });
 
 describe("the router", () => {
+  it("lets no cache keep an answer of the API, a 404 or an error included", async () => {
+    const { deps } = setup(PERSON);
+    for (const [method, path] of [
+      ["GET", "/api/nope"],
+      ["GET", "/api/rank/a/b/c"],
+      ["GET", "/api/rank/zzzzzzzz"],
+      ["POST", "/api/me/rankings"],
+      ["GET", "/api/me/rankings"],
+    ] as const) {
+      const answer = await call(deps, method, path);
+      assert.equal(
+        answer.headers["Cache-Control"],
+        "no-store",
+        `${method} ${path} ${answer.status}`,
+      );
+    }
+    const broken: WebDeps = {
+      ...deps,
+      db: () => {
+        throw new Error("database away");
+      },
+    };
+    const errored = console.error;
+    console.error = () => undefined;
+    try {
+      const failed = await call(broken, "GET", "/api/me/rankings");
+      assert.equal(failed.status, 503);
+      assert.equal(failed.headers["Cache-Control"], "no-store");
+    } finally {
+      console.error = errored;
+    }
+  });
+
   it("answers unknown addresses and methods plainly", async () => {
     const { deps } = setup(PERSON);
     assert.equal((await call(deps, "GET", "/api/nope")).status, 404);

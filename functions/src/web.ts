@@ -193,6 +193,10 @@ export async function route(
 
     // The API: /api/rank, /api/rank/{code} (read, claim, edit, delete) and /api/me/rankings.
     const api = segments[0] === "api" ? segments.slice(1) : null;
+    // No answer of the API is kept on the way, its errors included: a 404
+    // without a word of its own was kept ten minutes (max-age=600), and a
+    // ranking back from moderation would have stayed missing that long.
+    if (api !== null) response.setHeader("Cache-Control", "no-store");
     if (api === null || api.length > 2) return notFound(response, "No such address");
     const [resource, rest] = api;
 
@@ -263,6 +267,7 @@ export async function route(
   } catch (error) {
     console.error(`Request failed: ${request.method} ${request.path}`, error);
     if (reading && page) return unavailablePage(response);
+    if (segments[0] === "api") response.setHeader("Cache-Control", "no-store");
     response.status(503).json({ error: "Unavailable", code: "UNAVAILABLE" });
   }
 }
