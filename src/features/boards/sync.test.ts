@@ -54,6 +54,9 @@ function fakeAccount(published: (string | PublishedEntry)[] | null = []) {
     fingerprint: board.fingerprint,
     title: board.title,
     itemCount: board.items.length,
+    ...(board.favouriteChangedAt === undefined
+      ? {}
+      : { favouritedAt: board.favouritedAt ?? null, favouriteChangedAt: board.favouriteChangedAt }),
   });
   const api: BoardsApi = {
     index: () => Promise.resolve({ boards: [...kept.values()].map(entryOf), next: null }),
@@ -70,9 +73,22 @@ function fakeAccount(published: (string | PublishedEntry)[] | null = []) {
         conflictWith = null;
         return Promise.reject(new ApiFailure({ kind: "conflict", board: theirs }));
       }
-      const revision = (kept.get(uid)?.revision ?? 0) + 1;
+      const was = kept.get(uid);
+      const revision = (was?.revision ?? 0) + 1;
+      // As the server keeps the star (Proxy #194): the later change, the one
+      // sent on a tie, and the stored one when a write says nothing of it.
+      const { favouritedAt, favouriteChangedAt, ...content } = request;
+      const sent =
+        favouriteChangedAt !== undefined &&
+        (was?.favouriteChangedAt === undefined || favouriteChangedAt >= was.favouriteChangedAt);
+      const star = sent
+        ? { favouritedAt: favouritedAt ?? null, favouriteChangedAt }
+        : was?.favouriteChangedAt === undefined
+          ? {}
+          : { favouritedAt: was.favouritedAt ?? null, favouriteChangedAt: was.favouriteChangedAt };
       kept.set(uid, {
-        ...request,
+        ...content,
+        ...star,
         uid,
         revision,
         updatedAt: 500 + revision,
@@ -264,9 +280,10 @@ describe("syncBoards", () => {
     expect(request.fingerprint).toMatch(/^[0-9a-f]{64}$/);
     expect(request.items.map((item) => item.title)).toEqual(["Dune", "Heat"]);
     expect(request.tiers.filter((tier) => tier.isPool)).toHaveLength(1);
-    // Nothing of this device's travels.
+    // Nothing of this device's travels; a board never starred says nothing of a star.
     expect(request).not.toHaveProperty("editedAt");
     expect(request).not.toHaveProperty("favouritedAt");
+    expect(request).not.toHaveProperty("favouriteChangedAt");
     expect(request).not.toHaveProperty("topic");
     expect(request).not.toHaveProperty("takenFrom");
     expect(request).not.toHaveProperty("rankingOf");
@@ -403,14 +420,14 @@ describe("syncBoards", () => {
     });
   });
 
-  it("takes the account's version when only the account moved on, and keeps the star and the topic", async () => {
+  it("takes the account's version when only the account moved on, and keeps the star, sent since, and the topic", async () => {
     const { repository, records, account, run } = setUp();
     repository.save(films());
     await run();
     const topic = { id: "t1", name: "Sci-fi" };
     // Where it was saved from, and the ranking it is out as, are this device's too.
     repository.save({
-      ...setFavourite(repository.get("films")!, 7),
+      ...setFavourite(repository.get("films")!, 7, 7),
       topic,
       takenFrom: "src",
       rankingOf: "src",
@@ -435,7 +452,218 @@ describe("syncBoards", () => {
     expect(board.favouritedAt).toBe(7);
     expect(board.topic).toEqual(topic);
     expect(board).toMatchObject({ takenFrom: "src", rankingOf: "src" });
-    expect(records.all()[0]?.revision).toBe(2);
+    // Their copy said nothing of a star: ours goes up on the revision just taken.
+    expect(account.keeps.at(-1)).toMatchObject({
+      uid: "films",
+      request: { basedOn: 2, title: "Their name", favouritedAt: 7, favouriteChangedAt: 7 },
+    });
+    expect(records.all()[0]).toMatchObject({ revision: 3, favouriteChangedAt: 7 });
+  });
+
+  it("sends a star given here on its own, once, without making it an edit", async () => {
+    const { repository, records, account, run } = setUp(["p1"]);
+    const out = { ...films(), publishedId: "p1", publishedEditedAt: 100 };
+    repository.save(out);
+    await run();
+    const fingerprint = account.keeps[0]!.request.fingerprint;
+    repository.save(setFavourite(repository.get("films")!, 2000, 2000));
+    const starred = repository.get("films")!;
+    // Not an edit: the edit time stays, and the published list is not behind for it.
+    expect(starred.editedAt).toBe(out.editedAt);
+    expect(isBehind(starred)).toBe(false);
+    expect(await fingerprintOf(starred)).toBe(fingerprint);
+
+    expect(await run()).toMatchObject({ carried: 1, refused: 0 });
+    expect(account.keeps).toHaveLength(2);
+    expect(account.keeps[1]).toMatchObject({
+      uid: "films",
+      request: { basedOn: 1, fingerprint, favouritedAt: 2000, favouriteChangedAt: 2000 },
+    });
+    expect(account.kept.get("films")).toMatchObject({ favouritedAt: 2000, revision: 2 });
+    expect(records.all()).toEqual([
+      { uid: "films", revision: 2, fingerprint, favouriteChangedAt: 2000 },
+    ]);
+    expect(repository.get("films")).toEqual(starred);
+
+    // Taken off again: that goes up too, as null.
+    repository.save(setFavourite(repository.get("films")!, null, 3000));
+    await run();
+    expect(account.keeps.at(-1)?.request).toMatchObject({
+      favouritedAt: null,
+      favouriteChangedAt: 3000,
+    });
+    // Nothing more to say: the next run sends nothing.
+    await run();
+    expect(account.keeps).toHaveLength(3);
+  });
+
+  it("sends a star given before the account kept stars once, from when it was given", async () => {
+    const { repository, records, account, run } = setUp();
+    repository.save(films());
+    await run();
+    // Starred by a site that kept the star to itself: no time it changed at.
+    repository.save({ ...repository.get("films")!, favouritedAt: 50 });
+    await run();
+    expect(account.keeps.at(-1)?.request).toMatchObject({
+      basedOn: 1,
+      favouritedAt: 50,
+      favouriteChangedAt: 50,
+    });
+    expect(records.all()[0]?.favouriteChangedAt).toBe(50);
+    await run();
+    expect(account.keeps).toHaveLength(2);
+  });
+
+  it("takes a star changed later on another device from the index, without reading it as an edit", async () => {
+    const { repository, records, account, run } = setUp(["p1"]);
+    const out = { ...films(), publishedId: "p1", publishedEditedAt: 100 };
+    repository.save(out);
+    await run();
+    // The phone starred it: a new revision, the same contents.
+    const kept = account.kept.get("films")!;
+    account.kept.set("films", {
+      ...kept,
+      revision: 2,
+      deviceName: "Pixel 7",
+      favouritedAt: 4000,
+      favouriteChangedAt: 4000,
+    });
+    expect(await run()).toMatchObject({ carried: 1, refused: 0 });
+    const board = repository.get("films")!;
+    expect(board).toEqual({ ...out, favouritedAt: 4000, favouriteChangedAt: 4000 });
+    expect(isBehind(board)).toBe(false);
+    // Nothing went back: the star was theirs, and nothing else moved.
+    expect(account.keeps).toHaveLength(1);
+    expect(records.all()[0]).toMatchObject({ revision: 2, favouriteChangedAt: 4000 });
+
+    // Then taken off there.
+    account.kept.set("films", {
+      ...account.kept.get("films")!,
+      revision: 3,
+      favouritedAt: null,
+      favouriteChangedAt: 5000,
+    });
+    await run();
+    expect(repository.get("films")).toMatchObject({ favouritedAt: null, favouriteChangedAt: 5000 });
+    expect(account.keeps).toHaveLength(1);
+  });
+
+  it("keeps a star changed here later than the account's, and sends it over theirs", async () => {
+    const { repository, account, run } = setUp();
+    repository.save(films());
+    await run();
+    repository.save(setFavourite(repository.get("films")!, 6000, 6000));
+    // Meanwhile the phone took off an older star of its own.
+    account.kept.set("films", {
+      ...account.kept.get("films")!,
+      revision: 2,
+      favouritedAt: null,
+      favouriteChangedAt: 5500,
+    });
+    await run();
+    expect(repository.get("films")?.favouritedAt).toBe(6000);
+    expect(account.keeps.at(-1)).toMatchObject({
+      request: { basedOn: 2, favouritedAt: 6000, favouriteChangedAt: 6000 },
+    });
+    expect(account.kept.get("films")).toMatchObject({ favouritedAt: 6000, revision: 3 });
+  });
+
+  it("takes the account's version with its star when that changed later", async () => {
+    const { repository, account, run } = setUp();
+    repository.save(films());
+    await run();
+    repository.save(setFavourite(repository.get("films")!, 7, 7));
+    account.kept.set("films", {
+      ...account.kept.get("films")!,
+      revision: 2,
+      title: "Their name",
+      fingerprint: "other",
+      favouritedAt: null,
+      favouriteChangedAt: 8,
+    });
+    await run();
+    expect(repository.get("films")).toMatchObject({
+      title: "Their name",
+      favouritedAt: null,
+      favouriteChangedAt: 8,
+    });
+    // Theirs was the later star: nothing goes back.
+    expect(account.keeps).toHaveLength(1);
+  });
+
+  it("writes again with the later star when the account refuses a write behind it", async () => {
+    const { repository, records, account, run } = setUp();
+    repository.save(films());
+    await run();
+    repository.save(setFavourite(repository.get("films")!, 2000, 2000));
+    // The index still says revision 1; the write finds revision 5 there, the
+    // same contents with an older star taken off.
+    const behind: KeptBoard = {
+      ...account.kept.get("films")!,
+      revision: 5,
+      favouritedAt: null,
+      favouriteChangedAt: 1500,
+    };
+    account.refuseNextWith(behind);
+    expect(await run()).toMatchObject({ carried: 1, refused: 0 });
+    expect(account.keeps.slice(-2).map((keep) => keep.request.basedOn)).toEqual([1, 5]);
+    expect(account.keeps.at(-1)?.request).toMatchObject({
+      favouritedAt: 2000,
+      favouriteChangedAt: 2000,
+    });
+    expect(repository.all()).toHaveLength(1);
+    expect(repository.get("films")?.favouritedAt).toBe(2000);
+    expect(records.all()[0]?.favouriteChangedAt).toBe(2000);
+  });
+
+  it("takes the later star from a refusal and sends it with the edit made here", async () => {
+    const { repository, account, run } = setUp();
+    repository.save(films());
+    await run();
+    const agreed = account.keeps[0]!.request.fingerprint;
+    repository.save(rename(setFavourite(repository.get("films")!, 2000, 2000), "Mine", 2100));
+    // Written again elsewhere with the contents agreed on, and a later star taken off.
+    account.refuseNextWith({
+      ...account.kept.get("films")!,
+      revision: 2,
+      deviceName: "Pixel 7",
+      fingerprint: agreed,
+      favouritedAt: null,
+      favouriteChangedAt: 2500,
+    });
+    await run();
+    expect(account.keeps.at(-1)?.request).toMatchObject({
+      basedOn: 2,
+      title: "Mine",
+      favouritedAt: null,
+      favouriteChangedAt: 2500,
+    });
+    expect(repository.all()).toHaveLength(1);
+    expect(repository.get("films")).toMatchObject({
+      title: "Mine",
+      favouritedAt: null,
+      favouriteChangedAt: 2500,
+    });
+  });
+
+  it("gives a copy kept after a conflict no star: the star stays with the board it was given to", async () => {
+    const { repository, account, run } = setUp();
+    repository.save(films());
+    await run();
+    repository.save(rename(repository.get("films")!, "Mine", 200));
+    account.kept.set("films", {
+      ...account.kept.get("films")!,
+      revision: 2,
+      title: "Theirs",
+      fingerprint: "elsewhere",
+      favouritedAt: 300,
+      favouriteChangedAt: 300,
+    });
+    await run();
+    const copy = repository.all().find((board) => board.uid !== "films")!;
+    expect(copy.favouritedAt).toBeNull();
+    expect(copy.favouriteChangedAt).toBeUndefined();
+    expect(repository.get("films")).toMatchObject({ title: "Mine", favouritedAt: 300 });
   });
 
   it("never writes down, nor later takes out of the account, a board the browser would not keep", async () => {
@@ -1317,6 +1545,31 @@ describe("syncBoards", () => {
     );
     expect(repository.get("here")?.items).toEqual(here.items);
   });
+});
+
+it("carries a star from one device to another and back, newest star first on both", async () => {
+  const first = setUp();
+  const second = setUp();
+  first.repository.save(films("a", "A"));
+  first.repository.save(films("b", "B"));
+  await first.run();
+  await second.run({ api: first.account.api });
+  first.repository.save(setFavourite(first.repository.get("a")!, 2000, 2000));
+  first.repository.save(setFavourite(first.repository.get("b")!, 2100, 2100));
+  await first.run();
+  await second.run({ api: first.account.api });
+  expect(second.repository.get("a")?.favouritedAt).toBe(2000);
+  expect(second.repository.get("b")?.favouritedAt).toBe(2100);
+  // Taken off on the second device: gone on the first after its next run.
+  second.repository.save(setFavourite(second.repository.get("a")!, null, 3000));
+  await second.run({ api: first.account.api });
+  await first.run();
+  expect(first.repository.get("a")?.favouritedAt).toBeNull();
+  expect(first.repository.get("b")?.favouritedAt).toBe(2100);
+  // Nothing else moved on either: no copies, no edits.
+  expect(first.repository.all()).toHaveLength(2);
+  expect(second.repository.all()).toHaveLength(2);
+  expect(first.repository.get("a")?.editedAt).toBe(100);
 });
 
 it("carries the precise next duel to another device and explicitly clears a large game", async () => {

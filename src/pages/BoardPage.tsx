@@ -38,6 +38,7 @@ import {
   type Board,
 } from "../features/boards/model";
 import { PublishButton, publishKindOf } from "../features/boards/PublishButton";
+import { ShareButton } from "../features/boards/ShareButton";
 import {
   BoardSettings,
   type LoadTopics,
@@ -130,7 +131,7 @@ import {
   markHouseSent,
   unlinkFromHouse,
 } from "../features/boards/houseList";
-import { fill, plural, strings } from "../strings";
+import { currentLocale, fill, plural, strings } from "../strings";
 import { Icon } from "../ui/Icon";
 import { ResetPoolItem } from "../features/tierboard/ResetPoolItem";
 import { Menu } from "../ui/Menu";
@@ -670,6 +671,12 @@ function OpenBoard({
     );
   } // Publish, Update or Show in Rankings beside Play.
   const publishKind = publishKindOf(board, house !== null);
+  const publishBusy = publication.busy === "publishing" || publication.busy === "updating";
+  // Out for everyone to see: not while a moderator holds it, whose link answers nobody yet.
+  const outPublicly =
+    (publishKind === "published" || publishKind === "update") && board.heldForReview !== true;
+  const dayOf = (at: number) =>
+    new Intl.DateTimeFormat(currentLocale(), { day: "numeric", month: "short" }).format(at);
 
   // What the board is right now: what is kept, or the fresh one until it is.
   const latest = (): Board => repository.get(uid) ?? board;
@@ -1139,7 +1146,21 @@ function OpenBoard({
           )}
           {/* Its section; how far it is placed is the one count, the bar's (audit C2). */}
           {board.category !== null && (
-            <p className="list-head__meta">{filedUnder(board.category, sections, me, homes)}</p>
+            <p className="list-head__meta">
+              {filedUnder(board.category, sections, me, homes)}
+              {/* Out, the status the Published chip said, quietly (the Designer, 23.11). */}
+              {outPublicly && (
+                <>
+                  {" · "}
+                  <span className="list-head__public">
+                    <Icon name="public" />
+                    {strings.listMenu.publicLabel}
+                  </span>
+                  {board.publishedEditedAt !== null &&
+                    ` · ${fill(strings.share.updated, { date: dayOf(board.publishedEditedAt) })}`}
+                </>
+              )}
+            </p>
           )}
           {/* What the link shows is behind the board: said in words, beside Update's dot. */}
           {publishKind === "update" && (
@@ -1156,12 +1177,22 @@ function OpenBoard({
             mode={board.displayMode}
             onMode={(mode) => keep(setDisplayMode(latest(), mode, now()))}
           />
-          {publishKind !== null && (
+          {publishKind !== null && (publishKind !== "published" || publishBusy || !outPublicly) && (
             <PublishButton
               kind={publishKind}
               main={view.pool.length === 0}
-              busy={publication.busy === "publishing" || publication.busy === "updating"}
+              busy={publishBusy}
               onClick={publishFromHeader}
+            />
+          )}
+          {/* Out: Share where Published stood, filled; beside a filled Update, outlined. */}
+          {outPublicly && board.publishedId !== null && !publishBusy && (
+            <ShareButton
+              board={board}
+              listId={board.publishedId}
+              filled={publishKind === "published"}
+              onShareImage={() => void shareBoard()}
+              onSettings={() => openPublish()}
             />
           )}
           <PlayButton {...play.button} />
@@ -1199,6 +1230,15 @@ function OpenBoard({
                   {strings.boards.shareImage}
                 </button>
               </li>
+              {/* Out, Share takes the button: on a phone it is the share sheet, so the
+                  window with the link and Take it down is here too. */}
+              {outPublicly && (
+                <li>
+                  <button type="button" className="menu__action" onClick={() => openPublish()}>
+                    {strings.share.settings}
+                  </button>
+                </li>
+              )}
               <li className="menu__divider" role="separator" />
               <li>
                 <button

@@ -383,7 +383,8 @@ export function BoardsPage({
   // The same two functions on every render, so a tile is drawn again only when its own board changes.
   const star = useCallback(
     (board: Board) => {
-      repository.save(setFavourite(board, board.favouritedAt === null ? now() : null));
+      const at = now();
+      repository.save(setFavourite(board, board.favouritedAt === null ? at : null, at));
     },
     [repository, now],
   );

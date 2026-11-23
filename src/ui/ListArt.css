@@ -1,7 +1,53 @@
 .art {
+  position: relative;
+  isolation: isolate;
   aspect-ratio: 16 / 10;
   overflow: hidden;
   background: var(--tile-placeholder);
+}
+
+/* A picture still on its way, or one that failed, is no frame and no blank
+   tile: its place is the tile's surface, with no gap against the others
+   waiting. It fades in once it has come; the gaps show between those shown
+   (the Designer, 23.11). */
+.art > .focused-picture {
+  z-index: 1;
+}
+
+.art > .focused-picture > img {
+  opacity: 0;
+  transition: opacity 180ms ease-out;
+}
+
+.art > .art__shown > img {
+  opacity: 1;
+}
+
+/* One soft shimmer over the whole tile while any picture is on its way, not
+   one per cell. */
+.art--waiting::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, var(--art-shimmer) 50%, transparent 70%) 0
+    0 / 250% 100% no-repeat;
+  animation: art-shimmer 1.4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes art-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .art--waiting::after {
+    display: none;
+  }
 }
 
 .art img {

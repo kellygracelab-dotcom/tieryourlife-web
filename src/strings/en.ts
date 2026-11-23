@@ -194,8 +194,6 @@ export const en = {
     categories: "Sections",
     popular: "Popular",
     popularNote: "Open one and start dragging. No account needed.",
-    fresh: "New from the community",
-    freshNote: "Lists people published lately.",
     source: "Whose lists to show",
     // "All" is the phone app's word for the same switch.
     everyone: "All",
@@ -1712,6 +1710,8 @@ export const en = {
     home: "Go to the front page",
   },
   card: {
+    /** On a card of people's newest lists, first in Popular (Marketing, 23.11). */
+    fresh: "New",
     by: "by {name}",
     items: { one: "{n} card", other: "{n} cards" },
     moreTiers: { one: "and {n} more tier", other: "and {n} more tiers" },
@@ -1885,5 +1885,15 @@ export const en = {
     eyebrow: "New here?",
     meta: "A ready list · {cards}",
     try: "Try it",
+  },
+  share: {
+    updated: "updated {date}",
+    button: "Share",
+    hook: "My {tier} tier: {names}. What’s yours?",
+    question: "What’s yours?",
+    copyByHand: "Copy the address by hand:",
+    address: "The list’s address",
+    openInCommunity: "Open in Community",
+    settings: "Publishing settings",
   },
 } as const;

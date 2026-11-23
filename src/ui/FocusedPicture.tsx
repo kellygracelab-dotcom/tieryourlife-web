@@ -40,6 +40,7 @@ function Placed({
   onError,
 }: FocusedPictureProps) {
   const box = useRef<HTMLSpanElement>(null);
+  const picture = useRef<HTMLImageElement>(null);
   const [aspect, setAspect] = useState<number | null>(null);
   const [size, setSize] = useState<Size | null>(null);
   useLayoutEffect(() => {
@@ -54,6 +55,23 @@ function Placed({
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
+  }, []);
+  const loaded = (image: HTMLImageElement) => {
+    const { naturalWidth: width, naturalHeight: height } = image;
+    if (width > 0 && height > 0) setSize({ width, height });
+    onLoad?.();
+  };
+  // A picture already there before React listened (from the cache, ahead of
+  // hydration) sends no load event: it counts as loaded at once, or a caller
+  // that waits for it to fade in would keep it hidden.
+  const loadedRef = useRef(loaded);
+  useLayoutEffect(() => {
+    loadedRef.current = loaded;
+  });
+  // On mount only: a later address is a new load, and its event comes.
+  useLayoutEffect(() => {
+    const image = picture.current;
+    if (image !== null && image.complete && image.naturalWidth > 0) loadedRef.current(image);
   }, []);
   // Until the picture's size and the box's shape are known, it covers as before,
   // and the middle needs nothing else.
@@ -79,13 +97,10 @@ function Placed({
         alt={alt}
         loading={loading}
         draggable={draggable}
+        ref={picture}
         onError={onError}
         style={style}
-        onLoad={(event) => {
-          const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
-          if (width > 0 && height > 0) setSize({ width, height });
-          onLoad?.();
-        }}
+        onLoad={(event) => loaded(event.currentTarget)}
       />
     </span>
   );

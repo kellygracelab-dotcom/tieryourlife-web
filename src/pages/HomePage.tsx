@@ -1,10 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePageTitle } from "../app/pageTitle";
 import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { useSession } from "../app/session";
 import { AppCard } from "../features/android/AppCard";
 import { FeedGrid } from "../features/feed/FeedGrid";
-import { FreshRow, type LoadFresh } from "../features/feed/FreshRow";
+import {
+  freshOnTop,
+  useFresh,
+  useFreshIds,
+  withFreshOnTop,
+  type LoadFresh,
+} from "../features/feed/fresh";
+import { useHidden } from "../features/community/useHidden";
 import {
   FollowingTab,
   type Follow,
@@ -30,7 +37,7 @@ export type HomeTab = "explore" | "following";
 interface HomePageProps {
   tab?: HomeTab;
   load?: LoadFeed;
-  /** "New from the community" over Popular; the site's own unless told otherwise. */
+  /** People's newest lists, first in Popular with "New"; the site's own unless told otherwise. */
   loadFresh?: LoadFresh;
   loadSuggestions?: LoadSuggestions;
   loadFollowing?: LoadFollowing;
@@ -72,17 +79,24 @@ function Explore({
 }) {
   const popular = useFeed({ sort: "popular" }, load);
   const { sections, known } = useSections(store);
+  const { hidden, hiddenThisVisit } = useHidden();
+  const fresh = useFresh(loadFresh);
+  const top = useMemo(
+    () => freshOnTop(fresh, hidden, hiddenThisVisit),
+    [fresh, hidden, hiddenThisVisit],
+  );
+  const freshIds = useFreshIds(top);
   return (
     <>
       <SectionGrid sections={sections} known={known} />
-      <FreshRow load={loadFresh} />
       <section className="home__popular" aria-labelledby="popular">
         <div className="home__heading">
           <h2 id="popular">{strings.sections.popular}</h2>
           <p>{strings.home.popularNote}</p>
         </div>
         <FeedGrid
-          state={popular.state}
+          state={withFreshOnTop(popular.state, top)}
+          freshIds={freshIds}
           label={strings.sections.popular}
           retry={popular.retry}
           more={popular.more}

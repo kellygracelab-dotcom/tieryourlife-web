@@ -206,8 +206,6 @@ const uk: Translation = {
     categories: "Розділи",
     popular: "Популярні",
     popularNote: "Відкрийте будь-який і починайте перетягувати. Акаунт не потрібен.",
-    fresh: "Нове від спільноти",
-    freshNote: "Списки, які люди нещодавно опублікували.",
     source: "Чиї списки показувати",
     everyone: "Усі",
     following: "Підписки",
@@ -703,6 +701,7 @@ const uk: Translation = {
     home: "На головну",
   },
   card: {
+    fresh: "Нове",
     by: "від {name}",
     items: {
       one: "{n} картка",
@@ -2101,6 +2100,16 @@ const uk: Translation = {
     eyebrow: "Вперше тут?",
     meta: "Готовий список · {cards}",
     try: "Спробувати",
+  },
+  share: {
+    updated: "оновлено {date}",
+    button: "Поділитися",
+    hook: "Мій {tier}-рівень: {names}. А твій?",
+    question: "А в тебе як?",
+    copyByHand: "Скопіюйте адресу вручну:",
+    address: "Адреса списку",
+    openInCommunity: "Відкрити у спільноті",
+    settings: "Налаштування публікації",
   },
 };
 

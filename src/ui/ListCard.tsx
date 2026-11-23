@@ -16,6 +16,8 @@ interface ListCardProps {
   reason?: string | null;
   /** The one signed in, when the list is theirs, named or not. */
   yours?: Yours | null;
+  /** One of people's newest lists, first in Popular: "New" on its picture. */
+  fresh?: boolean;
   /** Left out on the author's own page, where every card would name the page it is on. */
   showAuthor?: boolean;
   /** What a reader can do about the list from its card, at the end of its footer. */
@@ -59,6 +61,7 @@ export function ListCard({
   list,
   reason = null,
   yours = null,
+  fresh = false,
   showAuthor = true,
   menu = null,
 }: ListCardProps) {
@@ -76,6 +79,7 @@ export function ListCard({
           tierColors={list.tierColors}
           decorative
         />
+        {fresh && <span className="list-card__new">{strings.card.fresh}</span>}
         <span className="list-card__text">
           {reason !== null && <span className="list-card__reason">{reason}</span>}
           <bdi className="list-card__title">{titleIn(list, currentLocale())}</bdi>

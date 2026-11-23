@@ -41,6 +41,9 @@ function read(store: KeyValueStore, accountUid: string): Kept {
           ...(typeof record.remoteFingerprint === "string"
             ? { remoteFingerprint: record.remoteFingerprint }
             : {}),
+          ...(typeof record.favouriteChangedAt === "number"
+            ? { favouriteChangedAt: record.favouriteChangedAt }
+            : {}),
         };
       }
     }
@@ -93,6 +96,7 @@ export function syncRecords(store: KeyValueStore, accountUid: string): SyncRecor
             revision: record.revision,
             fingerprint: record.fingerprint,
             remoteFingerprint: record.remoteFingerprint,
+            favouriteChangedAt: record.favouriteChangedAt,
           },
         },
       }));
