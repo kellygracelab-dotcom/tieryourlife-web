@@ -6,8 +6,12 @@ import { ApiFailure } from "../api/errors";
 import { CATEGORIES, type FeedPage, type FeedQuery, type ListSummary } from "../api/types";
 import { routes } from "../app/routes";
 import { SessionContext } from "../app/session";
+import { forgetFurtherPagesForTests } from "../features/feed/useFeed";
 
-const mocks = vi.hoisted(() => ({ loadFeed: vi.fn<(query: FeedQuery) => Promise<FeedPage>>() }));
+const mocks = vi.hoisted(() => ({
+  loadFeed: vi.fn<(query: FeedQuery) => Promise<FeedPage>>(),
+  loadFresh: vi.fn<() => Promise<ListSummary[]>>(),
+}));
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
   // The sections answer at once: until they do, a page draws their places only.
@@ -27,6 +31,7 @@ vi.mock("../lib/api", async () => ({
   loadMyLists: vi.fn(),
   rearrangeRanking: vi.fn(),
   loadFeed: mocks.loadFeed,
+  loadFresh: mocks.loadFresh,
   loadList: vi.fn(),
   loadRanking: vi.fn(),
   noteTake: vi.fn(),
@@ -53,7 +58,12 @@ const open = (path = "/") =>
   render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />);
 
 beforeEach(() => {
+  // Show more's pages are kept for this visit: each test starts a visit of its own.
+  forgetFurtherPagesForTests();
   mocks.loadFeed.mockReset();
+  mocks.loadFresh.mockReset();
+  // People's newest lists, unless a test says: on their way for good.
+  mocks.loadFresh.mockImplementation(() => new Promise(() => undefined));
 });
 
 describe("HomePage", () => {
@@ -139,5 +149,51 @@ describe("HomePage", () => {
     expect(card.compareDocumentPosition(popular) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     // The page's outline still starts at its h1: the card's title is no heading.
     expect(screen.getAllByRole("heading")[0]).toBe(hero);
+  });
+
+  // Marketing, 23.11: no row of its own; up to four first in Popular, with
+  // "New", and never again further down, on any page.
+  it("puts people's newest lists first in Popular with New, each once on every page", async () => {
+    const fresh = ["f1", "f2", "a1", "f4", "f5"].map((id) => ({
+      ...summary(id, `Fresh ${id}`),
+      authorName: "olena",
+    }));
+    mocks.loadFresh.mockResolvedValue(fresh);
+    mocks.loadFeed.mockImplementation(async (query) =>
+      query.after === undefined
+        ? { lists: [summary("a1", "Every A24 film"), summary("b2", "Ghibli")], nextCursor: "b2" }
+        : { lists: [summary("f4", "Fresh again"), summary("c3", "Pixar")], nextCursor: null },
+    );
+    open();
+    const popular = await screen.findByRole("list", { name: "Popular" });
+    await within(popular).findByText("Fresh f1");
+    // This visit's page from the tests before goes once the fresh one is in.
+    const showMore = await screen.findByRole("button", { name: "Show more" });
+    const titles = () =>
+      within(popular)
+        .getAllByRole("article")
+        .map((card) => card.querySelector(".list-card__title")?.textContent);
+    expect(titles()).toEqual(["Fresh f1", "Fresh f2", "Fresh a1", "Fresh f4", "Ghibli"]);
+    expect(within(popular).getAllByText("New")).toHaveLength(4);
+    expect(screen.queryByRole("heading", { name: "New from the community" })).toBeNull();
+
+    await userEvent.click(showMore);
+    await within(popular).findByText("Pixar");
+    // The next page from Popular's own cursor, the one already on top left out.
+    expect(mocks.loadFeed).toHaveBeenLastCalledWith(expect.objectContaining({ after: "b2" }));
+    expect(titles()).toEqual(["Fresh f1", "Fresh f2", "Fresh a1", "Fresh f4", "Ghibli", "Pixar"]);
+  });
+
+  it("shows Popular as it is when the newest lists cannot be had", async () => {
+    mocks.loadFresh.mockRejectedValue(new ApiFailure({ kind: "unavailable" }));
+    mocks.loadFeed.mockResolvedValue({
+      lists: [summary("s1", "Spirited Away"), summary("s2", "Perfect Blue")],
+      nextCursor: null,
+    });
+    open();
+    const popular = await screen.findByRole("list", { name: "Popular" });
+    await within(popular).findByText("Perfect Blue");
+    expect(within(popular).getAllByRole("article")).toHaveLength(2);
+    expect(within(popular).queryByText("New")).toBeNull();
   });
 });
