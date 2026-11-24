@@ -380,9 +380,42 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0;
+  transition: opacity 180ms ease-out;
 }
 
-.cards__pick:hover:not([aria-disabled="true"]) .cards__pick-picture img {
+.cards__pick-picture--shown img {
+  opacity: 1;
+}
+
+/* One soft shimmer over a picture on its way, never a grey square that stays:
+   a tile whose picture fails or does not come goes (search-quality BRIEF). */
+.cards__pick-picture--waiting::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, var(--art-shimmer) 50%, transparent 70%) 0
+    0 / 250% 100% no-repeat;
+  animation: pick-shimmer 1.4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes pick-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cards__pick-picture--waiting::after {
+    display: none;
+  }
+}
+
+.cards__pick:hover:not([aria-disabled="true"]) .cards__pick-picture--shown img {
   opacity: 0.85;
 }
 
@@ -399,7 +432,7 @@
   box-shadow: inset 0 0 0 3px var(--accent);
 }
 
-.cards__pick[aria-busy="true"] .cards__pick-picture img {
+.cards__pick[aria-busy="true"] .cards__pick-picture--shown img {
   opacity: 0.5;
 }
 

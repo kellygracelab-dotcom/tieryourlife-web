@@ -20,14 +20,14 @@ export const isSearchLimit = (reason: unknown): boolean => errorOf(reason).kind 
  * does not count a refusal, but a page has no business sending them).
  */
 export function limitedSearch(
-  find: (ask: PictureAsk) => Promise<PicturePage>,
+  find: (ask: PictureAsk, signal?: AbortSignal) => Promise<PicturePage>,
   now: () => number = Date.now,
-): (ask: PictureAsk) => Promise<PicturePage> {
+): (ask: PictureAsk, signal?: AbortSignal) => Promise<PicturePage> {
   let until = 0;
-  return async (ask) => {
+  return async (ask, signal) => {
     if (now() < until) throw new ApiFailure({ kind: "searchLimit", retryAt: until });
     try {
-      return await find(ask);
+      return await find(ask, signal);
     } catch (reason) {
       if (isSearchLimit(reason)) {
         until = Math.max(until, searchLimitOf(reason) ?? now() + FALLBACK_WAIT_MS);

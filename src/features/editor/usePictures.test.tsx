@@ -65,6 +65,26 @@ afterEach(() => {
 });
 
 describe("usePictures", () => {
+  it("gives up a search whose words were typed past", async () => {
+    const signals: AbortSignal[] = [];
+    const find = vi.fn<FindPictures>(
+      (_ask, signal) =>
+        new Promise((resolve) => {
+          signals.push(signal!);
+          setTimeout(() => resolve({ items: [], hasMore: false, notices: [], rest: false }), 5_000);
+        }),
+    );
+    const { rerender } = render(<Probe query="bors" find={find} />);
+    await settle();
+    expect(signals).toHaveLength(1);
+    expect(signals[0]!.aborted).toBe(false);
+    rerender(<Probe query="borscht" find={find} />);
+    expect(signals[0]!.aborted).toBe(true);
+    await settle();
+    expect(signals).toHaveLength(2);
+    expect(signals[1]!.aborted).toBe(false);
+  });
+
   it("asks nothing for one letter, then the scope given after a pause", async () => {
     const find = vi.fn<FindPictures>(async ({ q }) => ({
       items: [picture(q)],
@@ -78,13 +98,16 @@ describe("usePictures", () => {
     rerender(<Probe query="an" scope="anime" find={find} />);
     expect(shown()).toHaveTextContent("searching");
     await settle();
-    expect(find).toHaveBeenCalledWith({
-      q: "an",
-      scope: "anime",
-      web: false,
-      page: 1,
-      quick: true,
-    });
+    expect(find).toHaveBeenCalledWith(
+      {
+        q: "an",
+        scope: "anime",
+        web: false,
+        page: 1,
+        quick: true,
+      },
+      expect.any(AbortSignal),
+    );
     expect(shown()).toHaveTextContent("ready:an|next:-|webDailyLimit");
 
     // A few more letters keep the answer on screen; another scope does not.
@@ -98,13 +121,16 @@ describe("usePictures", () => {
     rerender(<Probe query="ani" scope="games" web find={find} />);
     expect(shown()).toHaveTextContent("searching");
     await settle();
-    expect(find).toHaveBeenLastCalledWith({
-      q: "ani",
-      scope: "games",
-      web: true,
-      page: 1,
-      quick: true,
-    });
+    expect(find).toHaveBeenLastCalledWith(
+      {
+        q: "ani",
+        scope: "games",
+        web: true,
+        page: 1,
+        quick: true,
+      },
+      expect.any(AbortSignal),
+    );
 
     rerender(<Probe query="zebra" scope="games" web find={find} />);
     expect(shown()).toHaveTextContent("searching");
@@ -221,14 +247,22 @@ describe("usePictures", () => {
     );
     render(<Probe query="dune" find={find} />);
     await settle();
-    expect(find).toHaveBeenNthCalledWith(1, {
-      q: "dune",
-      scope: "all",
-      web: false,
-      page: 1,
-      quick: true,
-    });
-    expect(find).toHaveBeenNthCalledWith(2, { q: "dune", scope: "all", web: false, page: 1 });
+    expect(find).toHaveBeenNthCalledWith(
+      1,
+      {
+        q: "dune",
+        scope: "all",
+        web: false,
+        page: 1,
+        quick: true,
+      },
+      expect.any(AbortSignal),
+    );
+    expect(find).toHaveBeenNthCalledWith(
+      2,
+      { q: "dune", scope: "all", web: false, page: 1 },
+      expect.any(AbortSignal),
+    );
     // No next page until the whole search says there is one.
     expect(shown()).toHaveTextContent("ready:a,b|next:-||filling");
 
@@ -327,13 +361,16 @@ describe("usePictures, with a busy catalogue", () => {
       vi.advanceTimersByTime(20);
     });
     expect(find).toHaveBeenCalledTimes(2);
-    expect(find).toHaveBeenLastCalledWith({
-      q: "naruto",
-      scope: "anime",
-      web: false,
-      page: 1,
-      quick: true,
-    });
+    expect(find).toHaveBeenLastCalledWith(
+      {
+        q: "naruto",
+        scope: "anime",
+        web: false,
+        page: 1,
+        quick: true,
+      },
+      expect.any(AbortSignal),
+    );
     expect(shown()).toHaveTextContent("ready:naruto");
   });
 
@@ -424,7 +461,10 @@ describe("usePictures, with a busy catalogue", () => {
       vi.advanceTimersByTime(30_000);
     });
     expect(find).toHaveBeenCalledTimes(2);
-    expect(find).toHaveBeenLastCalledWith({ q: "naruto", scope: "anime", web: false, page: 1 });
+    expect(find).toHaveBeenLastCalledWith(
+      { q: "naruto", scope: "anime", web: false, page: 1 },
+      expect.any(AbortSignal),
+    );
     expect(shown()).toHaveTextContent("ready:a,naruto|next:2|");
 
     // Once only, however busy the next answer says the catalogues are.

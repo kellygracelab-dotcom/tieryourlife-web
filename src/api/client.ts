@@ -34,6 +34,20 @@ export interface RequestOptions {
    * statistics sent as a tab goes out of sight or closes.
    */
   keepalive?: boolean;
+  /** The caller no longer wants the answer: the request is given up (a search typed past). */
+  signal?: AbortSignal;
+}
+
+/** Given up when either is: the caller's signal or the request's own time. */
+function eitherOf(given: AbortSignal | undefined, timeout: AbortSignal): AbortSignal {
+  if (given === undefined) return timeout;
+  if (typeof AbortSignal.any === "function") return AbortSignal.any([given, timeout]);
+  const both = new AbortController();
+  for (const one of [given, timeout]) {
+    if (one.aborted) both.abort(one.reason);
+    else one.addEventListener("abort", () => both.abort(one.reason), { once: true });
+  }
+  return both.signal;
 }
 
 /** The token, or null once `ms` have gone by; the check goes on in the background and is kept. */
@@ -131,7 +145,7 @@ export function createApiClient({
     const init: RequestInit = {
       method,
       headers: await headersFor(options, forceRefresh),
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: eitherOf(options.signal, AbortSignal.timeout(timeoutMs)),
     };
     if (options.keepalive === true) init.keepalive = true;
     if (options.body !== undefined) init.body = JSON.stringify(options.body);

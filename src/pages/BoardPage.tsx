@@ -552,12 +552,15 @@ function OpenBoard({
   const topicId = board?.topic?.id ?? null;
   const listFind = useMemo<FindPictures>(() => {
     const base = find ?? findPictures;
-    return (ask) =>
-      base({
-        ...ask,
-        ...(listSection === null || listSection === "" ? {} : { section: listSection }),
-        ...(topicId === null || topicId === "" ? {} : { topic: topicId }),
-      });
+    return (ask, signal) =>
+      base(
+        {
+          ...ask,
+          ...(listSection === null || listSection === "" ? {} : { section: listSection }),
+          ...(topicId === null || topicId === "" ? {} : { topic: topicId }),
+        },
+        signal,
+      );
   }, [find, listSection, topicId]);
   // A pasted list asks for its names ten at a time, judged the same way (stage 2).
   // A page given its own `find` (a test) searches name by name unless given this too.

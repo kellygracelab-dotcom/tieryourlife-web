@@ -55,6 +55,7 @@ import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
 import { noteListChanged } from "./listChanges";
 import { preloadedList, preloadedRanking } from "./preload";
+import { rememberedSearch } from "./searchMemory";
 import { limitedSearch } from "./searchLimit";
 import { limitedLink } from "./linkPictures";
 import { listIn } from "./translated";
@@ -157,9 +158,14 @@ export const loadMyLists = (): Promise<{ lists: MyList[] }> => lists.loadMyLists
 
 // The catalogues answer in the language the page is in. Once the hour's or
 // the day's searches are used up, nothing more is asked until the time given.
-export const findPictures: (ask: PictureAsk) => Promise<PicturePage> = limitedSearch((ask) =>
-  pictures.searchPictures(api, { ...ask, lang: currentLocale() }),
-);
+// Words searched a moment ago are answered from memory, not asked again.
+export const findPictures: (ask: PictureAsk, signal?: AbortSignal) => Promise<PicturePage> =
+  rememberedSearch(
+    limitedSearch((ask, signal) =>
+      pictures.searchPictures(api, { ...ask, lang: currentLocale() }, signal),
+    ),
+    currentLocale,
+  );
 
 // A pasted list's names, ten to a request, each counted as one search (stage 2).
 export const findPictureBatch = (

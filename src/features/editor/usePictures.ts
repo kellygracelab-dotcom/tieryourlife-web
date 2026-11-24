@@ -13,7 +13,8 @@ import { findPictures } from "../../lib/api";
 import { isSearchLimit, searchLimitOf } from "../../lib/searchLimit";
 import { busyUntil } from "./paste";
 
-export type FindPictures = (ask: PictureAsk) => Promise<PicturePage>;
+/** A search; `signal` gives it up once its words are no longer the ones wanted. */
+export type FindPictures = (ask: PictureAsk, signal?: AbortSignal) => Promise<PicturePage>;
 
 /** Shorter than this is a name being typed, not a search. */
 export const MIN_LOOKUP = MIN_PICTURE_QUERY;
@@ -92,6 +93,9 @@ export function usePictures(
     let tries = 0;
     // A busy catalogue's hits are asked for once more, at most.
     let refilled = false;
+    // Words typed past are given up, not waited for (search-quality BRIEF, 25.11).
+    const giveUp = new AbortController();
+    const { signal } = giveUp;
     const asked: Asked = { query: wanted, scope, web };
     const ask = { q: wanted, scope, web, page: 1 };
     const failed = (reason: unknown) =>
@@ -162,7 +166,7 @@ export function usePictures(
       refilled = true;
       timer = setTimeout(
         () => {
-          find(ask).then(filled, () => undefined);
+          find(ask, signal).then(filled, () => undefined);
         },
         Math.max(0, until - Date.now()),
       );
@@ -171,7 +175,7 @@ export function usePictures(
     // fills in a second, and books and the web's pictures join it when they come.
     const search = () => {
       tries++;
-      find({ ...ask, quick: true }).then(
+      find({ ...ask, quick: true }, signal).then(
         (quick) => {
           shown(quick, quick.rest);
           if (!current) return;
@@ -179,7 +183,7 @@ export function usePictures(
             settled(quick);
             return;
           }
-          find(ask).then(
+          find(ask, signal).then(
             (page) => {
               filled(page);
               settled(page);
@@ -201,7 +205,7 @@ export function usePictures(
             return;
           }
           if (busy(reason)) return;
-          find(ask).then(
+          find(ask, signal).then(
             (page) => {
               shown(page, false);
               settled(page);
@@ -217,6 +221,7 @@ export function usePictures(
     return () => {
       current = false;
       clearTimeout(timer);
+      giveUp.abort();
     };
   }, [wanted, scope, web, asking, find, attempt]);
 

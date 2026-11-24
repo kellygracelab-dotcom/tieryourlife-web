@@ -178,6 +178,7 @@ describe("Paste a list, step 2", () => {
     });
     expect(find).toHaveBeenLastCalledWith(
       expect.objectContaining({ q: "Paris Saint-Germain", scope: "all", web: false }),
+      expect.any(AbortSignal),
     );
     fireEvent.click(screen.getByRole("button", { name: /^Paris Saint-Germain/ }));
     expect(screen.queryByRole("textbox", { name: "Search a picture for PSG" })).toBeNull();

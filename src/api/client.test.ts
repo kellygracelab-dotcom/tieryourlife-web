@@ -286,6 +286,28 @@ describe("createApiClient", () => {
     });
   });
 
+  it("gives up on a request its caller no longer wants, the time limit still holding", async () => {
+    const seen: AbortSignal[] = [];
+    const hanging: FetchLike = (_url, init) =>
+      new Promise((_resolve, reject) => {
+        seen.push(init.signal!);
+        init.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      });
+    const client = createApiClient({
+      fetch: hanging,
+      appCheckToken: async () => null,
+      idToken: async () => null,
+      timeoutMs: 60_000,
+    });
+    const caller = new AbortController();
+    const asked = client.request("GET", "/lists/pictures", { signal: caller.signal });
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]!.aborted).toBe(false);
+    caller.abort();
+    await expect(asked).rejects.toMatchObject({ error: { kind: "offline" } });
+    expect(seen[0]!.aborted).toBe(true);
+  });
+
   it("reports a thrown fetch as offline", async () => {
     const { client } = clientWith([new TypeError("Failed to fetch")]);
 
