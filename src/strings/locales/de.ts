@@ -280,6 +280,8 @@ const de: Translation = {
     pictureSignIn: "Melde dich an, um eigene Bilder hinzuzufügen; sie liegen in deinem Konto.",
     pictureNotImage: "{name} ist kein Bild.",
     pictureTooBig: "{name} ist selbst verkleinert zu groß.",
+    pictureNotKept:
+      "{name} steht so auf der Karte, wie die Seite es zeigt, auf der es gefunden wurde: Eine Kopie ließ sich nicht behalten.",
     pictureFailed: "{name} konnte nicht hochgeladen werden. Versuch es noch einmal.",
     addLabel: "Karte hinzufügen",
     addPlaceholder: "Suchen, einen Namen tippen oder einen Bildlink einfügen",

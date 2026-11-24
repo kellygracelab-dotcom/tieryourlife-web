@@ -330,6 +330,7 @@ const ar: Translation = {
     pictureSignIn: "سجّل الدخول لإضافة صورك الخاصة؛ تُحفظ في حسابك.",
     pictureNotImage: "{name} ليس صورة.",
     pictureTooBig: "{name} كبير جدًا حتى بعد التصغير.",
+    pictureNotKept: "أُضيفت {name} كما يعرضها الموقع الذي وُجدت فيه: تعذّر حفظ نسخة منها.",
     pictureFailed: "تعذّر رفع {name}. حاول مرة أخرى.",
     addLabel: "إضافة بطاقة",
     addPlaceholder: "ابحث أو اكتب اسمًا أو الصق رابط صورة",

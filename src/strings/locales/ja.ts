@@ -276,6 +276,8 @@ const ja: Translation = {
     pictureSignIn: "自分の画像を追加するにはログインしてください。画像はアカウントに保存されます。",
     pictureNotImage: "{name} は画像ではありません。",
     pictureTooBig: "{name} は縮小しても大きすぎます。",
+    pictureNotKept:
+      "{name} は見つかったサイトの表示のままカードに追加されました。コピーは保存できませんでした。",
     pictureFailed: "{name} をアップロードできませんでした。もう一度お試しください。",
     addLabel: "カードを追加",
     addPlaceholder: "検索、名前を入力、または画像のリンクを貼り付け",

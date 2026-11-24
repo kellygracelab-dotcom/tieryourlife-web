@@ -284,6 +284,8 @@ const es: Translation = {
     pictureSignIn: "Inicia sesión para añadir tus propias imágenes; se guardan en tu cuenta.",
     pictureNotImage: "{name} no es una imagen.",
     pictureTooBig: "{name} es demasiado grande incluso después de reducirla.",
+    pictureNotKept:
+      "{name} está en la tarjeta tal como la muestra el sitio donde se encontró: no se pudo guardar una copia.",
     pictureFailed: "No se pudo subir {name}. Inténtalo de nuevo.",
     addLabel: "Añadir una tarjeta",
     addPlaceholder: "Busca, escribe un nombre o pega el enlace de una imagen",

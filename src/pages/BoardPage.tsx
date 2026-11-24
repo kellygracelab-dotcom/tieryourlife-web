@@ -112,7 +112,12 @@ import type { EditorAction, EditorItem, EditorTier } from "../features/editor/mo
 import { TierDialog } from "../features/editor/TierDialog";
 import type { FindPictureBatch } from "../features/editor/pasteBatch";
 import type { FindPictures } from "../features/editor/usePictures";
-import { keepWebPicture, PictureRefused, uploadPicture } from "../lib/pictures";
+import {
+  keepWebPicture,
+  PictureRefused,
+  uploadPicture,
+  type UploadedPicture,
+} from "../lib/pictures";
 import { keepLinkedPicture, LinkRefused, linkRefusalOf } from "../lib/linkPictures";
 import { useSession } from "../app/session";
 import { type KeyValueStore, memoryStore, sessionStorageStore } from "../lib/storage";
@@ -890,6 +895,22 @@ function OpenBoard({
       },
     });
   };
+  // A web picture went on its card from the answers' preview; its own copy
+  // takes that place once kept, the name, focus and the rest as they are.
+  // A card since given another picture, or gone, keeps what it has.
+  const pictureKept = (itemUid: string, shown: string, kept: UploadedPicture) => {
+    const current = latest();
+    const card = current.items.find((item) => item.uid === itemUid && item.deletedAt === null);
+    if (card === undefined || card.imageUrl !== shown) return;
+    keep(
+      setPicture(
+        current,
+        itemUid,
+        { ...pictureOf(card), imageUrl: kept.previewUrl, pictureId: kept.pictureId },
+        now(),
+      ),
+    );
+  };
   const editorItems: EditorItem[] = view.uids.map((itemUid, index) => ({
     key: itemUid,
     title: view.list.items[index]?.title ?? "",
@@ -1123,6 +1144,7 @@ function OpenBoard({
       onIncomingTaken={incomingTaken}
       house={house !== null}
       onRename={renameCard}
+      onPictureKept={pictureKept}
     />
   );
 
