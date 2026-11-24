@@ -114,3 +114,95 @@ test("no shimmer for someone who asked for less motion", async ({ page }) => {
   await expect(art).toHaveClass(/art--waiting/);
   expect(await art.evaluate((tile) => getComputedStyle(tile, "::after").display)).toBe("none");
 });
+
+// Your lists glues a board's mosaic into one picture once its pictures have
+// come, keeps it in this browser only, and shows it alone the next time
+// (cover-collage BRIEF, steps 2 and 3, 24.11.2026).
+test("a board's collage is glued on this device and shown alone the next time", async ({
+  page,
+}) => {
+  await mockBackend(page);
+  const asked: string[] = [];
+  await page.route("https://pics.test/**", (route) => {
+    asked.push(route.request().url());
+    return route.fulfill({
+      contentType: "image/png",
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: PIXEL,
+    });
+  });
+  const sent: string[] = [];
+  page.on("request", (request) => {
+    const type = request.headers()["content-type"] ?? "";
+    const body = request.postDataBuffer();
+    if (type.startsWith("image/") || (body !== null && body.length > 4096))
+      sent.push(request.url());
+  });
+  const uid = "glued-pictures";
+  const boardOf = (urls: readonly string[]) => ({
+    uid,
+    title: "Glued pictures",
+    tiers: ["S", "Pool"].map((label, i) => ({ uid: label, label, isPool: i === 1, position: i })),
+    items: urls.map((imageUrl, i) => ({
+      uid: "c" + i,
+      title: "Card " + i,
+      imageUrl,
+      tierUid: "S",
+      position: i,
+      deletedAt: null,
+    })),
+  });
+  await page.addInitScript(
+    ({ key, value }) => {
+      if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(value));
+    },
+    { key: "tyl:board:" + uid, value: boardOf(pictures("g")) },
+  );
+  // What this browser keeps: the keys of the site's own database.
+  const kept = () =>
+    page.evaluate(
+      () =>
+        new Promise<string[]>((done, failed) => {
+          const opened = indexedDB.open("tyl-glued");
+          opened.onerror = () => failed(opened.error);
+          opened.onsuccess = () => {
+            const database = opened.result;
+            if (!database.objectStoreNames.contains("pictures")) return done([]);
+            const keys = database.transaction("pictures").objectStore("pictures").getAllKeys();
+            keys.onsuccess = () => done(keys.result.map(String));
+            keys.onerror = () => failed(keys.error);
+          };
+        }),
+    );
+
+  // The first time: the mosaic, its six pictures, then one glued picture kept.
+  await page.goto("/b");
+  const tile = page.locator(".board-tile .art").first();
+  await expect(tile.locator(".art__shown")).toHaveCount(6);
+  await expect.poll(kept).toHaveLength(1);
+  const first = (await kept())[0]!;
+  expect(first).toMatch(/^-\/glued-pictures\/\d+x\d+\/[a-z0-9]+$/);
+
+  // The next time: the one picture from this browser, none of the six asked for.
+  asked.length = 0;
+  await page.reload();
+  await expect(tile).toHaveClass(/art--collage/);
+  await expect(tile.locator("img")).toHaveCount(1);
+  expect(await tile.locator("img").getAttribute("src")).toMatch(/^blob:/);
+  await expect(tile).not.toHaveClass(/art--waiting/);
+  expect(asked).toEqual([]);
+
+  // The first cards changed: drawn again from the mosaic, the old one gone.
+  await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
+    key: "tyl:board:" + uid,
+    value: boardOf([...pictures("g")].reverse()),
+  });
+  await page.reload();
+  await expect(tile).toHaveClass(/art--mosaic/);
+  await expect(tile.locator(".art__shown")).toHaveCount(6);
+  await expect.poll(kept).not.toEqual([first]);
+  expect(await kept()).toHaveLength(1);
+
+  // Never sent anywhere.
+  expect(sent).toEqual([]);
+});

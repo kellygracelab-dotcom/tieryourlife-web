@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
+import { shownOwner } from "./owners";
 import { fromOf, labelOf, metaPartsOf, spokenTitleOf, titleOf } from "./boardText";
 import { RenameField } from "./RenameField";
 import { cardFocusByPicture, coverFocusOf, previewsOf, rankedTiers, type Board } from "./model";
@@ -98,6 +99,7 @@ export const BoardTile = memo(function BoardTile({
       previews={board.coverImageUrls.length > 1 ? board.coverImageUrls : previewsOf(board)}
       cellFocus={cardFocusByPicture(board)}
       tierColors={rankedTiers(board).map((tier) => tier.colorLight)}
+      glue={{ owner: shownOwner(), board: board.uid }}
     />
   );
   const words = (

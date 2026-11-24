@@ -1,9 +1,18 @@
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CoverFocus } from "../lib/coverFocus";
 import { FocusedPicture } from "./FocusedPicture";
 import { strings } from "../strings";
 import "./ListArt.css";
 import { shownLight } from "../lib/tierColour";
+import {
+  GLUED_MIN,
+  gluedBroken,
+  gluedKept,
+  gluedKey,
+  gluedNow,
+  glueLater,
+  type Shape,
+} from "../lib/gluedCollage";
 
 interface ListArtProps {
   cover: string | null;
@@ -33,6 +42,12 @@ interface ListArtProps {
    * once and before the rest, not when the browser gets round to lazy ones.
    */
   first?: boolean;
+  /**
+   * A board of this browser's, whose (null: made without an account) and
+   * which: its mosaic is glued into one picture kept on this device, and
+   * shown alone the next time (cover-collage BRIEF, steps 2 and 3).
+   */
+  glue?: { owner: string | null; board: string };
 }
 
 const MOSAIC_MAX = 6;
@@ -51,6 +66,7 @@ export function ListArt({
   title,
   decorative = false,
   first = false,
+  glue,
 }: ListArtProps) {
   const asked = first
     ? ({ loading: "eager", fetchPriority: "high" } as const)
@@ -70,6 +86,65 @@ export function ListArt({
     key: `${at}-${url}`,
     focus: cellFocus?.get(url) ?? previewFocus?.[at] ?? null,
   }));
+  // A board's own: its tile's shape once laid out, then the picture kept for
+  // its pictures, looked for before any of them is asked for.
+  const box = useRef<HTMLDivElement>(null);
+  const [shape, setShape] = useState<Shape | null>(null);
+  const gluing =
+    glue !== undefined && cover === null && collage === null && cells.length >= GLUED_MIN;
+  const gluedAs =
+    gluing && shape !== null && shape.width > 0
+      ? gluedKey(
+          glue.owner,
+          glue.board,
+          cells.map(({ url, focus: cell }) => ({ url, focus: cell })),
+          shape,
+        )
+      : null;
+  const [found, setFound] = useState<{ key: string; url: string | null } | null>(null);
+  const [gluedFailed, setGluedFailed] = useState<string | null>(null);
+  useLayoutEffect(() => {
+    if (!gluing || shape !== null || box.current === null) return;
+    const { width, height } = box.current.getBoundingClientRect();
+    // Not laid out (a test's page): the mosaic, as before.
+    setShape(
+      width >= 1 && height >= 1
+        ? { width: Math.round(width), height: Math.round(height) }
+        : { width: 0, height: 0 },
+    );
+  }, [gluing, shape]);
+  useLayoutEffect(() => {
+    if (gluedAs === null || found?.key === gluedAs) return;
+    const now = gluedNow(gluedAs);
+    if (now !== null) {
+      setFound({ key: gluedAs, url: now });
+      return;
+    }
+    let active = true;
+    void gluedKept(gluedAs).then((url) => {
+      if (active) setFound({ key: gluedAs, url });
+    });
+    return () => {
+      active = false;
+    };
+  }, [gluedAs, found]);
+  const glued =
+    gluedAs !== null && found?.key === gluedAs && gluedAs !== gluedFailed ? found.url : null;
+  const looking = gluing && (shape === null || (gluedAs !== null && found?.key !== gluedAs));
+  // Every picture of the mosaic has come (from the browser's cache, now):
+  // glued once, for the next time.
+  const allIn =
+    gluedAs !== null && glued === null && cells.every(({ key: cell }) => loaded.has(cell));
+  useEffect(() => {
+    if (allIn && gluedAs !== null && shape !== null)
+      glueLater(
+        gluedAs,
+        cells.map(({ url, focus: cell }) => ({ url, focus: cell })),
+        shape,
+      );
+    // The pictures are in the key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allIn, gluedAs]);
   const waiting = (keys: readonly string[]) =>
     keys.some((key) => !loaded.has(key) && !broken.has(key));
   const named = (label: string) =>
@@ -111,9 +186,34 @@ export function ListArt({
       </div>
     );
   }
+  // A board's mosaic glued on this device: one picture, no other loads.
+  if (glued !== null && gluedAs !== null) {
+    const shownKey = `glued-${gluedAs}`;
+    return (
+      <div
+        ref={box}
+        className={waiting([shownKey]) ? "art art--collage art--waiting" : "art art--collage"}
+      >
+        <FocusedPicture
+          key={shownKey}
+          className={cellClass(shownKey, "art__picture")}
+          src={glued}
+          focus={null}
+          onLoad={add(setLoaded, shownKey)}
+          onError={() => {
+            gluedBroken(gluedAs);
+            setGluedFailed(gluedAs);
+          }}
+        />
+      </div>
+    );
+  }
+  // Looking for it: the quiet surface a moment, so no picture is asked for in vain.
+  if (looking) return <div ref={box} className="art art--waiting" aria-hidden="true" />;
   if (cells.length > 0 && !cells.every(({ key }) => broken.has(key))) {
     return (
       <div
+        ref={box}
         className={
           waiting(cells.map(({ key }) => key)) ? "art art--mosaic art--waiting" : "art art--mosaic"
         }

@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
+import { shownOwner } from "./owners";
 import { ListLabel, MetaParts, MoreButton } from "./BoardTile";
 import { fromOf, labelOf, spokenTitleOf, titleOf } from "./boardText";
 import { RenameField } from "./RenameField";
@@ -90,6 +91,7 @@ export const BoardRow = memo(function BoardRow({
           previews={board.coverImageUrls.length > 1 ? board.coverImageUrls : previewsOf(board)}
           cellFocus={cardFocusByPicture(board)}
           tierColors={rankedTiers(board).map((tier) => tier.colorLight)}
+          glue={{ owner: shownOwner(), board: board.uid }}
         />
       </span>
       <span className="board-card__text">
