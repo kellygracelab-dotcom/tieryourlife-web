@@ -119,13 +119,16 @@ describe("AddCardBox", () => {
       "Animals",
     ]);
     expect(chips.getByRole("button", { name: "Anime" })).toHaveAttribute("aria-pressed", "true");
-    expect(find).toHaveBeenCalledWith({
-      q: "naruto",
-      scope: "anime",
-      web: false,
-      page: 1,
-      quick: true,
-    });
+    expect(find).toHaveBeenCalledWith(
+      {
+        q: "naruto",
+        scope: "anime",
+        web: false,
+        page: 1,
+        quick: true,
+      },
+      expect.any(AbortSignal),
+    );
     const tile = screen.getByRole("button", { name: /Naruto/ });
     expect(tile).toHaveTextContent("Anime · 2002");
     expect(screen.getByText("From AniList")).toBeInTheDocument();
@@ -134,13 +137,16 @@ describe("AddCardBox", () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, LOOKUP_DEBOUNCE_MS + 20));
     });
-    expect(find).toHaveBeenLastCalledWith({
-      q: "naruto",
-      scope: "games",
-      web: false,
-      page: 1,
-      quick: true,
-    });
+    expect(find).toHaveBeenLastCalledWith(
+      {
+        q: "naruto",
+        scope: "games",
+        web: false,
+        page: 1,
+        quick: true,
+      },
+      expect.any(AbortSignal),
+    );
   });
 
   it("says what it searched instead when nothing matched the words as typed", async () => {
@@ -169,13 +175,16 @@ describe("AddCardBox", () => {
     await typeAndWait("borscht");
     const chips = within(screen.getByRole("group", { name: "Where to look" }));
     expect(chips.getAllByRole("button")[0]).toHaveTextContent("All");
-    expect(find).toHaveBeenCalledWith({
-      q: "borscht",
-      scope: "all",
-      web: false,
-      page: 1,
-      quick: true,
-    });
+    expect(find).toHaveBeenCalledWith(
+      {
+        q: "borscht",
+        scope: "all",
+        web: false,
+        page: 1,
+        quick: true,
+      },
+      expect.any(AbortSignal),
+    );
   });
 
   it("is where the newcomer's Add tip points on an empty list, and a card added is enough of a lesson", async () => {
@@ -282,13 +291,16 @@ describe("AddCardBox", () => {
     await typeAndWait("fox");
     const chips = within(screen.getByRole("group", { name: "Where to look" }));
     expect(chips.getAllByRole("button")[1]).toHaveTextContent("Animals");
-    expect(find).toHaveBeenCalledWith({
-      q: "fox",
-      scope: "animals",
-      web: false,
-      page: 1,
-      quick: true,
-    });
+    expect(find).toHaveBeenCalledWith(
+      {
+        q: "fox",
+        scope: "animals",
+        web: false,
+        page: 1,
+        quick: true,
+      },
+      expect.any(AbortSignal),
+    );
     expect(screen.getByRole("button", { name: /Red fox/ })).toHaveTextContent("Animal");
     // The photographer its license asks to name, beside the picture, short: "author, licence"
     // (artboard 23); the whole line on hover. None where none is asked.
@@ -519,13 +531,16 @@ describe("AddCardBox", () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, LOOKUP_DEBOUNCE_MS + 20));
     });
-    expect(find).toHaveBeenLastCalledWith({
-      q: "borscht",
-      scope: "all",
-      web: true,
-      page: 1,
-      quick: true,
-    });
+    expect(find).toHaveBeenLastCalledWith(
+      {
+        q: "borscht",
+        scope: "all",
+        web: true,
+        page: 1,
+        quick: true,
+      },
+      expect.any(AbortSignal),
+    );
     expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/Web search is used up for today/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Borscht/ })).toHaveTextContent("Film");
@@ -579,13 +594,16 @@ describe("AddCardBox", () => {
       await new Promise((resolve) => setTimeout(resolve, LOOKUP_DEBOUNCE_MS + 20));
     });
     expect(screen.queryByText(/catalogue is not answering/)).toBeNull();
-    expect(find).toHaveBeenLastCalledWith({
-      q: "qwzxy",
-      scope: "all",
-      web: false,
-      page: 1,
-      quick: true,
-    });
+    expect(find).toHaveBeenLastCalledWith(
+      {
+        q: "qwzxy",
+        scope: "all",
+        web: false,
+        page: 1,
+        quick: true,
+      },
+      expect.any(AbortSignal),
+    );
   });
 
   it("brings the next page on Show more", async () => {

@@ -206,6 +206,7 @@ function searchedAsOf(value: unknown): SearchedAs | null {
 export async function searchPictures(
   client: ApiClient,
   ask: PictureAsk & { lang: string },
+  signal?: AbortSignal,
 ): Promise<PicturePage> {
   const answer = await client.request<{
     items?: unknown;
@@ -226,6 +227,7 @@ export async function searchPictures(
       ...(ask.section === undefined || ask.section === "" ? {} : { section: ask.section }),
       ...(ask.topic === undefined || ask.topic === "" ? {} : { topic: ask.topic }),
     },
+    ...(signal === undefined ? {} : { signal }),
   });
   const searchedAs = searchedAsOf(answer.searchedAs);
   const items = Array.isArray(answer.items) ? answer.items : [];
