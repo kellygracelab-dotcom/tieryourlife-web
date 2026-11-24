@@ -291,6 +291,8 @@ const pl: Translation = {
     pictureSignIn: "Zaloguj się, aby dodawać własne obrazy; są przechowywane na twoim koncie.",
     pictureNotImage: "{name} to nie obraz.",
     pictureTooBig: "{name} jest za duży nawet po zmniejszeniu.",
+    pictureNotKept:
+      "{name} jest na karcie tak, jak pokazuje to strona, na której znaleziono: nie udało się zachować kopii.",
     pictureFailed: "Nie udało się przesłać {name}. Spróbuj ponownie.",
     addLabel: "Dodaj kartę",
     addPlaceholder: "Szukaj, wpisz nazwę albo wklej link do obrazu",

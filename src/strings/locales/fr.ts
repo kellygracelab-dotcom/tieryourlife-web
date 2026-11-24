@@ -291,6 +291,8 @@ const fr: Translation = {
       "Connectez-vous pour ajouter vos propres images ; elles restent dans votre compte.",
     pictureNotImage: "{name} n’est pas une image.",
     pictureTooBig: "{name} est trop lourde, même réduite.",
+    pictureNotKept:
+      "{name} est sur la carte telle que l’affiche le site où elle a été trouvée : impossible d’en garder une copie.",
     pictureFailed: "Impossible d’envoyer {name}. Réessayez.",
     addLabel: "Ajouter une carte",
     addPlaceholder: "Cherchez, tapez un nom ou collez le lien d’une image",

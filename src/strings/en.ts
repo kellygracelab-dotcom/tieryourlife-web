@@ -274,6 +274,7 @@ export const en = {
     pictureSignIn: "Sign in to add your own pictures; they live in your account.",
     pictureNotImage: "{name} is not a picture.",
     pictureTooBig: "{name} is too big even after shrinking.",
+    pictureNotKept: "{name} shows from the site it was found on: a copy of it could not be kept.",
     pictureFailed: "{name} could not be uploaded. Try again.",
     addLabel: "Add a card",
     addPlaceholder: "Search, type a name, or paste a picture link",

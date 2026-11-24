@@ -31,7 +31,7 @@ import { TIER_HOLD_MS } from "../features/tierboard/useTierMove";
 import { SessionContext, type Session } from "../app/session";
 import type { SectionStats } from "../api/sections";
 import type { PublishedList } from "../api/types";
-import type { LinkKeep, Upload } from "../features/editor/AddCardBox";
+import type { Keep, LinkKeep, Upload } from "../features/editor/AddCardBox";
 import { createSectionsStore, type SectionsStore } from "../features/sections/useSections";
 import { memoryStore, type KeyValueStore } from "../lib/storage";
 import { ApiFailure } from "../api/errors";
@@ -95,6 +95,7 @@ const open = (
     account?: Session["account"];
     upload?: Upload;
     linkWeb?: LinkKeep;
+    keepWeb?: Keep;
     find?: FindPictures;
     signIn?: Session["signIn"];
     store?: SectionsStore;
@@ -120,6 +121,7 @@ const open = (
             }
             upload={extra.upload ?? (() => Promise.reject(new Error("no uploads here")))}
             linkWeb={extra.linkWeb ?? (() => Promise.reject(new Error("no links here")))}
+            keepWeb={extra.keepWeb}
             publishing={extra.publishing ?? noPublishing}
             share={extra.share ?? (() => Promise.resolve())}
             store={extra.store}
@@ -2133,6 +2135,45 @@ describe("BoardPage: a house list", () => {
     expect(houseLinkOf("films", houseStore)).toBeNull();
     expect(unpublish).not.toHaveBeenCalled();
     expect(router.state.location.pathname).toBe("/admin/house");
+  });
+});
+
+describe("BoardPage: pictures from the web search", () => {
+  it("shows a picked web picture on its card at once, and its own copy takes the preview's place", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    let kept: (picture: { pictureId: string; previewUrl: string }) => void = () => undefined;
+    const keepWeb = vi.fn<Keep>(() => new Promise((resolve) => (kept = resolve)));
+    const find = vi.fn<FindPictures>(async () => ({
+      items: [
+        {
+          id: "web:borscht",
+          title: "Borscht",
+          subtitle: null,
+          imageUrl: "https://site.test/borscht.jpg",
+          thumbUrl: "https://thumb.test/borscht.jpg",
+          source: "web",
+          kind: "web",
+          credit: null,
+          attribution: { source: "web", link: "https://site.test/borscht" },
+        },
+      ],
+      hasMore: false,
+      notices: [],
+      rest: false,
+    }));
+    open(repository, "/b/films", { account: member, keepWeb, find });
+    await userEvent.type(screen.getByRole("textbox", { name: "Add a card" }), "Borscht");
+    await userEvent.click(await screen.findByRole("button", { name: /^Borscht/ }));
+    const card = () => liveItems(repository.get("films")!).find((item) => item.title === "Borscht");
+    expect(card()).toMatchObject({ imageUrl: "https://thumb.test/borscht.jpg", pictureId: null });
+    expect(keepWeb).toHaveBeenCalledWith("https://site.test/borscht.jpg");
+    await act(async () => kept({ pictureId: "kept-1", previewUrl: "https://dl.test/kept-1" }));
+    expect(card()).toMatchObject({
+      imageUrl: "https://dl.test/kept-1",
+      pictureId: "kept-1",
+      attribution: { source: "web", link: "https://site.test/borscht" },
+    });
   });
 });
 

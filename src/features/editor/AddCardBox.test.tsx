@@ -44,6 +44,7 @@ function setup({
   upload = vi.fn<Upload>(),
   guest = false,
   askUploads,
+  onPictureKept,
 }: {
   find: FindPictures;
   keep?: Keep;
@@ -52,6 +53,11 @@ function setup({
   upload?: Upload;
   guest?: boolean;
   askUploads?: (count: number) => Promise<number>;
+  onPictureKept?: (
+    key: string,
+    shown: string,
+    kept: { pictureId: string; previewUrl: string },
+  ) => void;
 }) {
   const dispatch = vi.fn<(action: EditorAction) => void>();
   const signIn = vi.fn(async () => ({ kind: "failed" as const, code: "test" }));
@@ -71,6 +77,7 @@ function setup({
         upload={upload}
         keep={keep}
         {...(askUploads === undefined ? {} : { askUploads })}
+        {...(onPictureKept === undefined ? {} : { onPictureKept })}
       />
     </SessionContext.Provider>,
   );
@@ -338,18 +345,24 @@ describe("AddCardBox", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it("copies a web picture into the person's own before it goes on a card", async () => {
+  it("puts a web picture on its card at once from its preview, its own copy taking its place when kept", async () => {
     const find = vi.fn<FindPictures>(async () =>
       page([
-        picture("web:abc", { title: "Borscht", source: "web", kind: "web", subtitle: "site.test" }),
+        picture("web:abc", {
+          title: "Borscht",
+          source: "web",
+          kind: "web",
+          subtitle: "site.test",
+          thumbUrl: "https://thumb.test/abc.jpg",
+          attribution: { source: "web", link: "https://site.test/borscht" },
+        }),
       ]),
     );
-    const keep = vi.fn<Keep>(async () => ({
-      pictureId: "kept-1",
-      previewUrl: "https://dl/kept-1",
-    }));
+    let done: (kept: { pictureId: string; previewUrl: string }) => void = () => undefined;
+    const keep = vi.fn<Keep>(() => new Promise((resolve) => (done = resolve)));
+    const onPictureKept = vi.fn();
     const count = vi.spyOn(usage, "count");
-    const { dispatch } = setup({ find, keep, category: null });
+    const { dispatch } = setup({ find, keep, category: null, onPictureKept });
     await typeAndWait("borscht");
     expect(screen.getByText("From the web", { selector: ".cards__source" })).toBeInTheDocument();
     // The web's pages have no kind worth a label: the tile says it is the web's, and the site.
@@ -357,44 +370,120 @@ describe("AddCardBox", () => {
       /^BorschtFrom the web · site\.test$/,
     );
     await userEvent.click(screen.getByRole("button", { name: /Borscht/ }));
-    expect(keep).toHaveBeenCalledWith("https://img.test/web:abc.jpg");
+    // On the card before the copy is made, as the answers showed it, with the page it stands on.
     expect(dispatch).toHaveBeenCalledWith({
       type: "addItem",
       title: "Borscht",
-      imageUrl: "https://dl/kept-1",
-      pictureId: "kept-1",
-      key: "web:abc",
-    });
-    // Counted once the copy is the person's.
-    expect(count.mock.calls).toEqual([["picture.pick.web"], ["picture.pos.1"]]);
-  });
-
-  it("keeps the page a web picture stands on, for the publication", async () => {
-    const find = vi.fn<FindPictures>(async () =>
-      page([
-        picture("web:abc", {
-          title: "Borscht",
-          source: "web",
-          kind: "web",
-          attribution: { source: "web", link: "https://site.test/borscht" },
-        }),
-      ]),
-    );
-    const keep = vi.fn<Keep>(async () => ({
-      pictureId: "kept-1",
-      previewUrl: "https://dl/kept-1",
-    }));
-    const { dispatch } = setup({ find, keep, category: null });
-    await typeAndWait("borscht");
-    await userEvent.click(screen.getByRole("button", { name: /Borscht/ }));
-    expect(dispatch).toHaveBeenCalledWith({
-      type: "addItem",
-      title: "Borscht",
-      imageUrl: "https://dl/kept-1",
-      pictureId: "kept-1",
+      imageUrl: "https://thumb.test/abc.jpg",
       key: "web:abc",
       attribution: { source: "web", link: "https://site.test/borscht" },
     });
+    expect(count.mock.calls).toEqual([["picture.pick.web"], ["picture.pos.1"]]);
+    expect(keep).toHaveBeenCalledWith("https://img.test/web:abc.jpg");
+    expect(onPictureKept).not.toHaveBeenCalled();
+    // Nothing says it is on its way.
+    expect(screen.getByRole("button", { name: /Borscht/ })).not.toHaveAttribute("aria-busy");
+    await act(async () => done({ pictureId: "kept-1", previewUrl: "https://dl/kept-1" }));
+    expect(onPictureKept).toHaveBeenCalledWith("web:abc", "https://thumb.test/abc.jpg", {
+      pictureId: "kept-1",
+      previewUrl: "https://dl/kept-1",
+    });
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps the smaller copy the answers showed when the picture itself is too big", async () => {
+    const find = vi.fn<FindPictures>(async () =>
+      page([
+        picture("web:big", {
+          title: "Huge",
+          source: "web",
+          kind: "web",
+          thumbUrl: "https://thumb.test/big.jpg",
+        }),
+      ]),
+    );
+    const keep = vi.fn<Keep>(async (url) => {
+      if (url === "https://img.test/web:big.jpg") throw new PictureRefused("tooBig");
+      return { pictureId: "kept-small", previewUrl: "https://dl/kept-small" };
+    });
+    const onPictureKept = vi.fn();
+    setup({ find, keep, category: null, onPictureKept });
+    await typeAndWait("huge");
+    await userEvent.click(screen.getByRole("button", { name: /Huge/ }));
+    await vi.waitFor(() =>
+      expect(onPictureKept).toHaveBeenCalledWith("web:big", "https://thumb.test/big.jpg", {
+        pictureId: "kept-small",
+        previewUrl: "https://dl/kept-small",
+      }),
+    );
+    expect(keep.mock.calls).toEqual([
+      ["https://img.test/web:big.jpg"],
+      ["https://thumb.test/big.jpg"],
+    ]);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText(/shrinking/)).toBeNull();
+  });
+
+  it("leaves the card on its preview, and says so without speaking of shrinking, when no copy can be kept", async () => {
+    const find = vi.fn<FindPictures>(async () =>
+      page([
+        picture("web:big", {
+          title: "Huge",
+          source: "web",
+          kind: "web",
+          thumbUrl: "https://thumb.test/big.jpg",
+        }),
+      ]),
+    );
+    const keep = vi.fn<Keep>(async () => {
+      throw new PictureRefused("tooBig");
+    });
+    const onPictureKept = vi.fn();
+    const { dispatch } = setup({ find, keep, category: null, onPictureKept });
+    await typeAndWait("huge");
+    await userEvent.click(screen.getByRole("button", { name: /Huge/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Huge shows from the site it was found on: a copy of it could not be kept.",
+    );
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ imageUrl: "https://thumb.test/big.jpg", key: "web:big" }),
+    );
+    expect(keep).toHaveBeenCalledTimes(2);
+    expect(onPictureKept).not.toHaveBeenCalled();
+  });
+
+  it("does not ask again for a picture without a smaller copy, or when today's copies are used up", async () => {
+    const find = vi.fn<FindPictures>(async () =>
+      page([
+        picture("web:one", { title: "One", source: "web", kind: "web" }),
+        picture("web:two", {
+          title: "Two",
+          source: "web",
+          kind: "web",
+          thumbUrl: "https://thumb.test/two.jpg",
+        }),
+      ]),
+    );
+    const keep = vi.fn<Keep>(async (url) => {
+      throw new PictureRefused(url.includes("one") ? "tooBig" : "dailyLimit");
+    });
+    const { dispatch } = setup({ find, keep, category: null });
+    await typeAndWait("pictures");
+    await userEvent.click(screen.getByRole("button", { name: /One/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/^One shows from the site/);
+    // Without a smaller copy, the card shows the picture from where it lives.
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ imageUrl: "https://img.test/web:one.jpg" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Two/ }));
+    await vi.waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/^Two shows from the site/),
+    );
+    expect(keep.mock.calls).toEqual([
+      ["https://img.test/web:one.jpg"],
+      ["https://img.test/web:two.jpg"],
+    ]);
   });
 
   it("tells a guest at once, in the answers, that a picture from the web needs an account", async () => {
@@ -413,20 +502,6 @@ describe("AddCardBox", () => {
     expect(dispatch).not.toHaveBeenCalled();
     await userEvent.click(within(said).getByRole("button", { name: strings.nav.signIn }));
     expect(signIn).toHaveBeenCalled();
-  });
-
-  it("says when the web pictures for today are used up", async () => {
-    const find = vi.fn<FindPictures>(async () =>
-      page([picture("web:abc", { title: "Borscht", source: "web", kind: "web" })]),
-    );
-    const keep = vi.fn<Keep>(async () => {
-      throw new PictureRefused("dailyLimit");
-    });
-    const { dispatch } = setup({ find, keep });
-    await typeAndWait("borscht");
-    await userEvent.click(screen.getByRole("button", { name: /Borscht/ }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/all the web pictures for today/);
-    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it("offers to search everywhere when the section finds nothing, and says so quietly when the web is done", async () => {

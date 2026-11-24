@@ -276,6 +276,7 @@ const tr: Translation = {
     pictureSignIn: "Kendi görsellerinizi eklemek için oturum açın; hesabınızda saklanırlar.",
     pictureNotImage: "{name} bir görsel değil.",
     pictureTooBig: "{name} küçültülse bile çok büyük.",
+    pictureNotKept: "{name}, bulunduğu sitenin gösterdiği haliyle kartta: bir kopyası saklanamadı.",
     pictureFailed: "{name} yüklenemedi. Tekrar deneyin.",
     addLabel: "Kart ekle",
     addPlaceholder: "Arayın, bir ad yazın ya da bir görsel bağlantısı yapıştırın",

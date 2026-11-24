@@ -108,6 +108,12 @@ interface AddCardBoxProps {
    * uploaded without one are offered fields for theirs (night pass W22).
    */
   onRename?: (key: string, title: string) => void;
+  /**
+   * A picture from the web went on its card at once, from the preview the
+   * answers showed; its own copy is ready now, to take that preview's place
+   * on the card with this key (Danylo, 24.11: some came late, unseen).
+   */
+  onPictureKept?: (key: string, shown: string, kept: UploadedPicture) => void;
 }
 
 /** A picture uploaded without a name, by the key its card was added under. */
@@ -214,6 +220,9 @@ export function draftFailureOf(failure: unknown): DraftPicture & { status: "fail
   };
 }
 
+/** Refusals of a web picture's own copy that its smaller copy may not meet. */
+const RETRY_SMALLER: readonly string[] = ["tooBig", "notAnImage", "upload"];
+
 /** Whether a paste has anything to say once it is done. */
 const worthSaying = (outcome: PasteOutcome): boolean =>
   outcome.missing.length > 0 || outcome.pageless.length > 0;
@@ -249,6 +258,7 @@ export function AddCardBox({
   house = false,
   loadQuota = loadLinkQuota,
   onRename,
+  onPictureKept,
 }: AddCardBoxProps) {
   const { account, signIn } = useSession();
   const signedIn = account?.kind === "signedIn";
@@ -278,7 +288,6 @@ export function AddCardBox({
   }
   // "Search everywhere" holds for the words it was pressed for, and no others.
   const [everywhere, setEverywhere] = useState<string | null>(null);
-  const [keeping, setKeeping] = useState<ReadonlySet<string>>(new Set());
   // The answers show while the box is in use; Escape or a press elsewhere puts
   // them away, the words and the cards picked staying. The field brings them back.
   const [open, setOpen] = useState(true);
@@ -571,8 +580,8 @@ export function AddCardBox({
     setNote(null);
   };
   // A catalogue's picture stays at its address, as the phone keeps it; one
-  // from the web is copied into the person's own pictures first. The search
-  // stays open, its tile ticked, so several can be chosen in a row.
+  // from the web is copied into the person's own pictures. The search stays
+  // open, its tile ticked, so several can be chosen in a row.
   // `at` is its place in the answers, from 0.
   const addFound = (picture: FoundPicture, at: number) => {
     if (full()) return;
@@ -596,29 +605,33 @@ export function AddCardBox({
       return;
     }
     setNote(null);
-    setKeeping((now) => new Set(now).add(picture.id));
+    // On the card at once, as the answers showed it, the browser holding it
+    // already; the copy is made meanwhile and takes its place when it is
+    // ready (Danylo, 24.11: some came at once, some late and unseen).
+    const shown = picture.thumbUrl ?? picture.imageUrl;
+    dispatch({
+      type: "addItem",
+      title: picture.title,
+      imageUrl: shown,
+      key: picture.id,
+      // The page it stands on goes out with the publication (CONTRACT, Picture attribution).
+      ...(picture.attribution === null ? {} : { attribution: picture.attribution }),
+    });
+    picturePicked(picture.source, at);
+    // A picture too big to copy, or no picture where it lives, has the
+    // smaller copy the answers showed (Danylo, 24.11: one shown in the
+    // answers was refused as too big).
+    const smaller =
+      picture.thumbUrl !== null && picture.thumbUrl !== picture.imageUrl ? picture.thumbUrl : null;
     keep(picture.imageUrl)
+      .catch((failure: unknown) => {
+        const reason = failure instanceof PictureRefused ? failure.reason : "upload";
+        if (smaller === null || !RETRY_SMALLER.includes(reason)) throw failure;
+        return keep(smaller);
+      })
       .then(
-        ({ previewUrl, pictureId }) => {
-          dispatch({
-            type: "addItem",
-            title: picture.title,
-            imageUrl: previewUrl,
-            pictureId,
-            key: picture.id,
-            // The page it stands on goes out with the publication (CONTRACT, Picture attribution).
-            ...(picture.attribution === null ? {} : { attribution: picture.attribution }),
-          });
-          picturePicked(picture.source, at);
-        },
-        (failure: unknown) => setNote(pictureFailureText(picture.title, failure)),
-      )
-      .finally(() =>
-        setKeeping((now) => {
-          const next = new Set(now);
-          next.delete(picture.id);
-          return next;
-        }),
+        (kept) => onPictureKept?.(picture.id, shown, kept),
+        () => setNote(fill(strings.new.pictureNotKept, { name: picture.title })),
       );
   };
   const onSubmit = (event: FormEvent) => {
@@ -830,7 +843,7 @@ export function AddCardBox({
                       key={picture.id}
                       found={picture}
                       added={added.has(picture.id)}
-                      busy={keeping.has(picture.id)}
+                      busy={false}
                       onPick={() => addFound(picture, at)}
                     />
                   ))}

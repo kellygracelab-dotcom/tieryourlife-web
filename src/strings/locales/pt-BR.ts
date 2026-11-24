@@ -284,6 +284,8 @@ const ptBR: Translation = {
     pictureSignIn: "Entre para adicionar suas próprias imagens; elas ficam na sua conta.",
     pictureNotImage: "{name} não é uma imagem.",
     pictureTooBig: "{name} é grande demais, mesmo depois de reduzida.",
+    pictureNotKept:
+      "{name} está no cartão como o site onde foi encontrada a mostra: não foi possível guardar uma cópia.",
     pictureFailed: "Não foi possível enviar {name}. Tente de novo.",
     addLabel: "Adicionar um cartão",
     addPlaceholder: "Pesquise, digite um nome ou cole o link de uma imagem",
