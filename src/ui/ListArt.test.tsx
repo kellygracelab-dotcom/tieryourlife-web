@@ -1,6 +1,57 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ListArt } from "./ListArt";
+import {
+  gluedKey,
+  gluedSettled,
+  resetGluedForTests,
+  type GluedDrawing,
+  type GluedShelf,
+} from "../lib/gluedCollage";
+
+afterEach(() => {
+  resetGluedForTests();
+  vi.restoreAllMocks();
+});
+
+/** A tile laid out at 240×132, as Your lists draws it on a phone. */
+const laidOut = () =>
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+    width: 240,
+    height: 132,
+  } as DOMRect);
+
+function keptOn(entries: Record<string, Blob> = {}): GluedShelf & { kept: Map<string, Blob> } {
+  const kept = new Map(Object.entries(entries));
+  return {
+    kept,
+    read: async (key) => kept.get(key) ?? null,
+    keep: async (key, picture) => void kept.set(key, picture),
+    drop: async (key) => void kept.delete(key),
+    keepOnly: async () => undefined,
+  };
+}
+
+const canvas = (): GluedDrawing & { written: number } => {
+  const drawing = {
+    written: 0,
+    load: async () => ({ width: 4, height: 3, close: () => undefined }) as unknown as ImageBitmap,
+    write: async () => {
+      drawing.written++;
+      return new Blob(["webp"], { type: "image/webp" });
+    },
+  };
+  return drawing;
+};
+
+const boardPictures = ["https://img/a.jpg", "https://img/b.jpg", "https://img/c.jpg"];
+const boardKey = () =>
+  gluedKey(
+    "me",
+    "board-1",
+    boardPictures.map((url) => ({ url, focus: null })),
+    { width: 240, height: 132 },
+  );
 
 describe("ListArt", () => {
   it("shows the cover when there is one", () => {
@@ -231,5 +282,109 @@ describe("ListArt", () => {
       <ListArt cover="https://img/c.jpg" previews={[]} collage={null} tierColors={[]} first />,
     );
     expect(container.querySelector("img")).toHaveAttribute("fetchpriority", "high");
+  });
+
+  describe("a board's mosaic glued on this device", () => {
+    let made = 0;
+    const objectUrls = () => {
+      URL.createObjectURL = vi.fn(() => `blob:glued-${++made}`);
+      URL.revokeObjectURL = vi.fn();
+    };
+
+    it("shows the kept picture alone, asking for none of the board's pictures", async () => {
+      objectUrls();
+      laidOut();
+      resetGluedForTests({
+        shelf: keptOn({ [boardKey()]: new Blob(["webp"]) }),
+        drawing: canvas(),
+      });
+      const { container } = render(
+        <ListArt
+          cover={null}
+          previews={boardPictures}
+          tierColors={[]}
+          glue={{ owner: "me", board: "board-1" }}
+        />,
+      );
+      // Looking for it: the quiet surface, no picture asked for.
+      expect(container.querySelector(".art")).toHaveClass("art--waiting");
+      expect(container.querySelectorAll("img")).toHaveLength(0);
+      await waitFor(() => expect(container.querySelectorAll("img")).toHaveLength(1));
+      const glued = container.querySelector("img")!;
+      expect(glued.getAttribute("src")).toMatch(/^blob:glued-/);
+      expect(container.querySelector(".art--collage")).toHaveClass("art--waiting");
+      fireEvent.load(glued);
+      expect(container.querySelector(".art--collage")).not.toHaveClass("art--waiting");
+    });
+
+    it("shows the mosaic when none is kept, and glues it once every picture has come", async () => {
+      objectUrls();
+      laidOut();
+      const shelf = keptOn();
+      const drawing = canvas();
+      resetGluedForTests({ shelf, drawing });
+      const { container } = render(
+        <ListArt
+          cover={null}
+          previews={boardPictures}
+          tierColors={[]}
+          glue={{ owner: "me", board: "board-1" }}
+        />,
+      );
+      await waitFor(() => expect(container.querySelectorAll(".art--mosaic img")).toHaveLength(3));
+      const [a, b, c] = Array.from(container.querySelectorAll("img"));
+      fireEvent.load(a!);
+      fireEvent.load(b!);
+      await act(gluedSettled);
+      expect(drawing.written).toBe(0);
+      fireEvent.load(c!);
+      await act(gluedSettled);
+      expect(drawing.written).toBe(1);
+      expect(shelf.kept.has(boardKey())).toBe(true);
+      // The tile stays as it is; the picture is for the next time.
+      expect(container.querySelectorAll(".art--mosaic img")).toHaveLength(3);
+    });
+
+    it("goes back to the mosaic when the kept picture will not show", async () => {
+      objectUrls();
+      laidOut();
+      const shelf = keptOn({ [boardKey()]: new Blob(["bad"]) });
+      resetGluedForTests({ shelf, drawing: canvas() });
+      const { container } = render(
+        <ListArt
+          cover={null}
+          previews={boardPictures}
+          tierColors={[]}
+          glue={{ owner: "me", board: "board-1" }}
+        />,
+      );
+      await waitFor(() => expect(container.querySelectorAll("img")).toHaveLength(1));
+      fireEvent.error(container.querySelector("img")!);
+      expect(container.querySelectorAll(".art--mosaic img")).toHaveLength(3);
+      await waitFor(() => expect(shelf.kept.size).toBe(0));
+    });
+
+    it("keeps the cover, one picture or a tile not laid out as they were", () => {
+      resetGluedForTests({ shelf: keptOn(), drawing: canvas() });
+      const glue = { owner: "me", board: "board-1" };
+      const { container, rerender } = render(
+        <ListArt cover={null} previews={boardPictures} tierColors={[]} glue={glue} />,
+      );
+      expect(container.querySelectorAll(".art--mosaic img")).toHaveLength(3);
+      rerender(
+        <ListArt
+          cover="https://img/cover.jpg"
+          previews={boardPictures}
+          tierColors={[]}
+          glue={glue}
+        />,
+      );
+      expect(container.querySelector(".art--cover img")).not.toBeNull();
+      laidOut();
+      rerender(
+        <ListArt cover={null} previews={["https://img/a.jpg"]} tierColors={[]} glue={glue} />,
+      );
+      expect(container.querySelectorAll(".art--mosaic img")).toHaveLength(1);
+    });
   });
 });

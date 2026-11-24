@@ -238,6 +238,12 @@ export function boardOwners(store: KeyValueStore): BoardOwners {
   };
 }
 
+/** Whose boards this browser shows now, as last told: the account, or null for nobody's. */
+export function shownOwner(store: KeyValueStore = localStorageStore): string | null {
+  const owner = store.read(OWNER_KEY);
+  return owner === null || owner === "" ? null : owner;
+}
+
 /** The site's own. */
 export const owners: BoardOwners = boardOwners(localStorageStore);
 

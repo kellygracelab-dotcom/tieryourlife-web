@@ -18,6 +18,7 @@ import {
 } from "../lib/signIn";
 import { localStorageStore } from "../lib/storage";
 import { signedIn } from "../lib/usageEvents";
+import { keepGluedOf } from "../lib/gluedCollage";
 import { RedirectFailedContext, SessionContext, ShowFaceContext } from "./session";
 
 interface SessionProviderProps {
@@ -80,6 +81,8 @@ export function SessionProvider({
           owner: next.kind === "signedIn" ? next.uid : null,
           guestUid: next.kind === "guest" ? next.uid : null,
         });
+        // Board covers glued on this device are only for whoever is here.
+        keepGluedOf(next.kind === "signedIn" ? next.uid : null);
         setAccount(next);
       }),
     [subscribe, keep],
