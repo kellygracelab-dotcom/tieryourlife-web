@@ -1,6 +1,7 @@
 import { devices, expect, test } from "@playwright/test";
 import { LIST_ID, list, mockBackend } from "./fixtures";
 import { signIn } from "./signedIn";
+import { startFromScratch } from "./listVersion";
 
 // From 840 px the pool is a card in a column beside the board; the count and
 // the buttons stand in the page's header, which stays in view while a long
@@ -25,7 +26,7 @@ test.describe("a wide screen", () => {
     await page.route(`**/lists/${LIST_ID}`, (route) => route.fulfill({ json: { ...list, tiers } }));
     await page.goto(`/l/${LIST_ID}`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
-    await page.getByRole("button", { name: "Mine", exact: true }).click();
+    await startFromScratch(page);
 
     await page.getByRole("button", { name: "Cards beside the tiers" }).click();
     const side = page.locator(".ranking__side");
@@ -66,19 +67,24 @@ test.describe("a wide screen", () => {
     page,
   }) => {
     await mockBackend(page);
-    await page.goto(`/l/${LIST_ID}`);
     const tier = page.locator(".tier").first();
     for (const size of [
       { width: 1280, height: 720 }, // beside
       { width: 1600, height: 900 }, // under
     ]) {
       await page.setViewportSize(size);
-      await page.getByRole("button", { name: "Mine", exact: true }).click();
-      await expect(page.locator(".ranking")).toBeVisible();
-      const mine = (await tier.boundingBox())!;
-      await page.getByRole("button", { name: "Author", exact: true }).click();
+      // The author's arrangement first, as the list opens, then one's own version:
+      // the version the last size made is put aside, away from the page.
+      if (page.url().includes("/l/")) {
+        await page.evaluate((id) => localStorage.removeItem(`tyl:draft:${id}`), LIST_ID);
+        await page.goto("about:blank");
+      }
+      await page.goto(`/l/${LIST_ID}`);
       await expect(page.getByRole("region", { name: "Their ranking" })).toBeVisible();
       const theirs = (await tier.boundingBox())!;
+      await startFromScratch(page);
+      await expect(page.getByRole("region", { name: "Your ranking" })).toBeVisible();
+      const mine = (await tier.boundingBox())!;
       expect(Math.round(theirs.x)).toBe(Math.round(mine.x));
       expect(Math.round(theirs.width)).toBe(Math.round(mine.width));
       // Mine's first tier is empty and the author's holds a card: one height, 90 + 2 × 12.
@@ -104,7 +110,7 @@ test.describe("a wide screen", () => {
     await page.route(`**/lists/${LIST_ID}`, (route) => route.fulfill({ json: { ...list, tiers } }));
     await page.goto(`/l/${LIST_ID}`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
-    await page.getByRole("button", { name: "Mine", exact: true }).click();
+    await startFromScratch(page);
     const board = page.locator(".ranking");
     await expect(board).not.toHaveClass(/ranking--under/);
     await page.getByRole("button", { name: "Cards under the tiers" }).click();
@@ -135,8 +141,8 @@ test.describe("a wide screen", () => {
     await expect(page.locator(".ranking__side")).toBeVisible();
     await page.reload();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
-    // Nothing is placed yet, so the list opens on the author's ranking again.
-    await page.getByRole("button", { name: "Mine", exact: true }).click();
+    // The version started from scratch is one's own: the list opens on it again.
+    await expect(page.locator(".list-head__version")).toBeVisible();
     await expect(page.locator(".ranking")).not.toHaveClass(/ranking--under/);
     await page.getByRole("button", { name: "Cards under the tiers" }).click();
     await expect(page.locator(".ranking")).toHaveClass(/ranking--under/);
@@ -164,7 +170,7 @@ test.describe("a wide screen", () => {
     );
     await page.goto(`/l/${LIST_ID}`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
-    await page.getByRole("button", { name: "Mine", exact: true }).click();
+    await startFromScratch(page);
     await expect(page.locator(".ranking")).not.toHaveClass(/ranking--under/);
     await page.waitForFunction(() => document.getAnimations().length === 0);
 
@@ -249,7 +255,7 @@ test.describe("a wide screen", () => {
     await mockBackend(page);
     await page.goto(`/l/${LIST_ID}`);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
-    await page.getByRole("button", { name: "Mine", exact: true }).click();
+    await startFromScratch(page);
 
     const pool = page.locator(".pool");
     await expect(pool).toHaveCSS("position", "fixed");

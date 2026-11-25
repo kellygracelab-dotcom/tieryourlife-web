@@ -143,6 +143,7 @@ export const en = {
     deleteFailed: "Couldn’t delete the account — nothing was changed. Try again in a minute.",
     deleted: "Your account was deleted.",
     languageTitle: "Language",
+    sheetDone: "Done",
     hiddenTitle: "Hidden",
     hiddenBody: "Lists and authors you hid on this device. Nobody else is told.",
     hiddenEmptyTitle: "Everything is showing",
@@ -166,6 +167,8 @@ export const en = {
   },
   footer: {
     privacy: "Privacy policy",
+    // On a phone the foot's first line is three short words (25.11.2026).
+    privacyShort: "Privacy",
     about: "About",
   },
   about: {
@@ -324,6 +327,12 @@ export const en = {
     addAsName: "Add “{name}” as a card",
     pickHint: "Click a result to add it. Enter adds “{name}” as a card with just a name.",
     add: "Add",
+    firstTitle: "Add your first cards",
+    firstCaption: "Search films, games, anime, music — the picture comes with the name.",
+    firstField: "Search or type a name",
+    sheetTitle: "Add cards",
+    sheetDone: "Done",
+    sheetDoneAdded: "Done · {n} added",
     noCardsYet: "No cards yet. Search the catalogue or type a name and press Enter.",
     tiers: "Tiers",
     // The phone app's names for the five tiers a new list starts with.
@@ -439,10 +448,9 @@ export const en = {
     offlineBody: "Nothing was lost. Try again once you are back online.",
     failedTitle: "Could not open this list",
     failedBody: "Something went wrong on the way. Try again.",
+    // A ranking's page still switches between its author's and its visitors' (RankingPage).
     views: "Whose arrangement to show",
-    // The phone app's words for the same switch.
     viewMine: "Mine",
-    viewTheirs: "Author",
     yourArrangement: "Your arrangement",
     more: "More about this list",
     report: "Report this list",
@@ -465,7 +473,7 @@ export const en = {
     hiddenBody: "It won’t show up in your feed. You can undo that here.",
     unhide: "Unhide",
     goHome: "Go to home",
-    // The one Save (Danylo, 14.11.2026): its words follow the Author | Mine switch.
+    // The one Save (Danylo, 14.11.2026): "Save my list" once there is a version of one's own.
     saveAuthors: "Save author’s list",
     saveMyList: "Save my list",
     saved: "Saved",
@@ -476,22 +484,31 @@ export const en = {
     source: "Source: {label}",
     viewAuthor: "View {name}",
     theirRanking: "Their ranking",
-    backToAuthor: "Back to the author’s ranking",
-    // The phone app's words for a first move on Author, which starts Mine from it.
+    // No Author | Mine (Danylo and Android, 25.11.2026): the list opens on the
+    // author's arrangement, and its first move starts one's own version from it.
+    // A list without its author's name says "the author’s" in every one of them.
     startedFrom: "Your version starts from {name}’s ranking",
-    startedFromUnnamed: "Your version starts from this ranking",
-    replacedYours: "Replaced your version with {name}’s ranking",
-    replacedYoursUnnamed: "Replaced your version with this ranking",
+    startedFromUnnamed: "Your version starts from the author’s ranking",
     seedHint: "Placing it starts your version from {name}’s.",
-    seedHintUnnamed: "Placing it starts your version from this ranking.",
+    seedHintUnnamed: "Placing it starts your version from the author’s.",
     dropToStart: "Drop it to start your version.",
     seedStart: "Move a card to start your version.",
-    // A first move on Theirs over a Mine with cards placed asks first (Danylo and Android, 16.11.2026).
-    replaceAsk: "Start from {name}’s ranking?",
-    replaceAskUnnamed: "Start from this ranking?",
+    // Under the title once the version is one's own; {see} is the way to the author's.
+    yourVersion: "Your version · {see}",
+    seeAuthors: "see {name}’s",
+    seeAuthorsUnnamed: "see the author’s",
+    // Over the board while somebody else's arrangement is looked at.
+    authorsRanking: "{name}’s ranking",
+    authorsRankingUnnamed: "The author’s ranking",
+    backToYours: "Back to yours",
+    // The menu's two ways over one's own version, each with an Undo.
+    startFromScratch: "Start from scratch",
+    scratchDone: "All cards are back in the deck",
+    backToAuthors: "Back to {name}’s ranking",
+    backToAuthorsUnnamed: "Back to the author’s ranking",
+    replacedYours: "Replaced your version with {name}’s ranking",
+    replacedYoursUnnamed: "Replaced your version with the author’s ranking",
     rankingsLink: "{rankings} — see how others placed them",
-    replaceBody: "Your version will be replaced.",
-    replace: "Replace",
   },
   // The readers' placings of a list. The title has no count, so it cannot
   // disagree with the chip's, which is the takes (Danylo, 28.10).
@@ -653,6 +670,7 @@ export const en = {
     hide: "Hide",
     footer: "Android app",
     footerSoon: "Android app · coming soon",
+    footerSoonPhone: "Android app — coming soon to Google Play",
     menu: "Get the Android app",
     aboutBody:
       "Everything the site does, plus offline lists, history, AI pictures and the Flip cover screen. Your lists sync through your Google account.",

@@ -1,5 +1,6 @@
 import { devices, expect, test, type Page } from "@playwright/test";
 import { LIST_ID, list, mockBackend } from "./fixtures";
+import { startFromScratch } from "./listVersion";
 
 /**
  * QA W48: the stack of notices set each one's bottom inline, which beat the
@@ -39,7 +40,7 @@ const openMine = async (page: Page, tiers?: number) => {
   }
   await page.goto(`/l/${LIST_ID}`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(list.title);
-  await page.getByRole("button", { name: "Mine", exact: true }).click();
+  await startFromScratch(page);
   await page.waitForFunction(() => document.getAnimations().length === 0);
 };
 

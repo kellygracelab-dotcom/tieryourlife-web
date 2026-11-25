@@ -27,8 +27,9 @@ async function makeBoard(page: Page, touch: boolean) {
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Films I make people watch");
   await title.press("Enter");
-  // An empty pool has the box that brings cards in open on a wide window, behind + Add on a phone.
-  if (touch) await press(page.getByRole("button", { name: "Add", exact: true }), touch);
+  // An empty list has the box that brings cards in open on a wide window; on a phone its
+  // first cards' card opens the sheet that does (mobile BRIEF 25.11).
+  if (touch) await press(page.getByRole("button", { name: "Search or type a name" }), touch);
   // A full page of pictures for every name, more than the box has room for.
   await page.route("**/lists/pictures?*", (route) => {
     const q = new URL(route.request().url()).searchParams.get("q") ?? "";
@@ -56,6 +57,8 @@ async function makeBoard(page: Page, touch: boolean) {
     await add.press("Enter");
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
+  // On a phone the cards were added in a sheet of the window's height: Done closes it.
+  if (touch) await press(page.getByRole("button", { name: /^Done/ }), touch);
   // The card's menu by a double tap, as on the phone: any tier by a press, no
   // keyboard needed. Nothing sits on the card itself to be hit by mistake.
   const card = page.getByRole("button", { name: "Ex Machina", exact: true });
@@ -115,11 +118,19 @@ test("New list opens a new board, where the list is made", async ({ page, hasTou
   await title.press("Enter");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Cheeses");
   await expect(page.getByRole("button", { name: "Add tier" })).toBeVisible();
-  // Nothing in the pool yet: it says so, and the catalogue's box takes the cursor,
-  // at once on a wide window, from + Add on a phone.
-  await expect(page.getByRole("heading", { name: "Cards left · 0" })).toBeVisible();
-  await expect(page.getByText("Add cards by name, or search the catalogue.")).toBeVisible();
-  if (hasTouch) await press(page.getByRole("button", { name: "Add", exact: true }), hasTouch);
+  // Nothing in the pool yet: it says so, and the catalogue's box takes the cursor at
+  // once on a wide window; a phone asks for the first cards above the tiers, with no
+  // tray, and its field opens the sheet that adds them (mobile BRIEF 25.11).
+  if (hasTouch) {
+    await expect(page.getByRole("heading", { name: "Add your first cards" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Cards left · 0" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Play", exact: true })).toBeHidden();
+    await press(page.getByRole("button", { name: "Search or type a name" }), hasTouch);
+    await expect(page.getByRole("dialog", { name: "Add cards" })).toBeVisible();
+  } else {
+    await expect(page.getByRole("heading", { name: "Cards left · 0" })).toBeVisible();
+    await expect(page.getByText("Add cards by name, or search the catalogue.")).toBeVisible();
+  }
   await expect(page.getByRole("textbox", { name: "Add a card" })).toBeFocused();
 });
 

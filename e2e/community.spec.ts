@@ -34,9 +34,9 @@ test("hides a list from its menu: the page closes, and says so when opened again
   // Hidden for good: the page says so when opened again, after a reload too.
   await page.goto(`/l/${list.id}`);
   await expect(page.getByRole("heading", { level: 2, name: "You hid this list" })).toBeVisible();
-  await expect(page.getByRole("group", { name: "Whose arrangement to show" })).toBeHidden();
+  await expect(page.getByRole("region", { name: "Their ranking" })).toBeHidden();
   await page.getByRole("button", { name: "Unhide" }).click();
-  await expect(page.getByRole("group", { name: "Whose arrangement to show" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Their ranking" })).toBeVisible();
 });
 
 test("takes a guest's report with no sign-in, and hides the list at once", async ({ page }) => {
@@ -61,6 +61,9 @@ test("a guest's settings: the theme on this device, and the privacy policy", asy
   await mockBackend(page);
   await page.goto("/settings");
   await expect(page.getByText("Sign in to change your settings.")).toBeVisible();
+  // On a phone the theme is a row whose sheet has the choice; a press there closes it.
+  const phone = page.viewportSize()!.width < 600;
+  if (phone) await page.getByRole("button", { name: "Theme" }).click();
   await page.getByRole("radio", { name: "Dark" }).first().click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect
@@ -70,6 +73,7 @@ test("a guest's settings: the theme on this device, and the privacy policy", asy
     "href",
     "/privacy.html",
   );
+  if (phone) await page.getByRole("button", { name: "Theme" }).click();
   await page.getByRole("radio", { name: "System" }).first().click();
   await expect(page.locator("html")).not.toHaveAttribute("data-theme", /./);
 });

@@ -507,9 +507,14 @@ describe("Shell page title", () => {
 });
 
 describe("Shell's bar on a list's page in a narrow window (audit C2)", () => {
-  // jsdom has no matchMedia: a narrow window answers every max-width query.
+  // jsdom has no matchMedia: a narrow window answers every max-width query, and never turns.
   const narrowWindow = (query: string) =>
-    ({ matches: query.includes("max-width"), media: query }) as MediaQueryList;
+    ({
+      matches: query.includes("max-width"),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }) as unknown as MediaQueryList;
   const scrollTo = (y: number) => {
     act(() => {
       Object.defineProperty(window, "scrollY", { value: y, configurable: true });
@@ -544,6 +549,55 @@ describe("Shell's bar on a list's page in a narrow window (audit C2)", () => {
       expect(screen.getByRole("banner")).not.toHaveClass("top--away");
     } finally {
       scrollTo(0);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  // One bar of 56 px on a phone, as the app's home screens (25.11.2026).
+  it("goes away on the tabs' pages of a phone too, where New list is the round button", () => {
+    vi.stubGlobal("matchMedia", narrowWindow);
+    try {
+      scrollTo(0);
+      open({}, "/b");
+      const bar = screen.getByRole("banner");
+      expect(bar).toHaveClass("top--tabs");
+      expect(within(bar).getByRole("navigation", { name: "Site" })).toBeInTheDocument();
+      expect(within(bar).getByRole("link", { name: "Search lists" })).toBeInTheDocument();
+      const fab = document.querySelector("a.fab");
+      expect(fab).toHaveAccessibleName("New list");
+      expect(fab).toHaveAttribute("href", "/b/new");
+      expect(bar).not.toContainElement(fab as HTMLElement);
+      scrollTo(400);
+      expect(bar).toHaveClass("top--away");
+      scrollTo(300);
+      expect(bar).not.toHaveClass("top--away");
+    } finally {
+      scrollTo(0);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps the brand and no round button elsewhere on a phone", () => {
+    vi.stubGlobal("matchMedia", narrowWindow);
+    try {
+      open({}, "/about");
+      expect(screen.getByRole("banner")).not.toHaveClass("top--tabs");
+      expect(document.querySelector(".fab")).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("has the foot's short words on a phone, and the app's line saying where it is coming", () => {
+    vi.stubGlobal("matchMedia", narrowWindow);
+    try {
+      open({}, "/about");
+      const foot = within(screen.getByRole("contentinfo"));
+      expect(foot.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy.html");
+      expect(foot.getByText("Android app — coming soon to Google Play")).not.toHaveAttribute(
+        "href",
+      );
+    } finally {
       vi.unstubAllGlobals();
     }
   });

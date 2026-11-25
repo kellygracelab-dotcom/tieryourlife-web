@@ -1153,9 +1153,14 @@ function OpenBoard({
 
   return (
     <article
-      className={
-        boardDock === null ? "list-page board-page" : `list-page board-page list-page--${boardDock}`
-      }
+      className={[
+        "list-page board-page",
+        boardDock !== null && `list-page--${boardDock}`,
+        // No card yet: on a phone no Play until there is one (mobile BRIEF 25.11, 1).
+        view.uids.length === 0 && "board-page--no-cards",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <Link className="board-page__back" to={house === null ? "/b" : HOUSE_PANE_PATH}>
         <Icon name="arrow_back" />

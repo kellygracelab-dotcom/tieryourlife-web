@@ -18,8 +18,19 @@ export const TIP_DELAY_MS = 1000;
 /** Kept this far from its element and from the window's edges. */
 const GAP = 10;
 const MARGIN = 8;
+/** A phone's strip stands this far over the bottom panel, as a notice does. */
+const STRIP_GAP = 8;
 /** The element a tip points at wears this while the tip is on screen. */
 export const TIP_RING = "tip-ring";
+/**
+ * A phone (360–430 px, Danylo's yes of 25.11.2026): there a bubble by its
+ * element covered the list's title, the search field or the first card, so
+ * the tip is a strip over the bottom panel instead and the ring alone points.
+ */
+const PHONE = "(max-width: 599px)";
+
+const onPhone = (): boolean =>
+  typeof window.matchMedia === "function" && window.matchMedia(PHONE).matches;
 
 /** Where a page offers a tip: `data-tip` names it, and a tip with a number reads `data-tip-n`. */
 const placeOf = (id: TipId): HTMLElement | null =>
@@ -46,7 +57,9 @@ function offered(): { id: TipId; at: HTMLElement } | null {
  * (artboards 47–50): nothing darkens, nothing takes the focus, and the page
  * under it goes on working. Got it closes it, No more tips closes them all;
  * Escape and a press anywhere else close it too. A tip goes by itself when
- * its element does (a card placed takes the first one away). Mounted once.
+ * its element does (a card placed takes the first one away). On a phone it
+ * is a thin strip over the bottom panel instead, its element ringed in place.
+ * Mounted once.
  */
 export function Tips() {
   const [shown, setShown] = useState<{ id: TipId; at: HTMLElement } | null>(null);
@@ -124,22 +137,102 @@ function textOf(id: TipId, at: HTMLElement) {
   return strings.tips.add;
 }
 
+/** The field somebody is typing into, if any: a phone's strip never goes over it. */
+function typedInto(): HTMLElement | null {
+  const field = document.activeElement;
+  if (!(field instanceof HTMLElement)) return null;
+  const typed =
+    field.isContentEditable ||
+    field.matches(
+      "textarea, input:not([type=checkbox], [type=radio], [type=button], [type=submit], [type=range])",
+    );
+  return typed ? field : null;
+}
+
+/**
+ * The top of what is docked to the window's foot: the board's "Cards left"
+ * tray, or a pinned row at the foot of a sheet. Found by what stands at the
+ * foot rather than by name, so the pages keep their markup to themselves. A
+ * fixed thing reaching above the middle (a sheet over the whole page) is not
+ * a panel: then the pinned row at its foot counts, if it has one.
+ */
+function panelTop(foot: number, tip: HTMLElement): number {
+  if (typeof document.elementsFromPoint !== "function") return foot;
+  const middle = document.documentElement.clientWidth / 2;
+  const docked = (box: DOMRect) => box.bottom >= foot - 1 && box.top > foot / 2;
+  for (const hit of document.elementsFromPoint(middle, foot - 1)) {
+    if (tip.contains(hit)) continue;
+    let row: HTMLElement | null = null;
+    for (let node: Element | null = hit; node instanceof HTMLElement; node = node.parentElement) {
+      if (node === document.body) break;
+      const box = node.getBoundingClientRect();
+      const { position } = getComputedStyle(node);
+      if (position === "fixed" || position === "sticky") {
+        if (docked(box)) return box.top;
+        return row === null ? foot : row.getBoundingClientRect().top;
+      }
+      if (docked(box)) row = node;
+    }
+    // The first thing at the foot that is not the tip decides: the page's own flow docks nothing.
+    return foot;
+  }
+  return foot;
+}
+
+/**
+ * How far above the window's foot a phone's strip stands: over the bottom
+ * panel, an open keyboard and any notice there, and off the element it
+ * explains and the field being typed into (above it where there is room,
+ * else under it).
+ */
+function stripLift(tip: HTMLElement, at: HTMLElement): number {
+  const foot = document.documentElement.clientHeight;
+  const view = window.visualViewport;
+  // An open keyboard covers the window's foot and whatever is docked there.
+  const keyboard = view ? view.offsetTop + view.height : foot;
+  let floor = Math.min(foot, keyboard, panelTop(foot, tip));
+  for (const notice of document.querySelectorAll<HTMLElement>(".snackbar")) {
+    const box = notice.getBoundingClientRect();
+    if (box.height > 0 && box.top > foot / 2) floor = Math.min(floor, box.top);
+  }
+  const { height } = tip.getBoundingClientRect();
+  let bottom = floor - STRIP_GAP;
+  // The field typed into goes last, so it wins where both cannot be kept clear.
+  for (const kept of [at, typedInto()]) {
+    if (kept === null) continue;
+    const box = kept.getBoundingClientRect();
+    if (bottom <= box.top || bottom - height >= box.bottom) continue;
+    if (box.top - GAP - height >= MARGIN) bottom = box.top - GAP;
+    else if (box.bottom + GAP + height <= floor - STRIP_GAP) bottom = box.bottom + GAP + height;
+  }
+  return Math.max(0, foot - bottom);
+}
+
+type Place =
+  | { strip: false; left: number; top: number; arrow: number; below: boolean }
+  | { strip: true; lift: number };
+
 function Bubble({ id, at, onClose }: { id: TipId; at: HTMLElement; onClose: () => void }) {
   const bubble = useRef<HTMLDivElement>(null);
-  const [place, setPlace] = useState<{
-    left: number;
-    top: number;
-    arrow: number;
-    below: boolean;
-  } | null>(null);
+  // Known before the first frame, so a strip is measured as a strip.
+  const [phone, setPhone] = useState(onPhone);
+  const [place, setPlace] = useState<Place | null>(null);
 
-  // Beside its element wherever the page scrolls or the window turns.
+  // Beside its element wherever the page scrolls or the window turns; on a
+  // phone, over the bottom panel as it grows or shrinks, or a keyboard opens.
   useLayoutEffect(() => {
     const element = bubble.current;
     if (element === null) return;
     let frame = 0;
     const measure = () => {
       frame = 0;
+      const strip = onPhone();
+      setPhone(strip);
+      if (strip !== phone) return; // Measured again once drawn as the other.
+      if (strip) {
+        setPlace({ strip: true, lift: stripLift(element, at) });
+        return;
+      }
       const target = at.getBoundingClientRect();
       const { width, height } = element.getBoundingClientRect();
       const middle = (target.left + target.right) / 2;
@@ -148,6 +241,7 @@ function Bubble({ id, at, onClose }: { id: TipId; at: HTMLElement; onClose: () =
       const above = target.top - GAP - height;
       const below = above < MARGIN;
       setPlace({
+        strip: false,
         left,
         top: below ? target.bottom + GAP : above,
         arrow: Math.max(16, Math.min(middle - left, width - 16)),
@@ -162,13 +256,36 @@ function Bubble({ id, at, onClose }: { id: TipId; at: HTMLElement; onClose: () =
     window.addEventListener("resize", soon);
     const sizes = typeof ResizeObserver === "function" ? new ResizeObserver(soon) : null;
     sizes?.observe(at);
+    if (!phone) {
+      return () => {
+        cancelAnimationFrame(frame);
+        window.removeEventListener("scroll", soon, true);
+        window.removeEventListener("resize", soon);
+        sizes?.disconnect();
+      };
+    }
+    // A phone's strip also follows the keyboard, the field focused, its own
+    // words wrapping anew, and the tray and notices changing under a still page.
+    const view = window.visualViewport;
+    view?.addEventListener("resize", soon);
+    view?.addEventListener("scroll", soon);
+    document.addEventListener("focusin", soon);
+    document.addEventListener("focusout", soon);
+    sizes?.observe(element);
+    const changes = new MutationObserver(soon);
+    changes.observe(document.body, { subtree: true, childList: true, attributes: true });
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", soon, true);
       window.removeEventListener("resize", soon);
+      view?.removeEventListener("resize", soon);
+      view?.removeEventListener("scroll", soon);
+      document.removeEventListener("focusin", soon);
+      document.removeEventListener("focusout", soon);
       sizes?.disconnect();
+      changes.disconnect();
     };
-  }, [at]);
+  }, [at, phone]);
 
   // The ring on its element, and the ways out that are not its buttons.
   useEffect(() => {
@@ -191,12 +308,18 @@ function Bubble({ id, at, onClose }: { id: TipId; at: HTMLElement; onClose: () =
   return (
     <div
       ref={bubble}
-      className={`tip${place?.below === true ? " tip--below" : ""}`}
+      className={
+        phone
+          ? "tip tip--strip"
+          : `tip${place?.strip === false && place.below ? " tip--below" : ""}`
+      }
       data-tip-for={id}
       style={
-        place === null
+        place === null || place.strip !== phone
           ? { visibility: "hidden" }
-          : { left: place.left, top: place.top, ["--tip-arrow" as string]: `${place.arrow}px` }
+          : place.strip
+            ? { ["--tip-lift" as string]: `${place.lift}px` }
+            : { left: place.left, top: place.top, ["--tip-arrow" as string]: `${place.arrow}px` }
       }
     >
       {/* Read out when it comes, without taking the focus from where it is. */}

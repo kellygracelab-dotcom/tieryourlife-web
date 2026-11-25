@@ -86,7 +86,6 @@ import { sectionName } from "../features/sections/model";
 import { sectionsStore } from "../features/sections/useSections";
 import { fillNodes } from "../strings/fillNodes";
 import { Button } from "../ui/Button";
-import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
 import { Snackbar, useBoardNotice } from "../ui/Snackbar";
 import { useBackCloses } from "../ui/useBackCloses";
@@ -101,13 +100,27 @@ import "./ListPage.css";
 import { siteOrigin } from "../lib/links";
 import { listFinished, listOpened } from "../lib/usageEvents";
 
-/** Whose arrangement is on screen, in the app's words: the author's (or a reader's), or this person's own. */
+/**
+ * Whose arrangement the board holds: the author's (or a reader's), to be
+ * moved and so start one's own from, or this person's own version.
+ */
 type View = "theirs" | "mine";
 
-/** The spec's 200 ms for the cards to move when the switch changes boards. */
-const SWITCH_MS = 200;
+/**
+ * Where the page stands: the board, whether one's own version gives way to
+ * somebody else's for a look, and the reader whose placing was chosen. An
+ * Undo puts all three back as they were.
+ */
+interface Place {
+  view: View;
+  peek: boolean;
+  chosen: ReaderRanking | null;
+}
 
-/** A reader without a name is "Someone" on the switch too, in this language. */
+/** The spec's 200 ms for the cards to move when the page changes boards. */
+const MOVE_MS = 200;
+
+/** A reader without a name is "Someone" on the strip too, in this language. */
 const named = (ranking: ReaderRanking): ReaderRanking => ({
   ...ranking,
   authorName: readerName(ranking.authorName) ?? strings.profile.someone,
@@ -131,16 +144,19 @@ function mineFromCopy(
   return true;
 }
 
-/** This device began ranking the list, or finished: then it opens on Mine. */
-const begunHere = (store: KeyValueStore, list: PublishedList): boolean =>
+/** This device has a version of its own: something placed, or its cards put in an order of its own. */
+const mineBegun = (store: KeyValueStore, list: PublishedList): boolean =>
   loadPlacedDraft(store, scopeOf(list)) !== null ||
-  loadPoolOrder(store, scopeOf(list)) !== undefined ||
-  readKept(store, list.id) !== null;
+  loadPoolOrder(store, scopeOf(list)) !== undefined;
+
+/** This device began ranking the list, or finished: then it opens on one's own version. */
+const begunHere = (store: KeyValueStore, list: PublishedList): boolean =>
+  mineBegun(store, list) || readKept(store, list.id) !== null;
 
 /**
- * Switching boards moves the same cards rather than swapping one picture for
+ * Changing boards moves the same cards rather than swapping one picture for
  * another: each tile flies from where it sat on the board that was shown to
- * where it sits on the new one. `remember` is called just before the switch;
+ * where it sits on the new one. `remember` is called just before the change;
  * the render after it moves them.
  */
 function useCardsMove(box: RefObject<HTMLElement | null>): () => void {
@@ -151,7 +167,7 @@ function useCardsMove(box: RefObject<HTMLElement | null>): () => void {
     if (from === null) return;
     for (const tile of box.current?.querySelectorAll<HTMLElement>(".tile[data-item]") ?? []) {
       const rect = from.get(tile.dataset.item ?? "");
-      if (rect !== undefined) flyIn(tile, rect, undefined, SWITCH_MS);
+      if (rect !== undefined) flyIn(tile, rect, undefined, MOVE_MS);
     }
   });
   return () => {
@@ -232,56 +248,34 @@ function SourceLine({ source }: { source: ListSource }) {
   return <p className="list-head__based-on">{fillNodes(strings.list.source, { label })}</p>;
 }
 
-interface WhoseSwitchProps {
-  view: View;
-  /** The reader whose placing the left half shows; null for the author's. */
-  chosen: ReaderRanking | null;
-  /** The author's own page has no Mine: the left half alone, for a reader's placing. */
-  mine: boolean;
-  onView: (view: View) => void;
+interface StripProps {
+  /** Whose arrangement is on show: "danylo’s ranking". */
+  title: string;
+  /** The way back: to one's own version, or from a reader's placing to the author's. */
+  back: string;
   onBack: () => void;
+  backRef?: RefObject<HTMLButtonElement | null>;
 }
 
 /**
- * Author | Mine, the app's switch: one pill, the chosen half filled and
- * ticked. The left half is whoever's placing is on screen: the author's, or
- * a reader's by name with a cross back to the author's.
+ * Somebody else's arrangement on show in place of one's own, or a reader's
+ * in place of the author's: a strip over the board says whose it is, and its
+ * one button goes back (Danylo and Android, 25.11.2026: no Author | Mine).
  */
-function WhoseSwitch({ view, chosen, mine, onView, onBack }: WhoseSwitchProps) {
-  const half = (which: View, label: string, back?: boolean) => (
-    <span className={view === which ? "whose__half whose__half--on" : "whose__half"}>
+function WhoseStrip({ title, back, onBack, backRef }: StripProps) {
+  return (
+    <div className="list-strip" role="region" aria-label={title}>
+      <p className="list-strip__title">
+        <bdi>{title}</bdi>
+      </p>
       <button
         type="button"
-        className="whose__segment"
-        aria-pressed={view === which}
-        onClick={() => onView(which)}
+        className="btn btn--tonal list-strip__back"
+        onClick={onBack}
+        ref={backRef}
       >
-        {view === which && <Icon name="check" className="whose__check" />}
-        <span className="whose__label">{label}</span>
+        <span>{back}</span>
       </button>
-      {back === true && (
-        <button
-          type="button"
-          className="whose__back"
-          aria-label={strings.list.backToAuthor}
-          title={strings.list.backToAuthor}
-          onClick={onBack}
-        >
-          <Icon name="close" />
-        </button>
-      )}
-    </span>
-  );
-  return (
-    <div
-      className={["whose", !mine && "whose--one", view === "mine" && "whose--mine"]
-        .filter(Boolean)
-        .join(" ")}
-      role="group"
-      aria-label={strings.list.views}
-    >
-      {half("theirs", chosen?.authorName ?? strings.list.viewTheirs, chosen !== null)}
-      {mine && half("mine", strings.list.viewMine)}
     </div>
   );
 }
@@ -405,26 +399,31 @@ function OpenList({
   useEffect(() => {
     if (whoseKnown && !own) listOpened();
   }, [whoseKnown, own]);
-  // What somebody came for, as in the app: the author's ranking, unless this
-  // device has begun its own. An author who placed nothing has no half to show.
+  // What somebody came for, as in the app: the author's ranking, ready to be
+  // moved, unless this device has a version of its own, which opens instead
+  // (Danylo and Android, 25.11.2026: no Author | Mine). A list whose author
+  // placed nothing opens on one's own board, its cards in the deck.
   // Mine starts from the board the list was saved to; once anything is placed,
   // here or there, it is never put over Mine again while the page is open.
   const minePlaced = useRef(false);
   const location = useLocation();
-  const [view, setView] = useState<View>(() => {
-    mineFromCopy(localStorageStore, list, (repository ?? site).all());
-    // New here?'s ready list opens on one's own half, where the first tip waits.
-    if (wantsMine(location.state)) return "mine";
-    return author.known && !begunHere(localStorageStore, list) ? "theirs" : "mine";
-  });
-  // A reader's placing chosen in the rankings sheet, shown in the left half.
-  // It is kept in the history entry too, so Back, Forward and a reload bring
-  // it back as the app's saved state does.
   const navigate = useNavigate();
+  // A reader's placing chosen in the rankings sheet. It is kept in the
+  // history entry too, so Back, Forward and a reload bring it back as the
+  // app's saved state does.
   const [chosen, setChosen] = useState<ReaderRanking | null>(() => {
     const kept = readerKeptIn(location.state, list);
     return kept === null ? null : named(kept);
   });
+  const [view, setView] = useState<View>(() => {
+    mineFromCopy(localStorageStore, list, (repository ?? site).all());
+    // New here?'s ready list opens on one's own board, where the first tip waits.
+    if (wantsMine(location.state) || begunHere(localStorageStore, list)) return "mine";
+    // Nothing of one's own yet: the author's arrangement, or the reader's placing chosen.
+    return author.known || chosen !== null ? "theirs" : "mine";
+  });
+  // One's own version stays where it is while somebody else's is looked at, read-only.
+  const [peek, setPeek] = useState(() => view === "mine" && chosen !== null);
   const keepChosen = (ranking: ReaderRanking | null) => {
     setChosen(ranking === null ? null : named(ranking));
     void navigate(
@@ -450,28 +449,63 @@ function OpenList({
 
   const theirsKnown = author.known || chosen !== null;
   const shown: View = own || (theirsKnown && view === "theirs") ? "theirs" : "mine";
+  // One's own version is there, and somebody else's is on show over it for a look.
+  const peeking = !own && shown === "mine" && peek && theirsKnown;
   const page = useRef<HTMLElement>(null);
   const remember = useCardsMove(page);
 
-  const show = (next: View) => {
+  const place: Place = { view, peek, chosen };
+  // Where the page stands now: an Undo pressed later, or boards that came
+  // late, go by this rather than by the render they were made in.
+  const placeNow = useRef(place);
+  useLayoutEffect(() => {
+    placeNow.current = { view, peek, chosen };
+  }, [view, peek, chosen]);
+  const goTo = (next: Place) => {
     remember();
-    setView(next);
+    setView(next.view);
+    setPeek(next.peek);
+    if (next.chosen !== placeNow.current.chosen) keepChosen(next.chosen);
+    placeNow.current = next;
   };
+  // One's own version, the author's arrangement or a reader's put aside.
+  const toMine: Place = { view: "mine", peek: false, chosen: null };
+  // Whoever's placing was chosen: a look beside one's own version, or, with
+  // none yet, an arrangement to start one from.
   const choose = (ranking: ReaderRanking | null) => {
-    remember();
-    keepChosen(ranking);
-    setView("theirs");
     setSheet(false);
+    const mineHeld = view === "mine" && (author.known || mineBegun(localStorageStore, list) || own);
+    const back = ranking === null && !author.known;
+    goTo(
+      mineHeld
+        ? { view: "mine", peek: !back, chosen: ranking }
+        : { view: "theirs", peek: false, chosen: ranking },
+    );
+  };
+  // The strip's and the version line's buttons hand the focus to each other,
+  // as the one they were pressed on goes.
+  const stripBack = useRef<HTMLButtonElement>(null);
+  const seeTheirs = useRef<HTMLButtonElement>(null);
+  const focusNext = useRef<RefObject<HTMLButtonElement | null> | null>(null);
+  useEffect(() => {
+    const next = focusNext.current;
+    focusNext.current = null;
+    next?.current?.focus();
+  });
+  const lookAtAuthors = () => {
+    focusNext.current = stripBack;
+    goTo({ view: "mine", peek: true, chosen: null });
+  };
+  const backToYours = () => {
+    focusNext.current = seeTheirs;
+    goTo(toMine);
   };
   // Mine shown to others from this page, or taken back: until then the
   // rankings say whether it is among them.
   const [mineShown, setMineShown] = useState<boolean | null>(null);
   // One's own placing on the board as it is withdrawn gives way to the author's.
   const withdraw = (done?: (withdrawn: boolean) => void) => {
-    if (chosen?.mine === true) {
-      remember();
-      keepChosen(null);
-    }
+    if (chosen?.mine === true) goTo({ ...place, peek: false, chosen: null });
     if (account?.kind === "signedIn") settleRankingOffer(account.uid, list.id);
     const was = mineShown;
     setMineShown(false);
@@ -524,17 +558,17 @@ function OpenList({
     setMineRows(placed);
     setMineLabels(loadDraftLabels(localStorageStore, scopeOf(list)));
     setMineRound((round) => round + 1);
-    show("mine");
+    goTo(toMine);
   };
-  // Undo for both: Mine's draft as it was, byte for byte, and the view it was on.
-  const restoreMine = (before: string | null, back: View) => {
+  // Undo for all of them: Mine's draft as it was, byte for byte, and the page where it stood.
+  const restoreMine = (before: string | null, back: Place) => {
     if (before === null) clearDraft(localStorageStore, list.id);
     else localStorageStore.write(draftKey(list.id), before);
     setMineRows(loadDraft(localStorageStore, scopeOf(list)));
     setMineLabels(loadDraftLabels(localStorageStore, scopeOf(list)));
     setMineBefore(null);
     setMineRound((round) => round + 1);
-    show(back);
+    goTo(back);
   };
   const mineOrder = useMemo(() => {
     const order = loadPoolOrder(localStorageStore, scopeOf(list)) ?? [];
@@ -627,26 +661,25 @@ function OpenList({
         : placedBy(list, chosen),
     [list, author, chosen],
   );
-  const theirsLabel = chosen?.authorName ?? (own ? strings.owner.title : strings.list.theirRanking);
   // Whose ranking Mine starts from, by name, as the app says it: the reader
   // chosen, or the author unless the list stands without one.
-  const theirsName =
-    chosen?.authorName ?? (editorial || list.authorName.trim() === "" ? null : list.authorName);
+  const authorName = editorial || list.authorName.trim() === "" ? null : list.authorName;
+  const theirsName = chosen?.authorName ?? authorName;
+  // "danylo’s ranking", or "The author’s ranking" for a list without the name.
+  const theirsTitle =
+    theirsName === null
+      ? strings.list.authorsRankingUnnamed
+      : fill(strings.list.authorsRanking, { name: theirsName });
+  // The board's own name, as before: the reader's, or theirs.
+  const theirsLabel = chosen?.authorName ?? (own ? strings.owner.title : strings.list.theirRanking);
 
-  // A first move on Theirs over a Mine with cards placed waits for a yes, each
-  // time (Danylo and Android, 16.11.2026): its rows, while the question is up.
-  const [replacing, setReplacing] = useState<Rows | null>(null);
-  // Cancel takes the move back: Theirs is drawn again as it came.
-  const [theirsRound, setTheirsRound] = useState(0);
-  const startFromTheirs = (rows: Rows) => {
-    if (loadPlacedDraft(localStorageStore, scopeOf(list)) !== null) setReplacing(rows);
-    else takeTheirs(rows, false);
-  };
   // A first move on Theirs starts Mine from it, as on the phone, and says so.
-  // What Mine held before is kept for Undo, which puts it back byte for byte
-  // and shows Theirs again.
-  const takeTheirs = (rows: Rows, replaced: boolean) => {
+  // There is no Mine to replace: one's own version opens instead of Theirs,
+  // which is then only looked at. Undo puts the draft back byte for byte and
+  // shows Theirs again.
+  const takeTheirs = (rows: Rows) => {
     const before = localStorageStore.read(draftKey(list.id));
+    const back = place;
     // What was on screen, the reader's tier words included (the app's mine.copy(tiers = theirs.tiers)),
     // each as short as a saved ranking keeps it, so Mine shows the words Finish will save.
     // Cards a reader added of their own (K3) are theirs: Mine holds the list's.
@@ -654,17 +687,13 @@ function OpenList({
       rows.map((row) => row.filter((item) => item < list.items.length)),
       chosen === null ? null : tierWordsToSend(readerLabels(list.tiers.length, chosen)),
     );
-    const said = replaced
-      ? theirsName === null
-        ? strings.list.replacedYoursUnnamed
-        : fill(strings.list.replacedYours, { name: theirsName })
-      : theirsName === null
-        ? strings.list.startedFromUnnamed
-        : fill(strings.list.startedFrom, { name: theirsName });
-    // As long as the app's long snackbar: a finished Mine may have just been replaced.
+    // As long as the app's long snackbar.
     setNotice({
-      text: said,
-      action: { text: strings.list.undo, onClick: () => restoreMine(before, "theirs") },
+      text:
+        theirsName === null
+          ? strings.list.startedFromUnnamed
+          : fill(strings.list.startedFrom, { name: theirsName }),
+      action: { text: strings.list.undo, onClick: () => restoreMine(before, back) },
       long: true,
     });
   };
@@ -675,7 +704,9 @@ function OpenList({
     [list, theirs],
   );
   const keptBoards = useBoards(repository ?? site);
-  // The account's boards may come after the page: the saved board then starts Mine.
+  // The account's boards may come after the page: the saved board then starts
+  // Mine, and, as one's own version, takes the author's place on the board
+  // nothing was moved on yet. A reader's placing chosen stays on show for a look.
   useEffect(() => {
     if (loadPlacedDraft(localStorageStore, scopeOf(list)) !== null) minePlaced.current = true;
     if (minePlaced.current || !mineFromCopy(localStorageStore, list, keptBoards)) return;
@@ -683,11 +714,17 @@ function OpenList({
     setMineRows(loadDraft(localStorageStore, scopeOf(list)));
     setMineLabels(loadDraftLabels(localStorageStore, scopeOf(list)));
     setMineRound((round) => round + 1);
+    const now = placeNow.current;
+    if (now.view === "theirs") {
+      setView("mine");
+      setPeek(now.chosen !== null);
+    }
   }, [list, keptBoards]);
   const knownChoice = keptBoards.some(
     (board) => board.takenFrom === list.id && board.rankingChoice !== undefined,
   );
-  // Save keeps what the switch shows: the author's arrangement, or one's own.
+  // Save keeps one's own version once there is one, even while the author's
+  // is looked at; before, the author's arrangement as it is shown.
   const authorShown = shown === "theirs" && author.known;
   const toSave = useMemo<Shown>(
     () =>
@@ -719,8 +756,90 @@ function OpenList({
     saveAsked.current = false;
     saving.start();
   });
-  // The visitor's switch whenever there is a Theirs; the author's only for a reader's placing.
-  const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
+  // Over the board, whose arrangement stands in for one's own and the way
+  // back: to one's own version from a look at somebody else's, or from a
+  // reader's placing to the author's, before there is a version to go back to.
+  const strip: StripProps | null = outOfSight
+    ? null
+    : own
+      ? chosen === null
+        ? null
+        : { title: theirsTitle, back: strings.list.backToYours, onBack: () => choose(null) }
+      : peeking
+        ? {
+            title: theirsTitle,
+            back: strings.list.backToYours,
+            onBack: backToYours,
+            backRef: stripBack,
+          }
+        : shown === "theirs" && chosen !== null
+          ? {
+              title: theirsTitle,
+              back: !author.known
+                ? strings.list.backToYours
+                : authorName === null
+                  ? strings.list.backToAuthorsUnnamed
+                  : fill(strings.list.backToAuthors, { name: authorName }),
+              onBack: () => choose(null),
+            }
+          : null;
+  // One's own version on show of a list the author arranged: a grey line
+  // under the title says so, and leads to the author's for a look.
+  const versionLine = !own && !outOfSight && author.known && shown === "mine" && !peeking;
+
+  // The menu's two ways over one's own version, each at once with an Undo in
+  // the snackbar (Danylo and Android, 25.11.2026). Start from scratch puts
+  // every card back in the deck: the ones placed last, in their order, after
+  // the rest. Before there is a version it starts an empty one.
+  const scratchRows: Rows =
+    shown === "theirs" && !own
+      ? theirs.rows.map((row) => row.filter((item) => item < list.items.length))
+      : (mineRows ?? []);
+  const startFromScratch =
+    own || outOfSight || !scratchRows.some((row) => row.length > 0)
+      ? null
+      : () => {
+          const before = localStorageStore.read(draftKey(list.id));
+          const back = place;
+          const placed = scratchRows.flat();
+          const left = new Set(placed);
+          putInMine(
+            mineList.tiers.map(() => []),
+            undefined,
+            [...mineOrder.filter((i) => !left.has(i)), ...placed],
+          );
+          setNotice({
+            text: strings.list.scratchDone,
+            action: { text: strings.list.undo, onClick: () => restoreMine(before, back) },
+            long: true,
+          });
+        };
+  // Back to the author's ranking: one's own version becomes the author's arrangement again.
+  const backToAuthors =
+    own || outOfSight || !author.known || shown !== "mine"
+      ? null
+      : {
+          label:
+            authorName === null
+              ? strings.list.backToAuthorsUnnamed
+              : fill(strings.list.backToAuthors, { name: authorName }),
+          run: () => {
+            const before = localStorageStore.read(draftKey(list.id));
+            const back = place;
+            putInMine(
+              author.rows.map((row) => [...row]),
+              null,
+            );
+            setNotice({
+              text:
+                authorName === null
+                  ? strings.list.replacedYoursUnnamed
+                  : fill(strings.list.replacedYours, { name: authorName }),
+              action: { text: strings.list.undo, onClick: () => restoreMine(before, back) },
+              long: true,
+            });
+          },
+        };
   // Who else ranked it is a line of the menu, the one place the number is said.
   // Always there, as in the app: the author's own ranking heads the sheet.
   // The count the list came with, and one's own as it is shown or withdrawn here.
@@ -852,9 +971,35 @@ function OpenList({
           <h1 className="list-head__title">
             <bdi>{list.title}</bdi>
           </h1>
+          {/* "Your version · see danylo’s": the board is one's own, and the author's is a press away. */}
+          {versionLine && (
+            <p className="list-head__version">
+              {fillNodes(strings.list.yourVersion, {
+                see: (
+                  <button
+                    type="button"
+                    className="list-head__see"
+                    ref={seeTheirs}
+                    onClick={lookAtAuthors}
+                  >
+                    {authorName === null
+                      ? strings.list.seeAuthorsUnnamed
+                      : fill(strings.list.seeAuthors, { name: authorName })}
+                  </button>
+                ),
+              })}
+            </p>
+          )}
           {/* Its section and how many cards it has: "Anime · 25 cards" (artboard 21),
               then how many others ranked it, a way into their rankings (artboard 36). */}
-          <p className="list-head__meta list-head__count">
+          {/* On a phone the count stands in the author's line; a list without one keeps it here. */}
+          <p
+            className={
+              editorial
+                ? "list-head__meta list-head__count list-head__count--alone"
+                : "list-head__meta list-head__count"
+            }
+          >
             {[
               sectionName(list.category, knownSections),
               plural(strings.card.items, list.itemCount),
@@ -899,6 +1044,7 @@ function OpenList({
                 photoUrl={list.authorPhotoUrl}
                 own={own}
                 notify={setNotice}
+                count={own ? undefined : plural(strings.card.items, list.itemCount)}
               />
             </div>
           )}
@@ -913,15 +1059,6 @@ function OpenList({
           {list.basedOn != null && <BasedOnLine basedOn={list.basedOn} />}
           {list.listSource !== undefined && <SourceLine source={list.listSource} />}
         </div>
-        {switchShown && (
-          <WhoseSwitch
-            view={shown}
-            chosen={chosen}
-            mine={!own}
-            onView={show}
-            onBack={() => choose(null)}
-          />
-        )}
         <span className="list-head__tools">
           {own ? (
             <AuthorTools
@@ -942,29 +1079,15 @@ function OpenList({
                 saving={saving}
                 rankings={rankingsEntry}
                 showMine={showMine}
-                resetMine={
-                  outOfSight
-                    ? undefined
-                    : !arranged
-                      ? null
-                      : () => {
-                          const current = loadPlacedDraft(localStorageStore, scopeOf(list));
-                          if (current === null) return;
-                          const placed = new Set(current.flat());
-                          putInMine(
-                            current.map(() => []),
-                            undefined,
-                            [...mineOrder.filter((i) => !placed.has(i)), ...current.flat()],
-                          );
-                        }
-                }
+                startFromScratch={startFromScratch}
+                backToAuthors={backToAuthors}
               />
             </>
           )}
         </span>
         <span className="list-head__bar" ref={setHeadSlot} />
       </header>
-      {!outOfSight && !own && shown === "mine" && !sheet && !playing && (
+      {!outOfSight && !own && shown === "mine" && !peeking && !sheet && !playing && (
         <RankingOffer
           listId={list.id}
           due={arranged && (afterGame || allPlaced)}
@@ -973,8 +1096,9 @@ function OpenList({
         />
       )}
       {outOfSight && <HiddenView list={list} />}
+      {strip !== null && <WhoseStrip {...strip} />}
       {!outOfSight &&
-        (shown === "mine" ? (
+        (shown === "mine" && !peeking ? (
           <BoardFrameContext.Provider value={frame}>
             {/* Play starts from Mine as it stands, hand moves made since included. */}
             <RankingBoard
@@ -1003,8 +1127,10 @@ function OpenList({
               }}
             />
           </BoardFrameContext.Provider>
-        ) : own ? (
+        ) : own || peeking ? (
           // The author sees the list as it was published; it is changed on its board, behind Edit.
+          // A visitor with a version of their own looks at somebody else's the same way:
+          // their own stays as it is, a press away (Danylo and Android, 25.11.2026).
           <ReadOnlyBoard
             label={theirsLabel}
             tiers={theirs.tiers}
@@ -1013,13 +1139,13 @@ function OpenList({
             pool={chosen === null ? author.pool : []}
           />
         ) : (
-          // A visitor may start from what is on show: a card moved here moves in Mine.
+          // A visitor with no version yet may start one from what is on show: a card moved here moves in Mine.
           // Outside the frame, so the header keeps the layout it has for Theirs.
           // What it left unranked is its pool, where a card can be taken out too.
           <>
             <RankingBoard
               besideOnWide
-              key={`theirs:${list.id}:${chosen?.uid ?? ""}:${mineRound}:${theirsRound}`}
+              key={`theirs:${list.id}:${chosen?.uid ?? ""}:${mineRound}`}
               list={theirsList}
               seed={{
                 rows: theirs.rows,
@@ -1030,7 +1156,7 @@ function OpenList({
                     : fill(strings.list.seedHint, { name: theirsName }),
                 dropHint: strings.list.dropToStart,
                 start: strings.list.seedStart,
-                onStart: startFromTheirs,
+                onStart: takeTheirs,
               }}
             />
           </>
@@ -1041,31 +1167,10 @@ function OpenList({
           list={list}
           rankings={rankings}
           chosen={chosen?.uid ?? null}
-          showingMine={shown === "mine"}
+          showingMine={shown === "mine" && !peeking}
           onChoose={choose}
           onWithdraw={() => withdraw()}
           onClose={() => setSheet(false)}
-        />
-      )}
-      {replacing !== null && (
-        <ConfirmDialog
-          narrow
-          title={
-            theirsName === null
-              ? strings.list.replaceAskUnnamed
-              : fill(strings.list.replaceAsk, { name: theirsName })
-          }
-          body={strings.list.replaceBody}
-          confirmLabel={strings.list.replace}
-          cancelLabel={strings.rank.cancel}
-          onConfirm={() => {
-            setReplacing(null);
-            takeTheirs(replacing, true);
-          }}
-          onCancel={() => {
-            setReplacing(null);
-            setTheirsRound((round) => round + 1);
-          }}
         />
       )}
       <Snackbar notice={notice} onDone={clearNotice} onBoard />

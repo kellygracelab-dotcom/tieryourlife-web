@@ -1257,7 +1257,7 @@ describe("BoardPage: a new board", () => {
     );
   });
 
-  it("on a phone, puts the same + Add in the tray's head and opens the catalogue from it", async () => {
+  it("on a phone, asks for the first cards above the tiers and adds them in a sheet of the window's height", async () => {
     const width = window.innerWidth;
     onTestFinished(() => {
       window.innerWidth = width;
@@ -1266,15 +1266,25 @@ describe("BoardPage: a new board", () => {
     const repository = boardsRepository(memoryStore());
     open(repository, "/b/fresh?new=100");
     await userEvent.keyboard("{Enter}");
-    expect(screen.getByRole("heading", { name: "Cards left · 0" })).toBeInTheDocument();
-    expect(screen.getByText("Add cards by name, or search the catalogue.")).toBeInTheDocument();
-    expect(screen.queryByText(/All \d+ placed/)).toBeNull();
-    // A phone's tray keeps the box behind + Add, and asks nothing of the keyboard.
+    // No card yet: no tray, no count, no Play (mobile BRIEF 25.11, 1).
+    expect(screen.getByRole("heading", { name: "Add your first cards" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Cards left · 0" })).toBeNull();
+    expect(screen.queryByText(/0 of 0 placed/)).toBeNull();
+    expect(document.querySelector(".board-page--no-cards")).not.toBeNull();
+    // The sheet waits closed, and asks nothing of the keyboard.
     expect(screen.queryByRole("textbox", { name: "Add a card" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await userEvent.click(screen.getByRole("button", { name: "Search or type a name" }));
+    const sheet = screen.getByRole("dialog", { name: "Add cards" });
     expect(screen.getByRole("textbox", { name: "Add a card" })).toHaveFocus();
-    // The names drawn without pictures are the phone's size, on the board's name tile.
+    expect(within(sheet).getByRole("button", { name: "Done" })).toBeInTheDocument();
     await userEvent.type(screen.getByRole("textbox", { name: "Add a card" }), "Heat{Enter}");
+    await userEvent.click(within(sheet).getByRole("button", { name: "Done · 1 added" }));
+    expect(screen.queryByRole("dialog", { name: "Add cards" })).toBeNull();
+    // Closed, it is no modal: the board's keys, which wait while one is up, work again.
+    expect(document.querySelector("[aria-modal='true']")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Cards left · 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Add your first cards" })).toBeNull();
+    // The names drawn without pictures are the phone's size, on the board's name tile.
     const heat = screen.getByText("Heat", { selector: ".tile__name" });
     expect(heat).toHaveStyle({ fontSize: "10px" });
     expect(heat.closest(".tile")).toHaveClass("tile--name");

@@ -251,13 +251,14 @@ test("a guest can reset Mine and reopen it without altering the author's ranking
       );
   }, list);
   await page.goto("/l/" + list.id);
-  const mine = page.getByRole("button", { name: "Mine", exact: true });
-  await expect(mine).toHaveAttribute("aria-pressed", "true");
+  // A version begun here opens as one's own; Start from scratch asks nothing.
+  const mine = page.locator(".list-head__version");
+  await expect(mine).toBeVisible();
   await page.getByLabel("More about this list").click();
-  await page.getByRole("button", { name: "Return all cards to the deck" }).click();
-  await page.getByRole("button", { name: "Return to the deck", exact: true }).click();
+  await page.getByRole("button", { name: "Start from scratch" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.reload();
-  await expect(mine).toHaveAttribute("aria-pressed", "true");
+  await expect(mine).toBeVisible();
   const pool = page.locator(".pool__items .tile");
   await expect(pool).toHaveCount(3);
   expect(await pool.evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")))).toEqual([
@@ -265,7 +266,7 @@ test("a guest can reset Mine and reopen it without altering the author's ranking
     "The Witch",
     "Ex Machina",
   ]);
-  await page.getByRole("button", { name: "Author", exact: true }).click();
+  await page.locator(".list-head__see").click();
   await expect(page.locator(".tier .tile").first()).toHaveAttribute("aria-label", "Ex Machina");
 });
 

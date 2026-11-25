@@ -22,13 +22,18 @@ interface AuthorLineProps {
   own: boolean;
   notify: Notify;
   follow?: FollowDeps;
+  /**
+   * How many cards the list has, "218 cards": a phone's head says it in this
+   * line, beside the name, and leaves Follow at its end (25.11.2026).
+   */
+  count?: string;
 }
 
 /**
  * The second place following lives, as in the app: under the list's title,
  * the moment somebody most wants to follow and least wants to leave the page.
  */
-export function AuthorLine({ uid, name, photoUrl, own, notify, follow }: AuthorLineProps) {
+export function AuthorLine({ uid, name, photoUrl, own, notify, follow, count }: AuthorLineProps) {
   const byline = fillNodes(strings.list.by, { name: <bdi>{bylineName(name)}</bdi> });
   return (
     <div className="byline">
@@ -43,6 +48,7 @@ export function AuthorLine({ uid, name, photoUrl, own, notify, follow }: AuthorL
           {byline}
         </Link>
       )}
+      {count !== undefined && <span className="byline__count">· {count}</span>}
       {!own && uid !== "" && <FollowChip uid={uid} name={name} notify={notify} deps={follow} />}
     </div>
   );

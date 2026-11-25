@@ -16,8 +16,11 @@ export function useTheme(store: KeyValueStore = localStorageStore) {
     return () => media.removeEventListener("change", follow);
   }, [theme]);
 
+  // Put on the page at once, not only by the effect: a phone's sheet closes
+  // on the press that chose, and takes this switch with it before it runs.
   const choose = (next: Theme) => {
     keepTheme(store, next);
+    applyTheme(next);
     setTheme(next);
   };
 

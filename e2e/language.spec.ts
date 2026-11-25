@@ -14,6 +14,9 @@ test("a guest picks Ukrainian in the settings, and the site reloads in it", asyn
   // it lands on something else. WebKit under load found this.
   await expect(page.getByText("Sign in to change your settings.")).toBeVisible();
 
+  // On a phone the languages are in the sheet of the Language row.
+  const phone = page.viewportSize()!.width < 600;
+  if (phone) await page.getByRole("button", { name: "Language" }).click();
   const languages = page.getByRole("radiogroup", { name: "Language" });
   await expect(languages.getByRole("radio", { name: "English" })).toBeChecked();
   await languages.getByRole("radio", { name: "Українська" }).click();
@@ -21,6 +24,7 @@ test("a guest picks Ukrainian in the settings, and the site reloads in it", asyn
   // The page loads afresh; wait for what only the new page has.
   await expect(page.locator("html")).toHaveAttribute("lang", "uk");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Налаштування");
+  if (phone) await page.getByRole("button", { name: "Мова" }).click();
   await expect(
     page.getByRole("radiogroup", { name: "Мова" }).getByRole("radio", { name: "Українська" }),
   ).toBeChecked();
@@ -33,6 +37,7 @@ test("a guest picks Ukrainian in the settings, and the site reloads in it", asyn
 
   await page.goto("/settings");
   await expect(page.getByText("Увійдіть, щоб змінювати налаштування.")).toBeVisible();
+  if (phone) await page.getByRole("button", { name: "Мова" }).click();
   await page
     .getByRole("radiogroup", { name: "Мова" })
     .getByRole("radio", { name: "English" })
@@ -51,7 +56,8 @@ const SPOKEN: {
   lang: string;
   dir?: "rtl";
   /** The switch's half for one's own board, in the app's word. */
-  mine: string;
+  /** The list menu's Start from scratch: one's own board, every card in the deck. */
+  scratch: string;
   left: string | RegExp;
   /** The tray's head on a phone: the bar has the one count there (audit C2). */
   heading: string;
@@ -62,7 +68,7 @@ const SPOKEN: {
     browser: "ru-RU",
     heading: "Осталось карточек",
     lang: "ru",
-    mine: "Моя",
+    scratch: "Начать с нуля",
     left: "Осталось 3 карточки",
     placed: "Разложено 0 из 3",
     about: "О сайте",
@@ -71,7 +77,7 @@ const SPOKEN: {
     browser: "pt-PT",
     heading: "Cartões restantes",
     lang: "pt-BR",
-    mine: "Meu",
+    scratch: "Começar do zero",
     left: "Faltam 3 cartões",
     placed: "0 de 3 colocados",
     about: "Sobre",
@@ -80,7 +86,7 @@ const SPOKEN: {
     browser: "es-MX",
     heading: "Por colocar",
     lang: "es",
-    mine: "Mío",
+    scratch: "Empezar de cero",
     left: "Quedan 3 tarjetas",
     placed: "0 de 3 colocadas",
     about: "Acerca de",
@@ -89,7 +95,7 @@ const SPOKEN: {
     browser: "de-AT",
     heading: "Verbleibende Karten",
     lang: "de",
-    mine: "Meine",
+    scratch: "Von vorn beginnen",
     left: "Noch 3 Karten",
     placed: "0 von 3 platziert",
     about: "Über",
@@ -98,7 +104,7 @@ const SPOKEN: {
     browser: "fr-CA",
     heading: "Cartes restantes",
     lang: "fr",
-    mine: "Le mien",
+    scratch: "Repartir de zéro",
     left: "3 cartes restantes",
     placed: "0 sur 3 placées",
     about: "À propos",
@@ -107,7 +113,7 @@ const SPOKEN: {
     browser: "pl-PL",
     heading: "Pozostałe karty",
     lang: "pl",
-    mine: "Mój",
+    scratch: "Zacznij od zera",
     left: "Zostały 3 karty",
     placed: "Umieszczono 0 z 3",
     about: "O stronie",
@@ -116,7 +122,7 @@ const SPOKEN: {
     browser: "tr-TR",
     heading: "Kalan kartlar",
     lang: "tr",
-    mine: "Benimki",
+    scratch: "Sıfırdan başla",
     left: "3 kart kaldı",
     placed: "0 / 3 yerleştirildi",
     about: "Hakkında",
@@ -125,7 +131,7 @@ const SPOKEN: {
     browser: "ja-JP",
     heading: "残りのカード",
     lang: "ja",
-    mine: "自分",
+    scratch: "最初からやり直す",
     left: "残り 3 枚",
     placed: "3 枚中 0 枚を配置",
     about: "このサイトについて",
@@ -136,14 +142,14 @@ const SPOKEN: {
     heading: "البطاقات المتبقية",
     lang: "ar",
     dir: "rtl",
-    mine: "ترتيبي",
+    scratch: "البدء من الصفر",
     left: /بقيت [3٣] بطاقات/,
     placed: /وُضع [0٠] من [3٣]/,
     about: "حول الموقع",
   },
 ];
 
-for (const { browser, lang, dir, mine, left, heading, placed, about } of SPOKEN) {
+for (const { browser, lang, dir, scratch, left, heading, placed, about } of SPOKEN) {
   test.describe(`a browser set to ${browser}`, () => {
     test.use({ locale: browser });
 
@@ -153,8 +159,16 @@ for (const { browser, lang, dir, mine, left, heading, placed, about } of SPOKEN)
       await expect(page.locator("html")).toHaveAttribute("lang", lang);
       await expect(page.locator("html")).toHaveAttribute("dir", dir ?? "ltr");
       await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
-      // The list opens on the author's ranking; one's own board is a press away.
-      await page.getByRole("button", { name: mine, exact: true }).click();
+      // The list opens on the author's ranking; one's own board with every card in the
+      // deck is the menu's Start from scratch. A press before the page wakes is lost.
+      await expect(async () => {
+        await page
+          .locator(".list-head summary.list-head__more, .list-head details.menu > summary")
+          .first()
+          .click();
+        await page.getByRole("button", { name: scratch, exact: true }).click({ timeout: 1_000 });
+        await expect(page.locator(".list-head__version")).toBeVisible({ timeout: 1_000 });
+      }).toPass();
       const narrow = page.viewportSize()!.width < 840;
       await expect(page.getByRole("heading", { level: 2 })).toHaveText(
         // On a phone "Cards left · 3", as the app has it.

@@ -38,7 +38,7 @@ test("makes a card from a picture's link: draft, name, Add card", async ({ page,
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Films with sand");
   await title.press("Enter");
-  if (hasTouch) await press(page.getByRole("button", { name: "Add", exact: true }), hasTouch);
+  if (hasTouch) await press(page.getByRole("button", { name: "Search or type a name" }), hasTouch);
 
   await page.getByRole("textbox", { name: "Add a card" }).fill(PICTURE);
   const draft = page.getByRole("group", { name: "Picture from a link" });
