@@ -996,15 +996,25 @@
  * row; the name whole in the second; the view, the one count and Undo in the
  * third. The row "← Your lists" and the counts under the name are gone.
  */
+/* The way back at the name's start at every width (walkthrough 25.11, item 5). */
 .list-head__back {
-  display: none;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: 40px;
+  height: 40px;
+  margin-inline: -8px 0;
+  border-radius: 20px;
+  color: var(--ink);
+}
+
+.list-head__back:hover {
+  background: var(--hover);
 }
 
 @media (max-width: 839px) {
-  .board-page > .board-page__back {
-    display: none;
-  }
-
   .board-page .list-head {
     flex-wrap: wrap;
     align-items: center;
@@ -1012,19 +1022,7 @@
   }
 
   .list-head__back {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
     margin-inline: -8px auto;
-    border-radius: 20px;
-    color: var(--ink);
-  }
-
-  .list-head__back:hover {
-    background: var(--hover);
   }
 
   .board-page .list-head > .list-head__tools {

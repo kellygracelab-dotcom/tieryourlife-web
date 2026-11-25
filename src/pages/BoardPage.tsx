@@ -1169,12 +1169,10 @@ function OpenBoard({
         .filter(Boolean)
         .join(" ")}
     >
-      <Link className="board-page__back" to={house === null ? "/b" : HOUSE_PANE_PATH}>
-        <Icon name="arrow_back" />
-        <span>{house === null ? strings.boards.back : strings.admin.house}</span>
-      </Link>
       <header className={tightHead ? "list-head list-head--tight" : "list-head"}>
-        {/* Narrow, the way back is an arrow at the head's start, not a row of its own (audit C2). */}
+        {/* The way back is an arrow at the head's start, not a row of its own: narrow since
+            audit C2, at every width since the walkthrough of 25.11 (Designer: the row took
+            the 40 px that left Add tier under the tray at 900 px). */}
         <Link
           className="list-head__back"
           to={house === null ? "/b" : HOUSE_PANE_PATH}

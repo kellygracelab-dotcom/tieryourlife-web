@@ -160,9 +160,10 @@ test("New list opens a new board, where the list is made", async ({ page, hasTou
   await expect(add).toBeInViewport();
 });
 
-// Danylo's computer (25.11): Add tier went under the tray at the window's foot. The
+// Danylo's computer (25.11): Add tier went under the tray at the window's foot. With
+// the way back on the name's line, it is clear of the tray as the page opens, and the
 // page keeps room under the board for the tray, so at its end nothing is under it.
-test("an empty list on a computer leaves Add tier clear of the tray at the page's end", async ({
+test("an empty list on a computer leaves Add tier clear of the tray, as it opens and at the page's end", async ({
   page,
 }, info) => {
   test.skip(info.project.use.hasTouch === true, "a computer's window");
@@ -172,8 +173,18 @@ test("an empty list on a computer leaves Add tier clear of the tray at the page'
   await page.getByRole("link", { name: "New list" }).first().click();
   await expect(page).toHaveURL(/\/b\/[^?]+\?new=/);
   await expect(page.getByRole("textbox", { name: "Add a card" })).toBeFocused();
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const addTier = page.getByRole("button", { name: "Add tier" });
+  // No row of its own for the way back: an arrow at the name's start (walkthrough 25.11, item 5).
+  const back = page.locator(".list-head > .list-head__back");
+  await expect(back).toBeVisible();
+  const arrow = (await back.boundingBox())!;
+  const name = (await page.locator(".list-head__text").boundingBox())!;
+  expect(Math.abs(arrow.y + arrow.height / 2 - (name.y + name.height / 2))).toBeLessThan(12);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  const opened = (await addTier.boundingBox())!;
+  const foot = (await page.locator(".pool").boundingBox())!;
+  expect(foot.y - (opened.y + opened.height)).toBeGreaterThanOrEqual(0);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expect(addTier).toBeInViewport();
   await expect
     .poll(async () => {
