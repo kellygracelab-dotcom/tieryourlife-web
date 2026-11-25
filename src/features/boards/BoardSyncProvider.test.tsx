@@ -1,5 +1,5 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
-import { StrictMode, useState } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { KeepBoardRequest, KeptBoard, Removal } from "../../api/boards";
@@ -538,6 +538,51 @@ describe("BoardSyncProvider", () => {
     act(() => repository.save({ ...repository.get("a")!, title: "A2", editedAt: 9 }));
     await settle();
     expect(keeps).toHaveLength(1);
+  });
+
+  it("a run asked for the moment switching off ends, before the page has drawn it, sends nothing back up", async () => {
+    // The debounce's timer, or the connection coming back, calls the run the
+    // page had before the switch moved. It fired between the end of switching
+    // off and the next render, the copy just deleted went up again as a new
+    // board, and the account had it back while the switch said off (e2e
+    // account "takes a photo as the face", 1 in 30 in Safari, 25.11.2026).
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    const { api, keeps, kept, forgotten } = fakeApi([theirBoard("a", "A")]);
+    const seen: { current: ReturnType<typeof useBoardSync> | null } = { current: null };
+    function Grab() {
+      const sync = useBoardSync();
+      useEffect(() => {
+        seen.current = sync;
+      });
+      return null;
+    }
+    render(
+      <SessionContext.Provider value={sessionOf(signedIn)}>
+        <BoardSyncProvider
+          repository={repository}
+          store={store}
+          api={api}
+          syncAfterMs={10}
+          resolvePicture={() => () => Promise.resolve(null)}
+        >
+          <Grab />
+        </BoardSyncProvider>
+      </SessionContext.Provider>,
+    );
+    await waitFor(() => expect(syncRecords(store, "me").all()).toHaveLength(1));
+    await settle();
+    await waitFor(() => expect(seen.current!.status).toBe("idle"));
+    const before = keeps.length;
+
+    // The run and the switch of one render, as a timer set before the switch holds them.
+    const { syncNow, setBackUp } = seen.current!;
+    await setBackUp(false).then(() => syncNow());
+    await settle();
+    expect(forgotten).toEqual(["a"]);
+    expect(keeps).toHaveLength(before);
+    expect(kept.get("a")?.deleted).toBe(true);
+    expect(readBackUp(store, "me")).toBe(false);
   });
 });
 
