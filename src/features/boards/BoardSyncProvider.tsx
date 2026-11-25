@@ -185,6 +185,11 @@ function ForAccount({
   publish: (controls: { uid: string | null; value: BoardSyncControls }) => void;
 }) {
   const [backUp, setBackUpState] = useState(() => uid === null || readBackUp(store, uid));
+  // The switch as it is now, not as the render a run was made in saw it: a
+  // timer set before switching off calls that render's run, and it fired
+  // between the end of switching off and the next render. The copy just
+  // deleted went up again as a new board (e2e account, 1 in 30, 25.11.2026).
+  const backUpNow = useRef(backUp);
   const [status, setStatus] = useState<SyncStatus>("idle");
   const records = useMemo<SyncRecords | null>(
     () => (uid === null ? null : syncRecords(store, uid)),
@@ -222,7 +227,7 @@ function ForAccount({
   }, []);
 
   const run = useCallback((): Promise<void> => {
-    if (uid === null || records === null || !backUp || stopping.current) {
+    if (uid === null || records === null || !backUp || !backUpNow.current || stopping.current) {
       return Promise.resolve();
     }
     if (running.current !== null) {
@@ -338,6 +343,7 @@ function ForAccount({
 
   const turnOn = useCallback(() => {
     if (uid !== null) keepBackUp(store, uid, true);
+    backUpNow.current = true;
     setBackUpState(true);
     return Promise.resolve();
   }, [store, uid]);
@@ -356,6 +362,8 @@ function ForAccount({
       inFlight: running.current,
       onRunEnded: () => setStatus("idle"),
       onOff: () => {
+        // Off before `stopping` lets go, so no run of an older render starts in between.
+        backUpNow.current = false;
         setLastSyncedAt(null);
         setRefusals([]);
         setBackUpState(false);
