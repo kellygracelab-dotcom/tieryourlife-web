@@ -233,7 +233,7 @@ describe("HousePane", () => {
     expect(await screen.findByRole("heading", { name: "House lists" })).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Published by nobody: no name, no face, no account. Visitors see an anonymous list.",
+        "Published by nobody: no name, no picture, no account. Visitors see an anonymous list.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/Edit opens a copy of a house list/)).toBeInTheDocument();

@@ -404,10 +404,7 @@ describe("PublishWindow: the window", () => {
     expect(screen.getByRole("dialog", { name: "Films" })).toBeVisible();
     expect(outStatus()).toBeVisible();
     expect(win().getByText("Up to date")).toBeVisible();
-    expect(win().getByRole("link", { name: "See it in Community" })).toHaveAttribute(
-      "href",
-      "/l/L1",
-    );
+    expect(win().getByRole("link", { name: "Open in Community" })).toHaveAttribute("href", "/l/L1");
     expect(win().queryByRole("button", { name: "Update" })).toBeNull();
     expect(win().getByRole("button", { name: "Done" })).toBeVisible();
 
@@ -706,7 +703,7 @@ describe("PublishWindow: copies and rankings", () => {
     // Somebody else's: nothing to review, it goes into the list's Rankings.
     show(board, signedIn, deps);
     expect(screen.getByRole("dialog", { name: "Show in Rankings" })).toBeVisible();
-    expect(win().getByText("Your arrangement of someone else’s list")).toBeVisible();
+    expect(win().getByText("Your version of someone else’s list")).toBeVisible();
     expect(win().queryByRole("button", { name: "Publish" })).toBeNull();
     await userEvent.click(go("Show in Rankings"));
     await waitFor(() => expect(outStatus("In Rankings")).toBeVisible());
@@ -784,7 +781,7 @@ describe("PublishWindow: copies and rankings", () => {
     // Said in advance, above the buttons.
     expect(
       win().getByText(
-        "Your arrangement goes into this list’s Rankings, under your name. No second list appears in the feed. This list stays yours to edit.",
+        "Your version goes into this list’s Rankings, under your name. No second list appears in the feed. This list stays yours to edit.",
       ),
     ).toBeVisible();
     expect(win().getByText("by Olena")).toBeVisible();
@@ -803,7 +800,7 @@ describe("PublishWindow: copies and rankings", () => {
     });
     expect(published).toHaveBeenCalledWith("ranking", "SRC", 0);
     // A ranking is seen on the page of the list it ranks, and has no section or topic of its own.
-    expect(win().getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+    expect(win().getByRole("link", { name: "Open in Community" })).toHaveAttribute(
       "href",
       "/l/SRC",
     );
@@ -987,10 +984,7 @@ describe("PublishWindow: a list out", () => {
     expect(win().getByText("Up to date")).toBeVisible();
     expect(win().queryByRole("button", { name: "Update" })).toBeNull();
     expect(win().queryByRole("button", { name: "Publish" })).toBeNull();
-    expect(win().getByRole("link", { name: "See it in Community" })).toHaveAttribute(
-      "href",
-      "/l/L1",
-    );
+    expect(win().getByRole("link", { name: "Open in Community" })).toHaveAttribute("href", "/l/L1");
     await userEvent.click(win().getByRole("button", { name: "Done" }));
     expect(close).toHaveBeenCalledTimes(1);
   });
@@ -1133,7 +1127,7 @@ describe("PublishWindow: a list out", () => {
     expect(published).toHaveBeenCalledWith("held", "L1", 0);
     expect(published).not.toHaveBeenCalledWith("published", "L1", 0);
     // Its link answers 404 to everybody, the author too: nothing leads there.
-    expect(win().queryByRole("link", { name: "See it in Community" })).toBeNull();
+    expect(win().queryByRole("link", { name: "Open in Community" })).toBeNull();
     expect(win().getByText("It waits for a moderator before others can see it.")).toBeVisible();
     expect(outStatus()).toBeNull();
 
@@ -1150,10 +1144,7 @@ describe("PublishWindow: a list out", () => {
     await waitFor(() => expect(published).toHaveBeenLastCalledWith("updated", "L1", 0));
     expect(held.heldForReview).toBeUndefined();
     expect(outStatus()).toBeVisible();
-    expect(win().getByRole("link", { name: "See it in Community" })).toHaveAttribute(
-      "href",
-      "/l/L1",
-    );
+    expect(win().getByRole("link", { name: "Open in Community" })).toHaveAttribute("href", "/l/L1");
   });
 
   it("says a refused Update, and lets a list taken down elsewhere go", async () => {

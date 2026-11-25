@@ -1,4 +1,4 @@
-import { mediaSrc } from "../../functions/src/publicMedia";
+import { CARD_WIDTHS, mediaSrc, storedPublicMedia } from "../../functions/src/publicMedia";
 
 /** TMDB serves each poster at fixed widths, named in its address. */
 const TMDB = /^(https:\/\/image\.tmdb\.org\/t\/p\/)w\d+(\/.+)$/;
@@ -27,6 +27,14 @@ export function sizedFor(url: string, width: number): Sized {
   if (commons !== null) {
     const at = (w: number) => `${commons[1]}?width=${w}`;
     return { src: at(width * 2), srcSet: `${at(width * 2)} 1x, ${at(width * 3)} 2x` };
+  }
+  // A published list's picture in the site's bucket, at the smallest copy as wide as
+  // twice the tile; wider than the copies, its original (Designer, 25.11: 28 MB of
+  // 600 × 900 posters for 64 × 96 tiles).
+  const stored = storedPublicMedia(url);
+  const copy = CARD_WIDTHS.find((w) => w >= width * 2);
+  if (stored !== null && stored.startsWith("published/") && copy !== undefined) {
+    return { src: `/img/${copy}/${stored}` };
   }
   return { src: mediaSrc(url) };
 }

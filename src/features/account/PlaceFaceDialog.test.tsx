@@ -72,7 +72,7 @@ const covers = () => {
 describe("PlaceFaceDialog", () => {
   it("shows the picture behind the circle once it is there, and hands back the middle square", async () => {
     const { onUse } = open();
-    expect(screen.getByRole("dialog", { name: "Place your face" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Place your picture" })).toBeInTheDocument();
     expect(frame()).toHaveFocus();
     expect(frame()).toHaveAccessibleDescription("Drag to move, pinch or scroll to zoom.");
     // Asked for so the page may cut it.
@@ -215,7 +215,7 @@ describe("PlaceFaceDialog", () => {
     fireEvent.error(picture());
     expect(frame().querySelector("img")).toBeNull();
     expect(frame()).toHaveAccessibleDescription(
-      "This picture would not load, so it cannot be your face. Pick another.",
+      "This picture would not load, so it cannot be your picture. Pick another.",
     );
     // A dead address worn as the face would be a broken picture in the header.
     expect(confirmButton()).toBeDisabled();

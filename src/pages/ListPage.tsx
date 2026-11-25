@@ -451,6 +451,8 @@ function OpenList({
   const shown: View = own || (theirsKnown && view === "theirs") ? "theirs" : "mine";
   // One's own version is there, and somebody else's is on show over it for a look.
   const peeking = !own && shown === "mine" && peek && theirsKnown;
+  // Somebody else's arrangement on show, where a move starts one's own version.
+  const seeding = !outOfSight && !own && shown !== "mine";
   const page = useRef<HTMLElement>(null);
   const remember = useCardsMove(page);
 
@@ -604,6 +606,8 @@ function OpenList({
   const play = usePlay(`list:${list.id}`, playCards, playTiers, localStorageStore, {
     title: list.title,
     theirs: true,
+    // A house list has no author for the picker to name.
+    house: editorial,
     // Until the visitor places a card themselves, the tiers are the author's.
     placedByAuthor: mineRows === null,
     games,
@@ -971,6 +975,9 @@ function OpenList({
           <h1 className="list-head__title">
             <bdi>{list.title}</bdi>
           </h1>
+          {/* How to start one's own, under the title where it is read first: under the
+              last tier it stood at the page's foot (Danylo, 25.11). */}
+          {seeding && <p className="list-head__start">{strings.list.seedStart}</p>}
           {/* "Your version · see danylo’s": the board is one's own, and the author's is a press away. */}
           {versionLine && (
             <p className="list-head__version">
@@ -1155,7 +1162,6 @@ function OpenList({
                     ? strings.list.seedHintUnnamed
                     : fill(strings.list.seedHint, { name: theirsName }),
                 dropHint: strings.list.dropToStart,
-                start: strings.list.seedStart,
                 onStart: takeTheirs,
               }}
             />

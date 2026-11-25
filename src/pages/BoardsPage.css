@@ -10,14 +10,14 @@
 /*
  * From 840 px Your lists stands in Community's grid (the Designer's rule,
  * 19.11, by Danylo's "yes"): the lists' tiles, New list and Continue's cards
- * are as wide as the feed's cards, four across, and from 1400 as many as fit
- * at 250 px; a few lists keep to the left, as a short row does there. The
- * phone's and the tablet's grids stay as they are.
+ * are as wide as the feed's cards, four across and, once the column has room,
+ * as many as fit at 250 px (feed.css); a few lists keep to the left, as a
+ * short row does there. The phone's and the tablet's grids stay as they are.
  */
 @media (min-width: 840px) {
   .boards .boards__grid,
   .boards .started__list {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(250px, calc((100% - 48px) / 4)), 1fr));
     gap: 16px;
   }
 
@@ -39,13 +39,6 @@
   .boards .started__text {
     flex-basis: 100%;
     order: 1;
-  }
-}
-
-@media (min-width: 1400px) {
-  .boards .boards__grid,
-  .boards .started__list {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   }
 }
 

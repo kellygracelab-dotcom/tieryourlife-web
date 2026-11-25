@@ -4,6 +4,7 @@ import {
   useId,
   useRef,
   useState,
+  useSyncExternalStore,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
@@ -49,7 +50,13 @@ import type { UnpublishBoard } from "../features/boards/BoardSettings";
 import "../features/boards/boards.css";
 import { loadFeed, unpublish as unpublishList } from "../lib/api";
 import { TIP_CARDS } from "../ui/tipMemory";
-import { startedLists, TRY_MINE } from "../features/started/started";
+import {
+  startedLists,
+  startedVersion,
+  subscribeStarted,
+  TRY_MINE,
+} from "../features/started/started";
+import { PHONE, useMedia } from "../features/play/media";
 import { titleIn } from "../lib/translated";
 import { localStorageStore, sessionStorageStore, type KeyValueStore } from "../lib/storage";
 import { currentLocale, fill, plural, strings } from "../strings";
@@ -261,13 +268,23 @@ function ReadyList({ load }: { load: LoadReadyList }) {
   );
 }
 
-/** No lists yet: the phone's suggestions to start from, and New list for anything else. */
-function Empty({ ready }: { ready: ReactNode }) {
+/**
+ * No lists yet: the phone's suggestions to start from, and New list for
+ * anything else. A list begun from somebody else's is in Continue above, so
+ * "No lists yet" under it said the page had nothing while it showed one: then
+ * only the suggestions (walkthrough item 8, Danylo, 25.11). On a phone New
+ * list is the round button at the corner, not a second one here (item 10).
+ */
+function Empty({ ready, begun, phone }: { ready: ReactNode; begun: boolean; phone: boolean }) {
   return (
     <div className="boards__empty">
       {ready}
-      <Icon name="view_list" className="boards__empty-icon" />
-      <p className="boards__empty-title">{strings.boards.emptyTitle}</p>
+      {!begun && (
+        <>
+          <Icon name="view_list" className="boards__empty-icon" />
+          <p className="boards__empty-title">{strings.boards.emptyTitle}</p>
+        </>
+      )}
       <p className="boards__start-with">{strings.boards.startWith}</p>
       <ul className="boards__starts">
         {STARTS.map(({ text, category }) => (
@@ -282,9 +299,11 @@ function Empty({ ready }: { ready: ReactNode }) {
           </li>
         ))}
       </ul>
-      <Link className="btn btn--text" to="/b/new">
-        <span>{strings.boards.newBoard}</span>
-      </Link>
+      {!phone && (
+        <Link className="btn btn--text" to="/b/new">
+          <span>{strings.boards.newBoard}</span>
+        </Link>
+      )}
     </div>
   );
 }
@@ -369,6 +388,13 @@ export function BoardsPage({
   // A few lists are just the lists and a tile for a new one: search, filters,
   // order, the view and Select come with the seventh (artboard 33).
   const few = live.length <= fewLists;
+  // On a phone New list is the round button at the corner alone, and the line
+  // promising tools to come was one more line on a small screen (walkthrough
+  // items 8 and 10, Danylo, 25.11).
+  const phone = useMedia(PHONE);
+  // Drawn again when a begun list is discarded or put back, as Continue is.
+  useSyncExternalStore(subscribeStarted, startedVersion, startedVersion);
+  const begun = startedLists(store, new Set()).length > 0;
   const filters = few ? { show: "all" as const, query: "" } : { show, query };
   const viewNow: BoardsView = few ? "grid" : view;
   const arranged = arrangeBoards(kept, sort, filters);
@@ -679,14 +705,14 @@ export function BoardsPage({
         </div>
       </header>
 
-      <ContinueBlock repository={repository} onNotice={(said) => setNotices([said])} />
+      <ContinueBlock
+        store={store}
+        repository={repository}
+        onNotice={(said) => setNotices([said])}
+      />
 
       {live.length === 0 ? (
-        <Empty
-          ready={
-            startedLists(store, new Set()).length === 0 ? <ReadyList load={loadReady} /> : null
-          }
-        />
+        <Empty ready={begun ? null : <ReadyList load={loadReady} />} begun={begun} phone={phone} />
       ) : (
         <>
           {!few && (
@@ -847,10 +873,10 @@ export function BoardsPage({
               onStar={star}
               renaming={renaming}
               onRename={renamed}
-              newTile={few}
+              newTile={few && !phone}
             />
           )}
-          {few && <p className="boards__few">{strings.boards.fewLists}</p>}
+          {few && !phone && <p className="boards__few">{strings.boards.fewLists}</p>}
         </>
       )}
       {/* Lists kept only in this browser, and the way to keep them for good, as the phone offers. */}

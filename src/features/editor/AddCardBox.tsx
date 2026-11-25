@@ -198,8 +198,9 @@ export function AddCardBox({
   }
   // "Search everywhere" holds for the words it was pressed for, and no others.
   const [everywhere, setEverywhere] = useState<string | null>(null);
-  // The answers show while the box is in use; Escape or a press elsewhere puts
-  // them away, the words and the cards picked staying. The field brings them back.
+  // The answers show while the box is in use; a press elsewhere puts them away,
+  // the words and the cards picked staying, and the field brings them back.
+  // Escape is a change of mind: it empties the field as well (Danylo, 25.11).
   const [open, setOpen] = useState(true);
   const picker = useRef<HTMLInputElement>(null);
   const field = useRef<HTMLInputElement>(null);
@@ -583,10 +584,14 @@ export function AddCardBox({
         className="cards__add"
         onSubmit={onSubmit}
         onKeyDown={(event) => {
-          // From the field or a tile: the answers go away, the cursor back to the words.
-          if (event.key === "Escape" && showing) {
+          // From the field or a tile: the answers and the words go, the cursor
+          // back to the empty field. An empty field lets Escape on (a sheet closes).
+          if (event.key === "Escape" && (showing || typed !== "" || draft !== null)) {
             event.preventDefault();
             event.stopPropagation();
+            setTyped("");
+            setDraft(null);
+            setEverywhere(null);
             setOpen(false);
             field.current?.focus();
           }

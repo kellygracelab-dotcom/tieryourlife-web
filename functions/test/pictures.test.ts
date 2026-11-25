@@ -140,6 +140,48 @@ describe("pictures through the site's address", () => {
     assert.equal(missing.headers["Cache-Control"], "public, max-age=60, s-maxage=60");
   });
 
+  it("sends a published card picture at a tile's width, cached as its original is (Designer, 25.11)", async () => {
+    const bytes = Buffer.from([0xff, 0xd8, 0xff, 0xdb]);
+    const limits: (number | undefined)[] = [];
+    const fake = {
+      ...deps(),
+      read: async (p: string, limit?: number) => {
+        limits.push(limit);
+        return p === "published/list/pic" || p === "published/catalogue/w-0123" ? bytes : null;
+      },
+    };
+    const small = await ask(["200", "published", "list", "pic"], fake);
+    assert.equal(small.status, 200);
+    assert.equal(small.headers["Content-Type"], "image/webp");
+    assert.equal(small.headers["X-Content-Type-Options"], "nosniff");
+    // A takedown reaches everyone new within a minute, as with the original.
+    assert.equal(
+      small.headers["Cache-Control"],
+      "public, max-age=31536000, s-maxage=60, immutable",
+    );
+    const shared = await ask(["400", "published", "catalogue", "w-0123"], fake);
+    assert.equal(
+      shared.headers["Cache-Control"],
+      "public, max-age=31536000, s-maxage=86400, immutable",
+    );
+    assert.deepEqual(fake.shrunk, [200, 400]);
+    assert.deepEqual(limits, [4 * 1024 * 1024, 4 * 1024 * 1024]);
+    // Not a raster picture, another width, another folder: nothing made.
+    const svg = { ...fake, read: async () => Buffer.from("<svg onload='alert(1)'/>") };
+    assert.equal((await ask(["200", "published", "list", "pic"], svg)).status, 404);
+    for (const segments of [
+      ["300", "published", "list", "pic"],
+      ["480", "published", "list", "pic"],
+      ["200", "avatars", "me", "face"],
+      ["200", "users", "me", "pic"],
+      ["200", "published", "..", "pic"],
+    ]) {
+      const denied = deps();
+      assert.equal((await ask(segments, denied)).status, 404, segments.join("/"));
+      assert.deepEqual(denied.shrunk, []);
+    }
+  });
+
   it("names a section's or a topic's picture in the bucket, and nothing else", () => {
     assert.equal(picturePathOf("sections", "film_tv", "579c-14"), "sections/film_tv/579c-14");
     assert.equal(picturePathOf("topics", "AbC123", "p1"), "topics/AbC123/p1");

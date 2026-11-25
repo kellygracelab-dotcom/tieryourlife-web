@@ -42,7 +42,13 @@ vi.mock("firebase/auth", () => {
 vi.mock("./firebase", () => ({ getFirebaseAuth: () => mocks.auth }));
 vi.mock("./api", () => ({ carryGuest: mocks.carryGuest, claimKept: vi.fn() }));
 
-import { completeSignIn, sessionStash, signInWithGoogle, type SignInDeps } from "./signIn";
+import {
+  completeSignIn,
+  POPUP_BLOCKED,
+  sessionStash,
+  signInWithGoogle,
+  type SignInDeps,
+} from "./signIn";
 
 const googleInfo: UserInfo = {
   providerId: "google.com",
@@ -264,7 +270,39 @@ describe("signInWithGoogle", () => {
     mocks.linkWithRedirect.mockRejectedValueOnce(authError("auth/network-request-failed"));
     await expect(signInWithGoogle(deps())).resolves.toEqual({
       kind: "failed",
-      code: "auth/network-request-failed",
+      code: POPUP_BLOCKED,
+    });
+  });
+
+  it("goes to Google's own page when the browser blocks a first-time visitor's window", async () => {
+    mocks.signInWithPopup.mockRejectedValue(authError("auth/popup-blocked"));
+    await expect(signInWithGoogle(deps())).resolves.toEqual({ kind: "redirecting" });
+    expect(mocks.signInWithRedirect).toHaveBeenCalledWith(
+      mocks.auth,
+      expect.any(Object),
+      "the resolver",
+    );
+    expect(mocks.linkWithRedirect).not.toHaveBeenCalled();
+  });
+
+  // Walkthrough item 17 (Danylo, 25.11): "Try again" only met the same block.
+  it.each([
+    ["a first-time visitor", null],
+    ["a guest", "guest"],
+  ])("names the blocked window when %s cannot be redirected either", async (_who, who) => {
+    if (who === "guest") {
+      mocks.auth.currentUser = guest();
+      mocks.linkWithPopup.mockRejectedValue(authError("auth/popup-blocked"));
+      mocks.linkWithRedirect.mockRejectedValueOnce(authError("auth/web-storage-unsupported"));
+    } else {
+      mocks.signInWithPopup.mockRejectedValue(
+        authError("auth/operation-not-supported-in-this-environment"),
+      );
+      mocks.signInWithRedirect.mockRejectedValueOnce(authError("auth/web-storage-unsupported"));
+    }
+    await expect(signInWithGoogle(deps())).resolves.toEqual({
+      kind: "failed",
+      code: POPUP_BLOCKED,
     });
   });
 
@@ -292,6 +330,23 @@ describe("completeSignIn", () => {
     expect(mocks.updateProfile).toHaveBeenCalled();
     expect(user.getIdToken).toHaveBeenCalledWith(true);
     expect(mocks.keep).toHaveBeenCalledWith("u1");
+  });
+
+  it("finishes a guest linked through the redirect: the same uid, profile and rankings, nothing carried", async () => {
+    const linked = fakeUser({ uid: "guest-1", providerData: [googleInfo] });
+    mocks.getRedirectResult.mockResolvedValue({ user: linked });
+    await expect(completeSignIn(deps("guest-token"))).resolves.toEqual({
+      kind: "signedIn",
+      switched: false,
+    });
+    expect(mocks.getRedirectResult).toHaveBeenCalledWith(mocks.auth, "the resolver");
+    expect(mocks.updateProfile).toHaveBeenCalledWith(linked, {
+      displayName: "Danylo",
+      photoURL: "https://lh3.example/photo",
+    });
+    expect(mocks.keep).toHaveBeenCalledWith("guest-1");
+    // The uid stayed, so the guest's credits are already the account's.
+    expect(mocks.carryGuest).not.toHaveBeenCalled();
   });
 
   it("switches accounts after a redirect collision, carrying the stashed guest", async () => {

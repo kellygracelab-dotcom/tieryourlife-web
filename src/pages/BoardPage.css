@@ -21,6 +21,8 @@
 .board-page__title-row .list-head__title {
   overflow: hidden;
   text-overflow: ellipsis;
+  /* A click on the name edits it (Danylo, 25.11). */
+  cursor: text;
 }
 
 /* The pencil beside the name: quiet until the pointer is near. */

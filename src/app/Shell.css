@@ -12,7 +12,9 @@
   align-items: center;
   gap: var(--space-4);
   min-height: var(--header-height);
-  padding: 10px var(--space-8);
+  /* The bar spans the window; its logo and buttons keep to the page's column
+     (--width-page), not to the window's edges (Danylo's 2560 walk, 25.11). */
+  padding: 10px max(var(--space-8), calc((100% - var(--width-page)) / 2));
   /* Nearly solid: the blur behind is a nicety, and where it is not drawn the page's
      title read through at 92%, a ghost of text under the logo. */
   background: color-mix(in srgb, var(--paper) 97%, transparent);
@@ -489,12 +491,16 @@
      under it, out of sight, instead of pushing a foot already on screen. */
   min-height: calc(100vh - var(--header-height));
   width: 100%;
-  max-width: var(--width-board);
+  /* One column for every page, its padding outside --width-page (Danylo's 2560 walk, 25.11). */
+  max-width: calc(var(--width-page) + 2 * var(--space-8));
   margin: 0 auto;
   padding: var(--space-6) var(--space-8) var(--space-8);
 }
 
-/* A list page follows the window: the board grows with it (capped at 1760 in the page's own rules). */
+/*
+ * A list page follows the window: its sticky head and docked cards span it,
+ * and its own rules keep the board and the head's words to --width-page.
+ */
 /* It takes the focus only so a new page starts the keyboard there; a ring round the whole page says nothing. */
 .shell__main:focus {
   outline: none;
@@ -504,44 +510,47 @@
   max-width: none;
 }
 
-/*
- * The home page's feed is four across; a wide window's column grows with it,
- * to about 2200 (artboard 20). Your lists stands in the same column, so the
- * page does not jump between the two (the Designer's rule, 19.11). The
- * address, not the page, gives Your lists its width: its page comes later,
- * and the column must not widen under it as it arrives.
- */
-.shell__main:has(.home),
-.shell__main--lists {
-  max-width: 1160px;
-}
-
-@media (min-width: 1400px) {
-  .shell__main:has(.home),
-  .shell__main--lists {
-    max-width: calc(2200px + 2 * var(--space-8));
-  }
-}
-
 .foot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4) var(--space-6);
+  justify-content: center;
+  gap: var(--space-2) var(--space-6);
   padding: var(--space-5) var(--space-8) var(--space-8);
   border-top: 1px solid var(--line);
   font: var(--text-small);
   color: var(--ink-dim);
+  text-align: center;
+}
+
+/*
+ * Two lines at every width (Designer, 25.11; the phone's, #282): Privacy ·
+ * About · Settings, and under them the app in grey, words rather than a link
+ * until it is out.
+ */
+.foot a:not(.foot__app) {
+  color: var(--ink-dim);
+}
+
+.foot a:not(.foot__app):hover {
+  color: var(--ink);
 }
 
 .foot__app {
   display: inline-flex;
+  order: 1;
+  flex-basis: 100%;
   align-items: center;
+  justify-content: center;
   gap: 6px;
 }
 
 .foot__app .ms {
   font-size: 16px;
+}
+
+span.foot__app {
+  color: var(--ink-faint);
 }
 
 @media (max-width: 599px) {
@@ -551,35 +560,13 @@
     padding-inline: var(--space-4);
   }
 
-  /*
-   * Two lines in the middle (25.11.2026): Privacy · About · Settings, and
-   * under them the app in grey, words rather than a link until it is out.
-   */
   .foot {
-    justify-content: center;
-    gap: var(--space-2) var(--space-6);
     padding-top: var(--space-5);
-    text-align: center;
     font-size: 14px;
   }
 
-  .foot a:not(.foot__app) {
-    color: var(--ink-dim);
-  }
-
-  .foot a:not(.foot__app):hover {
-    color: var(--ink);
-  }
-
   .foot__app {
-    order: 1;
-    flex-basis: 100%;
-    justify-content: center;
     font-size: 13px;
-  }
-
-  span.foot__app {
-    color: var(--ink-faint);
   }
 }
 
@@ -708,10 +695,6 @@
     background: currentColor;
   }
 
-  .top--tabs .top__make {
-    display: none;
-  }
-
   /* The face alone, as in the app; the menu still opens on it. */
   .top--tabs .menu__chevron {
     display: none;
@@ -754,8 +737,9 @@
 }
 
 /*
- * New list on the tabs' pages of a phone: the app's round button at the lower
- * corner, over the page, clear of the home indicator. Drawn only there.
+ * New list on a phone: the app's round button at the lower corner, over the
+ * page, clear of the home indicator. The bar has no plus of its own there
+ * (walkthrough item 10, Danylo, 25.11).
  */
 .fab {
   position: fixed;

@@ -148,7 +148,7 @@ describe("RankingBoard's card menu", () => {
     // Climax waits in the pool: its menu has no "back to the pool"; the first item has the focus.
     let menu = await menuOf("Climax");
     expect(menu.getByRole("menuitem", { name: "Move to a tier" })).toHaveFocus();
-    expect(menu.queryByRole("menuitem", { name: "Back to the deck" })).toBeNull();
+    expect(menu.queryByRole("menuitem", { name: "Back to Cards left" })).toBeNull();
     let tiers = await tiersOf(menu);
     expect(menu.getByRole("menuitem", { name: "Move to a tier" })).toHaveAttribute(
       "aria-expanded",
@@ -174,13 +174,13 @@ describe("RankingBoard's card menu", () => {
     expect(onChange).toHaveBeenLastCalledWith([[1], [0, 2]], expect.any(Array));
     // Moving onto another item puts the tiers away, after a moment for a pointer
     // that only cuts across it on its way to them.
-    fireEvent.pointerEnter(menu.getByRole("menuitem", { name: "Back to the deck" }));
+    fireEvent.pointerEnter(menu.getByRole("menuitem", { name: "Back to Cards left" }));
     fireEvent.pointerEnter(screen.getByRole("menu", { name: "Move to a tier" }));
     await new Promise((done) => setTimeout(done, TIERS_GRACE_MS + 20));
     expect(screen.getByRole("menu", { name: "Move to a tier" })).toBeInTheDocument();
-    fireEvent.pointerEnter(menu.getByRole("menuitem", { name: "Back to the deck" }));
+    fireEvent.pointerEnter(menu.getByRole("menuitem", { name: "Back to Cards left" }));
     await waitFor(() => expect(screen.queryByRole("menu", { name: "Move to a tier" })).toBeNull());
-    await userEvent.click(menu.getByRole("menuitem", { name: "Back to the deck" }));
+    await userEvent.click(menu.getByRole("menuitem", { name: "Back to Cards left" }));
     expect(within(tier("A")).queryByRole("button", { name: "Climax" })).toBeNull();
     expect(onChange).toHaveBeenLastCalledWith([[1], [0]], expect.any(Array));
 
@@ -207,7 +207,7 @@ describe("RankingBoard's card menu", () => {
     const items = menu.getAllByRole("menuitem");
     expect(items.map((item) => item.textContent)).toEqual([
       "Move to a tierchevron_right",
-      "Back to the deck",
+      "Back to Cards left",
       "Remove from list",
     ]);
     expect(items[0]).toHaveFocus();
@@ -430,42 +430,26 @@ describe("RankingBoard's card menu", () => {
     expect(longPress.defaultPrevented).toBe(false);
   });
 
-  it("says how to reach the menu at the pool's foot, until it has been opened three times", async () => {
-    const store = memoryStore();
-    const board = () =>
-      render(
-        <MemoryRouter>
-          <RankingBoard
-            list={list}
-            store={store}
-            edit={{
-              rows: [[1], [0]],
-              save: vi.fn(async () => undefined),
-              cancel: vi.fn(),
-              owner: { live: true, canSave: false, onChange: vi.fn(), remove: vi.fn() },
-            }}
-          />
-        </MemoryRouter>,
-      );
-    const hint = "Double-click or right-click a card to move or remove it.";
-    const { unmount } = board();
-    expect(screen.getByText(hint)).toBeInTheDocument();
-    // Not while a card is picked: then the pool says how to place it. The line
-    // keeps its place, so the cards do not move under a double click.
-    await userEvent.click(card("Climax"));
-    expect(screen.getByText(hint)).not.toBeVisible();
-    await userEvent.keyboard("{Escape}");
-
-    for (let i = 0; i < 3; i++) {
-      fireEvent.contextMenu(card("Climax"));
-      await userEvent.keyboard("{Escape}");
-    }
-    expect(screen.queryByText(hint)).toBeNull();
-    // Kept on the device: the next visit has no hint either.
-    unmount();
-    board();
-    expect(screen.getByRole("button", { name: "Climax" })).toBeInTheDocument();
-    expect(screen.queryByText(hint)).toBeNull();
+  it("keeps one standing line in the owner's pool, how to place a card, and none on the menu", () => {
+    render(
+      <MemoryRouter>
+        <RankingBoard
+          list={list}
+          store={memoryStore()}
+          edit={{
+            rows: [[1], [0]],
+            save: vi.fn(async () => undefined),
+            cancel: vi.fn(),
+            owner: { live: true, canSave: false, onChange: vi.fn(), remove: vi.fn() },
+          }}
+        />
+      </MemoryRouter>,
+    );
+    // Two lines and a newcomer's tip were three hints at once; the keys line
+    // stayed (walkthrough of 25.11, item 4, Danylo).
+    expect(screen.getByText(/^Pick a card, then tap a tier or press/)).toBeInTheDocument();
+    expect(screen.queryByText(/right-click a card/)).toBeNull();
+    expect(document.querySelectorAll(".pool__hint--keys")).toHaveLength(1);
   });
 
   it("is on a reader's own board too, without taking a card off the list", async () => {
@@ -474,8 +458,6 @@ describe("RankingBoard's card menu", () => {
         <RankingBoard list={list} store={memoryStore()} />
       </MemoryRouter>,
     );
-    // The hint names removing, so it is the owner's alone.
-    expect(screen.queryByText(/right-click a card/)).toBeNull();
     const menu = await menuOf("The Witch");
     expect(menu.queryByRole("menuitem", { name: "Remove from list" })).toBeNull();
     await userEvent.click((await tiersOf(menu)).getByRole("menuitem", { name: "S" }));

@@ -435,24 +435,12 @@
   cursor: default;
 }
 
+/* Take it down: an outlined button with what it does under it, no tinted block (Danylo's walk, 25.11). */
 .publish-window__down {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--error) 8%, var(--surface));
-}
-
-.publish-window__down-button {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--error);
-  font: var(--text-small);
-  font-weight: 500;
-  cursor: pointer;
+  gap: 6px;
 }
 
 .publish-window__ask {

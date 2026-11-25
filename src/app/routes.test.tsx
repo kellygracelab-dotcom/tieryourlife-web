@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -105,7 +105,8 @@ describe("routes", () => {
     // /new → /b/new → a board of its own, not kept until it is touched.
     await vi.waitFor(() => expect(router.state.location.pathname).toMatch(/^\/b\/[0-9a-f-]{36}$/));
     expect(router.state.location.search).toMatch(/^\?new=\d+&title=Cheeses&category=food$/);
-    expect(await screen.findByRole("textbox", { name: "Title" })).toHaveValue("Cheeses");
+    // jsdom's window is a computer's: the name stands as the heading, edited on a click.
+    expect(await screen.findByRole("heading", { level: 1, name: /Cheeses/ })).toBeInTheDocument();
   });
 
   it("says so when there is nothing at an address, and leads home", async () => {
@@ -165,17 +166,22 @@ describe("routes", () => {
 describe("Shell", () => {
   it("names the phone app in the footer, without a link while Google Play shows it to testers only", () => {
     open("/");
-    expect(screen.getByText("Android app · coming soon")).toBeInTheDocument();
+    expect(screen.getByText("Android app — coming soon to Google Play")).toBeInTheDocument();
+    // The computer's foot is the phone's: three short links, the app a grey line, no link.
+    const foot = within(screen.getByRole("contentinfo"));
+    expect(foot.getAllByRole("link").map((a) => a.textContent)).toEqual([
+      "Privacy",
+      "About",
+      "Settings",
+    ]);
+    expect(screen.queryByText("Android app · coming soon")).toBeNull();
     expect(
       screen
         .queryAllByRole("link")
         .filter((link) => link.getAttribute("href")?.includes("play.google")),
     ).toEqual([]);
     expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
-    expect(screen.getByRole("link", { name: "Privacy policy" })).toHaveAttribute(
-      "href",
-      "/privacy.html",
-    );
+    expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy.html");
     // TMDB's sentence lives on the About page, which every page's foot leads to.
     expect(screen.getByRole("link", { name: "About" })).toHaveAttribute("href", "/about");
   });
@@ -192,8 +198,9 @@ describe("Shell", () => {
       "href",
       "/delete-account.html",
     );
+    // The page's own link; the foot's is the short "Privacy" at every width (Designer, 25.11).
     expect(
       screen.getAllByRole("link", { name: /Privacy policy/ }).map((a) => a.getAttribute("href")),
-    ).toEqual(["/privacy.html", "/privacy.html"]);
+    ).toEqual(["/privacy.html"]);
   });
 });

@@ -1,4 +1,5 @@
 import { expect, test, type Locator } from "@playwright/test";
+import { nameNewList } from "./fixtures";
 import { PIXEL, signIn } from "./signedIn";
 
 /*
@@ -35,9 +36,7 @@ test("makes a card from a picture's link: draft, name, Add card", async ({ page,
 
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
-  const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill("Films with sand");
-  await title.press("Enter");
+  await nameNewList(page, "Films with sand");
   if (hasTouch) await press(page.getByRole("button", { name: "Search or type a name" }), hasTouch);
 
   await page.getByRole("textbox", { name: "Add a card" }).fill(PICTURE);

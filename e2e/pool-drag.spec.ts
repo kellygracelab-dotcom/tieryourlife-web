@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { mockBackend } from "./fixtures";
+import { mockBackend, nameNewList } from "./fixtures";
 
 /*
  * A card carried from the pool to a tier, from a tier to the pool, or along
@@ -20,9 +20,7 @@ async function newBoard(page: Page, touch: boolean) {
   await mockBackend(page);
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
-  const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill("Pool order");
-  await title.press("Enter");
+  await nameNewList(page, "Pool order");
   // The box that brings cards in is open on a wide window, in a sheet on a phone.
   if (touch) await page.getByRole("button", { name: "Search or type a name" }).tap();
   for (const name of NAMES) {

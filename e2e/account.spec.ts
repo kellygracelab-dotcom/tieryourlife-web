@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { gate, list } from "./fixtures";
+import { gate, list, nameNewList } from "./fixtures";
 import { FACE_URL, PIXEL, shot, signIn } from "./signedIn";
 
 /*
@@ -35,9 +35,7 @@ async function expectRankedList(page: Page, touch: boolean) {
 async function newBoard(page: Page, touch: boolean, title: string) {
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
-  const field = page.getByRole("textbox", { name: "Title" });
-  await field.fill(title);
-  await field.press("Enter");
+  await nameNewList(page, title);
   // An empty list has the box that brings cards in open on a wide window, in a sheet on a phone.
   if (touch) await press(page.getByRole("button", { name: "Search or type a name" }), touch);
   for (const name of ["Ex Machina", "The Witch"]) {
@@ -115,7 +113,7 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   await press(page.getByLabel("More about this list"), hasTouch);
   await press(page.getByRole("button", { name: "Publishing settings" }), hasTouch);
   const out = page.getByRole("dialog", { name: "Films I make people watch" });
-  await expect(out.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+  await expect(out.getByRole("link", { name: "Open in Community" })).toHaveAttribute(
     "href",
     "/l/L1",
   );
@@ -345,16 +343,14 @@ test("takes a photo as the face, names a refused one, and switches the back-up o
     await press(page.locator(".settings__choice--photo"), hasTouch);
     await (await chooser).setFiles({ name: "me.png", mimeType: "image/png", buffer: PIXEL });
     // Placed in the circle first, then cut on the device; the middle square will do.
-    const placing = page.getByRole("dialog", { name: "Place your face" });
+    const placing = page.getByRole("dialog", { name: "Place your picture" });
     await press(placing.getByRole("button", { name: "Use this" }), hasTouch);
     await expect(placing).toBeHidden();
   };
 
   account.failNext.set("POST /lists/face/*", 422);
   await choosePhoto();
-  await expect(page.getByRole("alert")).toContainText(
-    "That picture cannot be your face. Pick another.",
-  );
+  await expect(page.getByRole("alert")).toContainText("That picture can’t be used. Pick another.");
   expect(account.photoUrl).toBeNull();
 
   await choosePhoto();

@@ -174,7 +174,7 @@ describe("Play on a page", () => {
     );
     await userEvent.click(playButton());
     expect(
-      screen.getByText("The result goes into Mine. The author’s ranking doesn’t change."),
+      screen.getByText("The result goes into your version. The author’s ranking doesn’t change."),
     ).toBeInTheDocument();
     await pickGame(/Bracket/);
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
@@ -312,10 +312,10 @@ describe("Play on a page", () => {
     await userEvent.click(playButton());
     await userEvent.click(screen.getByRole("button", { name: "Choose cards" }));
     await userEvent.click(screen.getByRole("checkbox", { name: /Everything/ }));
-    await userEvent.click(screen.getByRole("checkbox", { name: /The deck/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Cards left/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     // The deck alone: the picker names it, as the app does.
-    expect(screen.getByText(inSummary("3 cards from The deck"))).toBeInTheDocument();
+    expect(screen.getByText(inSummary("3 cards from Cards left"))).toBeInTheDocument();
     // Cancel there goes back to the picker, not out.
     // The arrow goes back to the picker; Cancel there closes the whole sheet, as on the app.
     await userEvent.click(screen.getByRole("button", { name: "Choose cards" }));
@@ -389,9 +389,9 @@ describe("Play on a page", () => {
     await userEvent.click(playButton());
     await userEvent.click(screen.getByRole("button", { name: "Choose cards" }));
     await userEvent.click(screen.getByRole("checkbox", { name: /Everything/ }));
-    await userEvent.click(screen.getByRole("checkbox", { name: /The deck/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Cards left/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(screen.getByText(inSummary("3 cards from The deck"))).toBeInTheDocument();
+    expect(screen.getByText(inSummary("3 cards from Cards left"))).toBeInTheDocument();
     await pickGame(/King of the hill/);
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
     await pickLeft(2);

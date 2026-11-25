@@ -8,6 +8,7 @@ import { boardsRepository, type BoardsRepository } from "../features/boards/repo
 import { ApiFailure } from "../api/errors";
 import { memoryStore, type KeyValueStore } from "../lib/storage";
 import { BoardsPage, VIEW_KEY, type LoadReadyList } from "./BoardsPage";
+import { startedChanged } from "../features/started/started";
 import type { ListSummary } from "../api/types";
 
 vi.mock("../lib/api", async () => (await import("../test/apiMock")).apiStubs());
@@ -139,7 +140,9 @@ describe("New here? on an empty Your lists", () => {
     expect(screen.getByText("No lists yet")).toBeInTheDocument();
   });
 
-  it("is not there once one has a list begun, or when the feed has none", async () => {
+  // Continue above shows the list begun: "No lists yet" under it said the
+  // page had nothing (walkthrough item 8, Danylo, 25.11).
+  it("is not there once one has a list begun, and nor is No lists yet under Continue", async () => {
     const begun = memoryStore();
     begun.write(
       "tyl:draft:other",
@@ -156,8 +159,65 @@ describe("New here? on an empty Your lists", () => {
       0,
       load,
     );
-    expect(await screen.findByText("No lists yet")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Continue · 1" })).toBeInTheDocument();
+    expect(screen.queryByText("No lists yet")).toBeNull();
+    expect(screen.getByText("Start with")).toBeInTheDocument();
     expect(screen.queryByText("New here?")).toBeNull();
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it("says No lists yet again once the list begun is discarded", async () => {
+    const begun = memoryStore();
+    begun.write(
+      "tyl:draft:other",
+      JSON.stringify({ listId: "other", title: "Pizza", rows: [[0]], itemCount: 5 }),
+    );
+    open(boardsRepository(memoryStore()), "/b", undefined, begun);
+    expect(await screen.findByRole("heading", { name: "Continue · 1" })).toBeInTheDocument();
+    expect(screen.queryByText("No lists yet")).toBeNull();
+    act(() => {
+      begun.remove("tyl:draft:other");
+      startedChanged(true);
+    });
+    expect(await screen.findByText("No lists yet")).toBeInTheDocument();
+  });
+});
+
+// On a phone New list is the round button at the corner alone, and the line
+// promising tools to come is gone (walkthrough items 8 and 10, Danylo, 25.11).
+describe("Your lists on a phone", () => {
+  const phone = (query: string) =>
+    ({
+      matches: query.includes("max-width"),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }) as unknown as MediaQueryList;
+
+  it("has no New list tile and no line about the tools with a few lists", () => {
+    vi.stubGlobal("matchMedia", phone);
+    try {
+      const repository = boardsRepository(memoryStore());
+      repository.saveAll([ranked("a", "Albums", 1)]);
+      open(repository, "/b", undefined, memoryStore(), undefined, memoryStore(), 6);
+      expect(opened()).toHaveLength(1);
+      expect(screen.queryByRole("link", { name: "New list" })).toBeNull();
+      expect(screen.queryByText(/appear here when you have more than six lists/)).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("starts empty with the suggestions and no New list of its own", () => {
+    vi.stubGlobal("matchMedia", phone);
+    try {
+      open(boardsRepository(memoryStore()));
+      expect(screen.getByText("No lists yet")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Films" })).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "New list" })).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

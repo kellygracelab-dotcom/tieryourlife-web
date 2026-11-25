@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { errorOf, type ApiError } from "../api/errors";
 import { creditAsAttribution } from "../api/pictureAttribution";
@@ -54,40 +54,10 @@ function useListLink(list: PublishedList) {
 }
 
 /**
- * One press and the link is on the clipboard. The address itself used to be
- * spelled out here, forty characters nobody reads and everybody had to select.
- */
-function CopyLinkButton({ list, notify }: { list: PublishedList; notify: Notify }) {
-  const { copy, refused } = useListLink(list);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), 2000);
-    return () => clearTimeout(timer);
-  }, [copied]);
-
-  return (
-    <button
-      type="button"
-      className="list-head__copy"
-      onClick={() => {
-        copy().then(
-          () => setCopied(true),
-          () => notify(refused()),
-        );
-      }}
-    >
-      <Icon name={copied ? "check" : "link"} />
-      <span aria-live="polite">{copied ? strings.list.linkCopied : strings.list.copyLink}</span>
-    </button>
-  );
-}
-
-/**
- * A phone's Share beside Play and Save (25.11.2026): the device's own share
- * sheet where there is one, the link on the clipboard where there is not.
- * Wider windows have Copy link in the head and Share in the menu instead.
+ * Share beside Play and Save (25.11.2026): the device's own share sheet where
+ * there is one, the link on the clipboard where there is not. On a computer it
+ * is the only link button in the head: the Copy link chip beside it did the
+ * same (Designer, 25.11).
  */
 function ShareButton({ list, notify }: { list: PublishedList; notify: Notify }) {
   const { copy, refused, canShare, share } = useListLink(list);
@@ -150,7 +120,7 @@ function VersionItems({
 }
 
 /**
- * Copy link, which the head's chip does too, and the device's own share sheet
+ * Copy link, which the head's Share does too when there is no share sheet, and the device's own sheet
  * where there is one: the web's way to hand a list on, which the app's
  * menu has no need of.
  */
@@ -158,8 +128,7 @@ function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
   const { copy, refused, canShare, share } = useListLink(list);
   return (
     <>
-      {/* From 840 the head has Copy link as a chip: the menu does not say it twice. */}
-      <li className="list-menu__copy">
+      <li>
         <button
           type="button"
           className="menu__action"
@@ -414,8 +383,7 @@ function SaveListButton({ saving }: { saving: SaveButton }) {
 }
 
 /**
- * A visitor's head: Save as a button beside Copy link, or beside Share on a
- * phone, the menu with the rest. One saving flow serves the button and the
+ * A visitor's head: Save as a button beside Share, the menu with the rest. One saving flow serves the button and the
  * menu's copy of it.
  */
 export function VisitorTools({
@@ -442,7 +410,6 @@ export function VisitorTools({
     <>
       <SaveListButton saving={saving} />
       <ShareButton list={list} notify={notify} />
-      <CopyLinkButton list={list} notify={notify} />
       <VisitorMenu
         list={list}
         report={report}
@@ -583,7 +550,7 @@ export function AuthorTools({
         <Icon name={board === null ? "bookmark" : "check"} className="btn__icon" />
         <span>{board === null ? strings.list.saveMyList : strings.list.saved}</span>
       </Link>
-      {list.underReview !== true && <CopyLinkButton list={list} notify={notify} />}
+      {list.underReview !== true && <ShareButton list={list} notify={notify} />}
       <AuthorMenu
         list={list}
         unpublish={unpublish}

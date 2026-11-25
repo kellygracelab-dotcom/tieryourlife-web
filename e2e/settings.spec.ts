@@ -31,10 +31,35 @@ test("the settings page does not jump when the account arrives", async ({ page }
   const before = await languages.evaluate((el) => el.getBoundingClientRect().top);
 
   release();
-  await expect(page.getByText("Sign in to change your settings.")).toBeVisible();
+  await expect(page.getByText("Sign in to keep your lists on every device.")).toBeVisible();
   await expect(page.locator(".settings__card[aria-busy]")).toHaveCount(0);
   const after = await languages.evaluate((el) => el.getBoundingClientRect().top);
   // The shape is the guest card's, not its exact height in every language and width: a
   // line or so may differ. It was 200 px.
   expect(Math.abs(after - before)).toBeLessThanOrEqual(32);
+});
+
+// The computer's foot is the phone's (Designer, 25.11): Privacy · About ·
+// Settings on one line, the app in grey words under them, nothing to press.
+test("the foot has the links in one line and the app's words under them, as no link", async ({
+  page,
+}) => {
+  await mockBackend(page);
+  await page.goto("/settings");
+  const foot = page.getByRole("contentinfo");
+  const links = foot.getByRole("link");
+  await expect(links).toHaveText(["Privacy", "About", "Settings"]);
+  const tops = await links.evaluateAll((all) =>
+    all.map((one) => Math.round(one.getBoundingClientRect().top)),
+  );
+  expect(new Set(tops).size).toBe(1);
+  const apple = await page.evaluate(() => /iPhone|iPad|iPod/.test(navigator.userAgent));
+  const app = foot.getByText("Android app — coming soon to Google Play");
+  if (apple) {
+    await expect(app).toHaveCount(0);
+    return;
+  }
+  await expect(app).toBeVisible();
+  expect((await app.boundingBox())!.y).toBeGreaterThan(tops[0]! + 10);
+  expect(await app.evaluate((one) => one.closest("a"))).toBeNull();
 });

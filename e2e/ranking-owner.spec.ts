@@ -75,7 +75,7 @@ for (const viewer of ["owner", "another account", "guest"] as const) {
       const neutral = async () => {
         await expect(page.locator(".list-head__meta")).not.toContainText(/ranked by/i);
         await expect(
-          page.getByRole("button", { name: /Visitor’s ranking|^Mine$|^Edit$/ }),
+          page.getByRole("button", { name: /Visitor’s ranking|^Your version$|^Edit$/ }),
         ).toHaveCount(0);
         await expect(page.getByRole("link", { name: "Rank this list" })).toHaveCount(0);
         expect(await tile!.evaluate((el) => el.isConnected)).toBe(true);

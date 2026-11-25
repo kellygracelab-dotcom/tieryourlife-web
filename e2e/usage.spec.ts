@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { nameNewList } from "./fixtures";
 import { signIn } from "./signedIn";
 
 /*
@@ -25,9 +26,7 @@ test("sends the visit's counts as the page is hidden, with the site's version an
   await page.goto("/b");
   // A batch sent as a page unloads may pass the mock by (Chromium): count something here.
   await page.getByRole("link", { name: "New list" }).first().click();
-  const field = page.getByRole("textbox", { name: "Title" });
-  await field.fill("Counted");
-  await field.press("Enter");
+  await nameNewList(page, "Counted");
   await expect(page).toHaveURL(/\/b\/(?!new)[^/]+$/);
   await expect(page.locator(".list-head")).toBeVisible();
   await hide(page);

@@ -30,7 +30,7 @@ describe("a card's menu", () => {
     const menu = within(screen.getByRole("menu", { name: "Dune" }));
     expect(menu.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
       "Move to a tierchevron_right",
-      "Back to the deck",
+      "Back to Cards left",
       "Adjust picture",
       "About the picture",
       "Open its page",
@@ -61,7 +61,7 @@ describe("a card's menu", () => {
     const menu = within(screen.getByRole("menu", { name: "Untitled card" }));
     expect(menu.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
       "Move to a tierchevron_right",
-      "Back to the deck",
+      "Back to Cards left",
       "Rename",
       "Adjust picture",
       "Remove from list",

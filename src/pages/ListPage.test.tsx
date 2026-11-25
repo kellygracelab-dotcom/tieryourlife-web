@@ -601,9 +601,10 @@ describe("ListPage", () => {
     expect(
       within(theirs).getByRole("heading", { name: "Cards left · 1" }).closest(".pool"),
     ).toHaveTextContent("The Witch");
-    expect(within(theirs).getByRole("status")).toHaveTextContent(
-      "Move a card to start your version.",
-    );
+    // How to start one's own stands under the title, not under the last tier (Danylo, 25.11).
+    const start = screen.getByText("Move a card to start your version.");
+    expect(start.closest(".list-head")).not.toBeNull();
+    expect(theirs).not.toHaveTextContent("Move a card to start your version.");
     expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
     expect(mocks.loadList).toHaveBeenCalledWith("abc", false);
   });
@@ -678,7 +679,7 @@ describe("ListPage", () => {
       expect(durations).toContain(200);
 
       await userEvent.click(
-        snackbar("All cards are back in the deck").getByRole("button", { name: "Undo" }),
+        snackbar("All cards are back in Cards left").getByRole("button", { name: "Undo" }),
       );
       expect(screen.getByRole("region", { name: "Their ranking" })).toHaveTextContent("Ex Machina");
       expect(localStorageStore.read(draftKey("abc"))).toBeNull();
@@ -709,7 +710,7 @@ describe("ListPage", () => {
     await fromScratch();
     expect(loadPlacedDraft(localStorageStore, scopeOf(list))).toBeNull();
     await userEvent.click(
-      snackbar("All cards are back in the deck").getByRole("button", { name: "Undo" }),
+      snackbar("All cards are back in Cards left").getByRole("button", { name: "Undo" }),
     );
     expect(keptDraft()).toEqual(before);
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
@@ -879,17 +880,18 @@ describe("ListPage", () => {
     expect(menuLines()[0]).toBe("Rankings · 0");
   });
 
-  it("copies the link with one press of the button in the head, and says so there", async () => {
+  it("has Share as the one link button in the head, with no Copy link chip beside it (Designer, 25.11)", async () => {
     mocks.loadList.mockResolvedValue(list);
     const writeText = vi.fn(async () => undefined);
     Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
     open();
     await screen.findByRole("heading", { level: 1 });
-    const button = screen.getAllByRole("button", { name: "Copy link" })[0]!;
-    expect(button).toHaveClass("list-head__copy");
-    await userEvent.click(button);
+    expect(document.querySelector(".list-head__copy")).toBeNull();
+    const head = document.querySelector<HTMLElement>(".list-head__tools .list-head__share")!;
+    expect(head).toHaveAccessibleName("Share");
+    // No share sheet: the link goes on the clipboard.
+    await userEvent.click(head);
     expect(writeText).toHaveBeenCalledWith("http://localhost:3000/l/abc");
-    expect(button).toHaveTextContent("Link copied");
   });
 });
 
@@ -1637,6 +1639,26 @@ describe("ListPage, Play", () => {
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByRole("button", { name: "Play" }));
     expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+  });
+
+  // Walk 25.11: there is no Mine any more, and a house list has no author to name.
+  it("says the game's result goes into one's version, naming the author only where there is one", async () => {
+    mocks.loadList.mockResolvedValue(twoTiers);
+    const { unmount } = open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(
+      screen.getByText("The result goes into your version. The author’s ranking doesn’t change."),
+    ).toBeInTheDocument();
+    unmount();
+
+    mocks.loadList.mockResolvedValue({ ...twoTiers, authorUid: "tyl-editorial" });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    const play = within(screen.getByRole("dialog", { name: "Play" }));
+    expect(play.getByText("The result goes into your version.")).toBeInTheDocument();
+    expect(play.queryByText(/author/i)).toBeNull();
   });
 });
 

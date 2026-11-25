@@ -393,4 +393,67 @@ test.describe("a wide screen", () => {
       expect(Math.round(trash.x + trash.width)).toBe(Math.round(home.x + home.width));
     }
   });
+
+  // Danylo's 2560 walk (25.11): the home was 2200 wide, a section and search a
+  // 1020 column and a list's board 1120, under a bar whose logo and buttons
+  // stood at the window's edges. Every page now keeps to one column, 1760 at
+  // most (--width-page), and the bar's logo and buttons stand on its edges.
+  test("keeps every page to one column, the bar's logo and buttons on its edges", async ({
+    page,
+  }) => {
+    await mockBackend(page);
+    const feed = Array.from({ length: 8 }, (_, n) => ({
+      id: `col${n}`,
+      title: `List ${n + 1}`,
+      authorUid: list.authorUid,
+      authorName: list.authorName,
+      authorPhotoUrl: null,
+      category: list.category,
+      itemCount: list.itemCount,
+      coverImageUrl: null,
+      previewImages: [],
+      tierColors: list.tierColors,
+      updatedAt: list.updatedAt,
+      takeCount: list.takeCount,
+    }));
+    await page.route("**/lists?**", (route) =>
+      route.fulfill({ json: { lists: feed, nextCursor: null } }),
+    );
+    const edges = async (selector: string) => {
+      const box = (await page.locator(selector).first().boundingBox())!;
+      return { left: box.x, right: box.x + box.width };
+    };
+    for (const width of [1280, 1440, 1920, 2560]) {
+      await page.setViewportSize({ width, height: 1000 });
+      const column = Math.min(width - 64, 1760);
+      const pages: [string, string, string][] = [
+        ["/", ".home", ".home .feed > li"],
+        ["/s/film_tv", ".section-page", ".section-head"],
+        ["/search?q=film", ".search", ".search .list-card"],
+      ];
+      for (const [path, selector, ready] of pages) {
+        await page.goto(path);
+        await expect(page.locator(ready).first()).toBeVisible();
+        const content = await edges(selector);
+        const brand = await edges(".top .brand");
+        const actions = await edges(".top__actions");
+        expect(Math.round(content.right - content.left), `${path} at ${width}`).toBe(column);
+        expect(Math.abs(brand.left - content.left), `${path} at ${width}`).toBeLessThanOrEqual(1);
+        expect(Math.abs(actions.right - content.right), `${path} at ${width}`).toBeLessThanOrEqual(
+          1,
+        );
+      }
+      // Somebody's list: the board, with its cards beside it or under it,
+      // from the column's one edge to the other.
+      await page.goto(`/l/${LIST_ID}`);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+      const brand = await edges(".top .brand");
+      const actions = await edges(".top__actions");
+      const board = await edges(".board");
+      const side = page.locator(".ranking:not(.ranking--under) .ranking__side");
+      const end = (await side.count()) > 0 ? (await edges(".ranking__side")).right : board.right;
+      expect(Math.abs(board.left - brand.left), `list at ${width}`).toBeLessThanOrEqual(2);
+      expect(Math.abs(end - actions.right), `list at ${width}`).toBeLessThanOrEqual(2);
+    }
+  });
 });

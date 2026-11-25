@@ -119,6 +119,50 @@ test.describe("starting from the author's ranking", () => {
   });
 });
 
+// The author's ranking with every card placed: no empty "Cards left · 0" column
+// beside it on a computer, where it took a third of the window, and the line
+// on how to start one's own under the title, not at the page's foot (Danylo, 25.11).
+test("the author's ranking with every card placed takes the width, and a card taken out still starts Mine", async ({
+  page,
+  hasTouch,
+}) => {
+  await mockBackend(page);
+  const placed = { ...list, items: list.items.map((item) => ({ ...item, tierIndex: 1 })) };
+  await page.route(`**/lists/${LIST_ID}`, (route) => route.fulfill({ json: placed }));
+  await page.goto(`/l/${LIST_ID}`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+  const theirs = page.getByRole("region", { name: "Their ranking" });
+  await expect(theirs.getByRole("list", { name: "A" }).getByRole("button")).toHaveCount(3);
+  const start = page.getByText("Move a card to start your version.");
+  await expect(start).toBeVisible();
+  // Under the title, above the board.
+  const said = (await start.boundingBox())!;
+  const title = (await page.getByRole("heading", { level: 1 }).boundingBox())!;
+  const board = (await theirs.locator(".board").boundingBox())!;
+  expect(said.y).toBeGreaterThan(title.y);
+  expect(said.y + said.height).toBeLessThanOrEqual(board.y);
+  await expect(theirs.locator(".pool")).toHaveCount(0);
+  if (hasTouch) return;
+
+  // The board as wide as the page's head: nothing stands beside it.
+  const head = (await page.locator(".list-head").boundingBox())!;
+  expect(Math.abs(board.width - head.width)).toBeLessThanOrEqual(1);
+  // A card lifted brings the pool, empty, at the window's foot; the rows stay put.
+  const from = (await theirs.getByRole("button", { name: "Ex Machina" }).boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 120, from.y + 160, { steps: 8 });
+  const pool = theirs.locator(".pool");
+  await expect(pool.getByRole("heading")).toHaveText("Cards left · 0");
+  expect((await theirs.locator(".board").boundingBox())!.width).toBe(board.width);
+  const to = (await pool.boundingBox())!;
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+  await expect(pool).toHaveClass(/pool--target/);
+  await page.mouse.up();
+  await expect(page.locator(".list-head__version")).toHaveText("Your version · see danylo’s");
+  await expect(page.getByText("2 of 3 placed")).toBeVisible();
+});
+
 // On every screen: a version begun here opens as one's own; the author's is
 // looked at read-only, and the menu puts it in place of one's own at once.
 test("a begun version opens as one's own, the author's only to look at, and Back to the author's ranking asks nothing", async ({
@@ -318,7 +362,7 @@ test.describe("ranking a list on a phone", () => {
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
 
     await card(page, "Ex Machina").tap();
-    await expect(page.getByText("Tap a tier to place Ex Machina.")).toBeVisible();
+    await expect(page.getByText("Tap a tier", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Place Ex Machina in S · Masterpiece" }).tap();
     // S holds a card and A is empty: one height, 64 + 2 × 11.
     const rows = page.locator(".board > .tier");

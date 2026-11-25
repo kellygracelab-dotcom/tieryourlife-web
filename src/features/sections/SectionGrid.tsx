@@ -1,6 +1,7 @@
 import { useWidthClass, type WidthClass } from "../../lib/useWidthClass";
 import { strings } from "../../strings";
-import { approvedOnly, homeSlots, type Section } from "./model";
+import type { CSSProperties } from "react";
+import { approvedOnly, evenColumns, homeSlots, type Section } from "./model";
 import { AllSectionsTile, SectionTile } from "./SectionTile";
 import "./sections.css";
 
@@ -19,11 +20,23 @@ export function SectionGrid({ sections, width, known = true }: SectionGridProps)
   // Somebody's own waiting section shows on /s and in Following, not here.
   const shown = approvedOnly(sections);
   const slots = homeSlots(shown, width ?? measured);
+  // How many a row keeps the rows even at each width's most (HomePage.css; Danylo's walk, 25.11).
+  const count = slots.tiles.length + (slots.allTile ? 1 : 0);
+  const columns = {
+    "--cols-5": evenColumns(count, 5),
+    "--cols-6": evenColumns(count, 6),
+    "--cols-12": evenColumns(count, 12),
+  } as CSSProperties;
   if (!known) {
     // The nine's places, nothing in them: drawn as art and then replaced by
     // the backend's pictures in its own order, the tiles flashed and jumped.
     return (
-      <nav className="sections-grid" aria-label={strings.home.categories} aria-busy="true">
+      <nav
+        className="sections-grid"
+        style={columns}
+        aria-label={strings.home.categories}
+        aria-busy="true"
+      >
         {slots.tiles.map((section) => (
           <span key={section.id} className="section-tile section-tile--blank" />
         ))}
@@ -34,7 +47,7 @@ export function SectionGrid({ sections, width, known = true }: SectionGridProps)
     );
   }
   return (
-    <nav className="sections-grid" aria-label={strings.home.categories}>
+    <nav className="sections-grid" style={columns} aria-label={strings.home.categories}>
       {slots.tiles.map((section) => (
         <SectionTile key={section.id} section={section} />
       ))}

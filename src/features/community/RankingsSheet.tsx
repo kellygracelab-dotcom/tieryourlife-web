@@ -10,6 +10,7 @@ import { Icon } from "../../ui/Icon";
 import { Skeleton } from "../../ui/Skeleton";
 import { useModal } from "../../ui/useModal";
 import { useSession } from "../../app/session";
+import { signInFailedText } from "../../app/signInFailure";
 import { searchAgainAt } from "../../lib/searchLimit";
 import { placedOn, readerName } from "./rankings";
 import type { LikeTrouble, Rankings } from "./useRankings";
@@ -151,15 +152,16 @@ function LikeSignIn({ onClose }: { onClose: () => void }) {
   const { signIn } = useSession();
   const titleId = useId();
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  // What went wrong, said by its reason: a blocked Google window names the way out.
+  const [failed, setFailed] = useState<string | null>(null);
   return (
     <li className="rankings__ask rankings__ask--sign-in" role="group" aria-labelledby={titleId}>
       <p id={titleId} className="rankings__ask-title">
         {strings.rankings.likeSignIn}
       </p>
-      {failed && (
+      {failed !== null && (
         <p className="rankings__trouble" role="alert">
-          {strings.nav.signInFailed}
+          {failed}
         </p>
       )}
       <div className="rankings__ask-actions">
@@ -172,10 +174,10 @@ function LikeSignIn({ onClose }: { onClose: () => void }) {
           disabled={busy}
           onClick={() => {
             setBusy(true);
-            setFailed(false);
+            setFailed(null);
             void signIn().then((outcome) => {
               setBusy(false);
-              if (outcome.kind === "failed") setFailed(true);
+              if (outcome.kind === "failed") setFailed(signInFailedText(outcome.code));
               else onClose();
             });
           }}

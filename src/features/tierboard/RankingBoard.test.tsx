@@ -377,7 +377,7 @@ describe("RankingBoard", () => {
     );
     expect(screen.getByText("Tap a card, then a tier")).toBeInTheDocument();
     await userEvent.click(card("Ex Machina"));
-    expect(screen.getByText("Tap a tier to place Ex Machina.")).toBeInTheDocument();
+    expect(screen.getByText("Tap a tier")).toBeInTheDocument();
 
     // The band's own button, the way a finger or a screen reader gets there.
     await userEvent.click(
@@ -843,7 +843,7 @@ describe("RankingBoard, one card at a time", () => {
       "aria-current",
       "true",
     );
-    expect(panel().getByRole("button", { name: "To the deck" })).toBeInTheDocument();
+    expect(panel().getByRole("button", { name: "To Cards left" })).toBeInTheDocument();
     await userEvent.keyboard("{Backspace}");
     expect(within(tierList("A")).queryAllByRole("button")).toHaveLength(0);
 

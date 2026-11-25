@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { list, mockBackend } from "./fixtures";
+import { list, mockBackend, nameNewList } from "./fixtures";
 import { signIn } from "./signedIn";
 
 /*
@@ -43,9 +43,7 @@ async function reloadSeen(page: Page): Promise<string[]> {
 
 async function ownBoard(page: Page) {
   await page.goto("/b/new");
-  const field = page.locator(".board-page__title-field");
-  await field.fill("Reloaded board");
-  await field.press("Enter");
+  await nameNewList(page, "Reloaded board");
   await expect(page.locator(".tier").first()).toBeVisible();
   // At its own address, as a reload finds it.
   await page.goto(new URL(page.url()).pathname);

@@ -368,18 +368,17 @@
   display: none;
 }
 
-/* How to reach a card's menu, at the pool's foot: a mouse's way, so a finger never sees it. */
-.pool__hint--menu {
-  padding: 8px 8px 0;
-  font: 400 12px/16px var(--font);
-  color: var(--ink-faint);
+/*
+ * While a newcomer's tip is up (ui/Tips, a strip at the body's end) the
+ * pool's standing hint steps aside: one hint on screen at a time
+ * (walkthrough of 25.11, item 4, Danylo). Hidden, not gone, so the cards under
+ * it stay put when a press on one closes the tip.
+ */
+body:has(> .tip) .pool__hint {
+  visibility: hidden;
 }
 
 @media (hover: none) and (pointer: coarse) {
-  .pool__hint--menu {
-    display: none;
-  }
-
   /*
    * A finger has no number keys and nothing to click, at any width: a tablet
    * or a phone on its side is told to tap, as a phone held upright is.
@@ -725,7 +724,8 @@
 @media (min-width: 840px) {
   .board-frame,
   .ranking {
-    --board-cap: 1760px;
+    /* The page's column (tokens.css): the board, the dock's row and the head share it. */
+    --board-cap: var(--width-page);
     --board-max: 1120px;
     --pool-cols: 4;
     /* The card's padding either side, and the cards with their gaps. */
@@ -1303,7 +1303,10 @@
   }
 
   body:has(.ranking--under .pool) .snackbar {
-    inset-inline-start: max(var(--space-8), calc((100vw - var(--board-cap, 1760px)) / 2));
+    inset-inline-start: max(
+      var(--space-8),
+      calc((100vw - var(--board-cap, var(--width-page))) / 2)
+    );
     bottom: calc(var(--dock-h, 262px) + 16px + var(--snackbar-lift, 0px));
   }
 
@@ -1981,7 +1984,14 @@
   }
 }
 
-@media (min-width: 2000px) {
+/*
+ * Eight from the first window whose page column (--width-page, 1760) holds
+ * them beside a 1120 board: 1120 + 24 + 614, plus the page's two 32 px
+ * sides. The two then fill the column, edge to edge with the bar's logo and
+ * buttons (Danylo's 2560 walk, 25.11); at 2000 a 1920 screen stood them 38
+ * px inside it.
+ */
+@media (min-width: 1824px) {
   .board-frame,
   .ranking {
     --pool-cols: 8;

@@ -3,8 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { IN_APP_BROWSER } from "../lib/inAppBrowser";
+import { POPUP_BLOCKED } from "../lib/signIn";
 import { PageTitle } from "./pageTitle";
-import { SearchScopeMark } from "./searchScope";
+import { SEARCH_DEBOUNCE_MS, SearchScopeMark } from "./searchScope";
 import { routes } from "./routes";
 import { Shell } from "./Shell";
 import { RedirectFailedContext, SessionContext, type Session } from "./session";
@@ -110,6 +111,91 @@ describe("Shell search", () => {
     expect(box).toHaveFocus();
     // The page's head is a status region: what was asked and how much came are read out.
     expect(screen.getByRole("heading", { level: 1 }).closest("[role='status']")).not.toBeNull();
+  });
+});
+
+// The results follow the typing in the bar's field, not only Enter
+// (walkthrough item 6, Danylo, 25.11).
+describe("Shell search as it is typed", () => {
+  const guest: Session = {
+    account: { kind: "guest", uid: null },
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    refresh: vi.fn(),
+  };
+  const start = (at: string) => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const router = createMemoryRouter(routes, { initialEntries: [at] });
+    render(
+      <SessionContext.Provider value={guest}>
+        <RouterProvider router={router} />
+      </SessionContext.Provider>,
+    );
+    // "Search lists", or "Search in Games" where the page keeps to a section.
+    const field = within(screen.getByRole("banner")).getByRole("searchbox", { name: /^Search/ });
+    return { router, field };
+  };
+  const pause = () =>
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS + 50);
+    });
+
+  it("opens the results after a pause, one step to come back from, then follows in place", async () => {
+    const { router, field } = start("/about");
+    await userEvent.type(field, "anime");
+    pause();
+    expect(router.state.location.pathname).toBe("/search");
+    expect(router.state.location.search).toBe("?q=anime");
+    expect(router.state.historyAction).toBe("PUSH");
+    expect(field).toHaveFocus();
+    await userEvent.type(field, " films");
+    pause();
+    expect(router.state.location.search).toBe("?q=anime+films");
+    expect(router.state.historyAction).toBe("REPLACE");
+    expect(field).toHaveValue("anime films");
+    await act(() => router.navigate(-1));
+    expect(router.state.location.pathname).toBe("/about");
+  });
+
+  it("keeps what was typed past the words it sent", async () => {
+    const { router, field } = start("/search?q=anime");
+    await userEvent.type(field, " ");
+    pause();
+    // A space more asks nothing new: the address, and so the feed, stay.
+    expect(router.state.location.search).toBe("?q=anime");
+    expect(router.state.historyAction).toBe("POP");
+    expect(field).toHaveValue("anime ");
+    await userEvent.type(field, "x ");
+    pause();
+    expect(router.state.location.search).toBe("?q=anime+x");
+    expect(field).toHaveValue("anime x ");
+  });
+
+  it("keeps the order and the place the search page asks, and browses when emptied", async () => {
+    const { router, field } = start("/search?sort=recent&category=games");
+    await userEvent.type(field, "zelda");
+    pause();
+    expect(router.state.location.search).toBe("?sort=recent&category=games&q=zelda");
+    await userEvent.clear(field);
+    pause();
+    expect(router.state.location.search).toBe("?sort=recent&category=games");
+  });
+
+  it("goes at once on Enter, and not again after the pause", async () => {
+    const { router, field } = start("/about");
+    await userEvent.type(field, "anime{Enter}");
+    expect(router.state.location.search).toBe("?q=anime");
+    const key = router.state.location.key;
+    pause();
+    expect(router.state.location.key).toBe(key);
+  });
+
+  it("sends nothing after a link followed during the pause", async () => {
+    const { router, field } = start("/about");
+    await userEvent.type(field, "anime");
+    await act(() => router.navigate("/settings"));
+    pause();
+    expect(router.state.location.pathname).toBe("/settings");
   });
 });
 
@@ -417,6 +503,27 @@ describe("Shell account", () => {
     );
   });
 
+  // Walkthrough item 17 (Danylo, 25.11): the window was blocked and the page
+  // could not go to Google either; "Try again" would only meet the same block.
+  it("says the browser blocked Google's window and how to let it open", async () => {
+    const signIn = vi.fn(async () => ({ kind: "failed" as const, code: POPUP_BLOCKED }));
+    open({ signIn });
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Your browser blocked the Google sign-in window");
+    expect(alert).toHaveTextContent("Allow pop-ups for this site");
+    expect(alert).not.toHaveTextContent("Could not sign in");
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+  });
+
+  it("says nothing while the page leaves for Google's own sign-in", async () => {
+    const signIn = vi.fn(async () => ({ kind: "redirecting" as const }));
+    open({ signIn });
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(signIn).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("says a sign-in that came back from its redirect failed, and lets Sign in be pressed again", async () => {
     const signIn = vi.fn(async () => ({ kind: "cancelled" as const }));
     open({ signIn }, "/", true);
@@ -586,6 +693,51 @@ describe("Shell's bar on a list's page in a narrow window (audit C2)", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  // New list lives in one place on a phone, the round button: no plus in the
+  // bar on a section's, a topic's, the search's or a profile's page either,
+  // and on a list's page neither, where the tray docks at the bottom
+  // (walkthrough item 10, Danylo, 25.11).
+  it.each(["/s", "/s/films", "/s/films/t/t1", "/search?q=anime", "/u/a1"])(
+    "has New list as the round button alone on %s on a phone",
+    (at) => {
+      vi.stubGlobal("matchMedia", narrowWindow);
+      try {
+        open({}, at);
+        // A profile has a header of its own: the site's bar is the first.
+        const bar = screen.getAllByRole("banner")[0]!;
+        expect(within(bar).queryByRole("link", { name: "New list" })).toBeNull();
+        const fab = document.querySelector("a.fab");
+        expect(fab).toHaveAccessibleName("New list");
+        expect(fab).toHaveAttribute("href", "/b/new");
+        expect(screen.getByRole("contentinfo")).toHaveClass("foot--fab");
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    },
+  );
+
+  it.each(["/l/a1", "/r/abc", "/settings"])("has no New list at all on %s on a phone", (at) => {
+    vi.stubGlobal("matchMedia", narrowWindow);
+    try {
+      open({}, at);
+      expect(
+        within(screen.getByRole("banner")).queryByRole("link", { name: "New list" }),
+      ).toBeNull();
+      expect(document.querySelector(".fab")).toBeNull();
+      expect(screen.getByRole("contentinfo")).not.toHaveClass("foot--fab");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps New list in the bar, and no round button, in a wide window", () => {
+    open({}, "/s/films");
+    expect(
+      within(screen.getByRole("banner")).getByRole("link", { name: "New list" }),
+    ).toHaveAttribute("href", "/b/new");
+    expect(document.querySelector(".fab")).toBeNull();
   });
 
   it("has the foot's short words on a phone, and the app's line saying where it is coming", () => {

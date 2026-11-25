@@ -145,7 +145,7 @@ test("reset requires confirmation and restores pool then tier order after reload
 }) => {
   await openBoard(page);
   const more = page.locator(".list-head details.menu summary:not(.view-button)");
-  const reset = page.getByRole("button", { name: "Return all cards to the deck", exact: true });
+  const reset = page.getByRole("button", { name: "Put all cards back in Cards left", exact: true });
   await more.click();
   await reset.click();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -157,7 +157,7 @@ test("reset requires confirmation and restores pool then tier order after reload
   await expect(page.locator(".tier .tile")).toHaveCount(4);
   await more.click();
   await reset.click();
-  await page.getByRole("button", { name: "Return to the deck", exact: true }).click();
+  await page.getByRole("button", { name: "Put them back", exact: true }).click();
   const expected = [...board.items.slice(4), ...board.items.slice(0, 4)].map((i) => i.title);
   for (let i = 0; i < 2; i++) {
     await expect(page.locator(".pool__items .tile")).toHaveCount(91);
@@ -286,7 +286,7 @@ for (const scope of ["whole board", "two tiers", "one occupied tier"]) {
     await openBoard(page, { ...board, items });
     await play(page).click();
     await page.getByRole("button", { name: "Choose cards" }).click();
-    if (scope === "two tiers") await page.getByRole("checkbox", { name: /The deck/ }).uncheck();
+    if (scope === "two tiers") await page.getByRole("checkbox", { name: /Cards left/ }).uncheck();
     if (scope === "one occupied tier") {
       // Everything on a board of one tier; ticking the tier alone only orders it.
       const only = page.getByRole("checkbox", { name: /^Tier S/ });

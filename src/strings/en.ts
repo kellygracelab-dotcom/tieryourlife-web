@@ -13,6 +13,8 @@ export const en = {
     boards: "Your lists",
     search: "Search lists",
     signInFailed: "Could not sign in. Try again.",
+    signInBlocked:
+      "Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again, or open this page in Chrome or Safari.",
     storageRefused:
       "This browser is not keeping your changes: its storage is full or blocked for this site. Free some space or allow the site to store data, or what you make now is lost.",
     theme: "Theme",
@@ -84,12 +86,13 @@ export const en = {
     facePhotoGone: "Too late to bring the photo back.",
     faceUndo: "Undo",
     faceNote:
-      "People see your face next to your name on the lists you publish. A card or a photo you pick is checked and kept with your account.",
+      "People see your picture next to your name on the lists you publish. A card or a photo you pick is checked and kept with your account.",
     faceUnchecked: "This picture can’t be checked. Try a still photo.",
-    faceNotMade: "That picture cannot be your face. Pick another.",
+    faceNotMade: "That picture can’t be used. Pick another.",
     title: "Settings",
-    guestTitle: "Sign in to change your settings.",
-    guestBody: "Your name and your picture belong to an account. Ranking a list doesn’t need one.",
+    guestTitle: "Sign in to keep your lists on every device.",
+    guestBody:
+      "Your name and picture, and your lists on all your devices. Theme, colour and language work without an account.",
     themeGuestNote: "Kept on this device, signed in or not.",
     nameTitle: "Your name",
     nameBody: "The name shown as the author on every list you publish. Your email is never shown.",
@@ -105,10 +108,10 @@ export const en = {
     saved: "Saved.",
     nameFailed: "Couldn’t save — the server didn’t answer. Your name is unchanged.",
     tryAgain: "Try again",
-    faceTitle: "Your face",
+    faceTitle: "Your picture",
     faceBody: "Pick a card from a list you published, or a photo from your device.",
     faceNone: "Publish a list and its pictures show up here.",
-    faceChoices: "Your face",
+    faceChoices: "Your picture",
     faceChoice: "Card from {list}",
     faceLetter: "Just the letter",
     faceLetterCaption: "Letter",
@@ -151,7 +154,7 @@ export const en = {
       "Lists and people you hide in the community wait here, in case you change your mind.",
     hiddenAuthor: "Everything from {name}",
     showAgain: "Show again",
-    placeTitle: "Place your face",
+    placeTitle: "Place your picture",
     placeFrame: "The picture to place in the circle",
     placeControls: "Move and zoom the picture",
     placeLeft: "Move left",
@@ -161,7 +164,7 @@ export const en = {
     placeZoomIn: "Zoom in",
     placeZoomOut: "Zoom out",
     placeUse: "Use this",
-    placeFailed: "This picture would not load, so it cannot be your face. Pick another.",
+    placeFailed: "This picture would not load, so it cannot be your picture. Pick another.",
     placeHelp: "Drag to move, pinch or scroll to zoom.",
     placeAsItIs: "This picture can only be used as it is.",
   },
@@ -197,6 +200,8 @@ export const en = {
     categories: "Sections",
     popular: "Popular",
     popularNote: "Open one and start dragging. No account needed.",
+    // Signed in, "No account needed" says nothing (Danylo's walk, 25.11).
+    popularNoteSignedIn: "Open one and start dragging.",
     source: "Whose lists to show",
     // "All" is the phone app's word for the same switch.
     everyone: "All",
@@ -450,8 +455,7 @@ export const en = {
     failedBody: "Something went wrong on the way. Try again.",
     // A ranking's page still switches between its author's and its visitors' (RankingPage).
     views: "Whose arrangement to show",
-    viewMine: "Mine",
-    yourArrangement: "Your arrangement",
+    viewYours: "Your version",
     more: "More about this list",
     report: "Report this list",
     hide: "Hide this list",
@@ -503,7 +507,7 @@ export const en = {
     backToYours: "Back to yours",
     // The menu's two ways over one's own version, each with an Undo.
     startFromScratch: "Start from scratch",
-    scratchDone: "All cards are back in the deck",
+    scratchDone: "All cards are back in Cards left",
     backToAuthors: "Back to {name}’s ranking",
     backToAuthorsUnnamed: "Back to the author’s ranking",
     replacedYours: "Replaced your version with {name}’s ranking",
@@ -514,7 +518,6 @@ export const en = {
   // disagree with the chip's, which is the takes (Danylo, 28.10).
   rankings: {
     publicationPreview: "Review publication",
-    previewRanking: "Your arrangement will appear in the original list’s Rankings.",
     notYours:
       "This is someone else’s list, so it can’t go out as a list of yours. Only your ranking can, in its Rankings.",
     progressTitle: "Show others how you ranked it?",
@@ -588,7 +591,7 @@ export const en = {
     hintPlace: "Click a tier to place {name}, or press its number.",
     hintMove: "← and → move {name} along its row",
     hintPickTouch: "Tap a card, then a tier",
-    hintPlaceTouch: "Tap a tier to place {name}.",
+    hintPlaceTouch: "Tap a tier",
     search: "Find a card",
     searchNone: "No card by that name.",
     dock: "Where the cards sit",
@@ -602,14 +605,14 @@ export const en = {
     allPlacedHint: "Drag a card to change your mind",
     placeIn: "Place {name} in {tier}",
     cardIn: "{name} in {tier}",
-    cardInPool: "{name} back in the deck",
+    cardInPool: "{name} back in Cards left",
     oneByOne: "One by one",
     oneByOneSkip: "Skip",
-    oneByOneToPool: "To the deck",
+    oneByOneToPool: "To Cards left",
     oneByOneDone: "Every card is in place",
     oneByOneLeave: "Show every card",
     oneByOneKeys: "{keys} for its tier, Space to skip",
-    oneByOneKeysPlaced: "{keys} for another tier, Backspace to the deck",
+    oneByOneKeysPlaced: "{keys} for another tier, Backspace to Cards left",
     undo: "Undo",
     cancel: "Cancel",
     saveChanges: "Save",
@@ -624,7 +627,7 @@ export const en = {
     failedBannedUntil: "You can’t rank lists until {date}.",
     failedOther: "Could not save the ranking. Nothing was lost. Try again.",
     failedTooLarge:
-      "This list is too large to save as a shared ranking. Your arrangement stays on this device.",
+      "This list is too large to save as a shared ranking. Your version stays on this device.",
     failedChanged:
       "The author changed this list while you were ranking it. Load it again to rank it as it is now.",
     loadAgain: "Load it again",
@@ -669,8 +672,7 @@ export const en = {
     soon: "Coming soon to Google Play",
     hide: "Hide",
     footer: "Android app",
-    footerSoon: "Android app · coming soon",
-    footerSoonPhone: "Android app — coming soon to Google Play",
+    footerSoon: "Android app — coming soon to Google Play",
     menu: "Get the Android app",
     aboutBody:
       "Everything the site does, plus offline lists, history, AI pictures and the Flip cover screen. Your lists sync through your Google account.",
@@ -971,7 +973,8 @@ export const en = {
       "Lists here may wait for a proposed section ({names}). Moving one takes it out of that proposal.",
     moveAnyway: "Move anyway",
     house: "House lists",
-    houseBody: "Published by nobody: no name, no face, no account. Visitors see an anonymous list.",
+    houseBody:
+      "Published by nobody: no name, no picture, no account. Visitors see an anonymous list.",
     houseHowTo:
       "Edit opens a copy of a house list on a board of yours; Update house list there changes the list in place, under the same link.",
     publishBoard: "Publish a board",
@@ -992,7 +995,7 @@ export const en = {
     newHouseList: "New house list",
     houseBoard: "House list",
     houseBoardNew:
-      "Goes out as the site: no name, no face, no account. Nothing is public until you publish it.",
+      "Goes out as the site: no name, no picture, no account. Nothing is public until you publish it.",
     houseBoardLinked: "Goes out as the site. Your changes reach the list only when you update it.",
     publishToHouse: "Publish to House lists",
     updateHouse: "Update house list",
@@ -1216,10 +1219,10 @@ export const en = {
   },
   play: {
     randomSample: "Random sample",
-    resetCards: "Return all cards to the deck",
-    resetQuestion: "Return all cards to the deck?",
-    resetBody: "Your tier arrangement will be reset.",
-    resetConfirm: "Return to the deck",
+    resetCards: "Put all cards back in Cards left",
+    resetQuestion: "Put all cards back in Cards left?",
+    resetBody: "Every tier will be emptied.",
+    resetConfirm: "Put them back",
     play: "Play",
     needsCards: "Play needs at least 3 cards.",
     savedGame: "A game is saved.",
@@ -1259,14 +1262,16 @@ export const en = {
     },
     changed: "The list changed, so this game can’t go on",
     startAgain: "Start again",
-    intoMine: "The result goes into Mine. The author’s ranking doesn’t change.",
+    // Under Start on somebody else's list; a house list has no author (walk 25.11).
+    intoYours: "The result goes into your version. The author’s ranking doesn’t change.",
+    intoYoursHouse: "The result goes into your version.",
     cancel: "Cancel",
     start: "Start",
     savedDiscarded: "Saved game discarded",
     undo: "Undo",
-    thePool: { one: "The deck · {n} card", other: "The deck · {n} cards" },
+    thePool: { one: "Cards left · {n}", other: "Cards left · {n}" },
     rankedRow: { one: "Placed · {n} card", other: "Placed · {n} cards" },
-    poolArea: "The deck",
+    poolArea: "Cards left",
     rankedArea: "Placed",
     everything: { one: "Everything · {n} card", other: "Everything · {n} cards" },
     selected: "{n} of {max} selected",
@@ -1309,9 +1314,15 @@ export const en = {
     },
     // A visitor's game over the author's placing (QA 19.11).
     placedWarningAuthor: {
-      one: "The author placed {n} card. The game rearranges it in Mine; Undo brings it back.",
+      one: "The author placed {n} card. The game rearranges it in your version; Undo brings it back.",
       other:
-        "The author placed {n} cards. The game rearranges them in Mine; Undo brings them back.",
+        "The author placed {n} cards. The game rearranges them in your version; Undo brings them back.",
+    },
+    // The same over a house list's placing: the site's lists have no author.
+    placedWarningHouse: {
+      one: "{n} card is already placed. The game rearranges it in your version; Undo brings it back.",
+      other:
+        "{n} cards are already placed. The game rearranges them in your version; Undo brings them back.",
     },
   },
   boards: {
@@ -1363,8 +1374,8 @@ export const en = {
     done: "Done",
     tierRemoved: "Tier {name} removed",
     tierRemovedCards: {
-      one: "Tier {name} removed · {n} card back in the deck",
-      other: "Tier {name} removed · {n} cards back in the deck",
+      one: "Tier {name} removed · {n} card back in Cards left",
+      other: "Tier {name} removed · {n} cards back in Cards left",
     },
     editTier: "Edit tier",
     editTierOf: "Edit tier {name}",
@@ -1383,7 +1394,7 @@ export const en = {
     rankedRow: "{n}. {name} in {tier}",
     moveTo: "Move to a tier",
     currentTier: "Currently here",
-    backToPool: "Back to the deck",
+    backToPool: "Back to Cards left",
     removeFromList: "Remove from list",
     photoBy: "Photo: {credit}",
     publication: "Publication",
@@ -1396,7 +1407,6 @@ export const en = {
     rankedShort: "In Rankings",
     seePublished: "View",
     inRankingsStatus: "In Rankings",
-    rankedBody: "Your arrangement is in the original list’s Rankings.",
     publicBody: "Anyone with the link can rank it. It shows in Community.",
     needsItems: "Add at least one card before you publish this list.",
     update: "Update",
@@ -1467,7 +1477,6 @@ export const en = {
     takeDownTitle: "Take {title} down?",
     takeDownBody: "It leaves Community and its link stops working. You keep it in Your lists.",
     categoryWaiting: "Waiting for a moderator",
-    menuHint: "Double-click or right-click a card to move or remove it.",
     choose: "Select",
     pickToDelete: "Choose the lists to delete",
     noneShown: "No lists under “{filter}”",
@@ -1491,8 +1500,8 @@ export const en = {
     publish: "Publish…",
     delete: "Delete",
     deleteMany: { one: "Delete {n} list", other: "Delete {n} lists" },
-    discard: "Discard my arrangement",
-    discarded: "Arrangement discarded",
+    discard: "Discard your version",
+    discarded: "Your version discarded",
     savedLabel: "Saved",
     publicLabel: "Public",
   },
@@ -1534,15 +1543,14 @@ export const en = {
     how: "It shows in Community under your name. Anyone with the link can rank it. This list stays yours to edit.",
     cancel: "Cancel",
     continue: "Continue",
-    rankSub: "Your arrangement of someone else’s list",
+    rankSub: "Your version of someone else’s list",
     rankHow:
-      "Your arrangement goes into this list’s Rankings, under your name. No second list appears in the feed. This list stays yours to edit.",
+      "Your version goes into this list’s Rankings, under your name. No second list appears in the feed. This list stays yours to edit.",
     change: "Change",
     changeSection: "Change section",
     changeTopic: "Change topic",
     version: "Version",
     upToDate: "Up to date",
-    seeIt: "See it in Community",
     takingDown: "Taking it down…",
     open: "Open",
     viewLabel: "Display: {mode}",
@@ -1637,7 +1645,7 @@ export const en = {
     refusedTooMany:
       "“{title}” is not backed up: an account keeps up to 200 lists. Removing some for good makes room.",
     refusedTooManyTiers:
-      "“{title}” has more tiers than an account keeps, so it is not backed up. An account keeps 19 and the deck: remove a tier and it goes up again.",
+      "“{title}” has more tiers than an account keeps, so it is not backed up. An account keeps 19 tiers plus Cards left: remove a tier and it goes up again.",
     refusedTooManyCards:
       "“{title}” has more cards than an account keeps, so it is not backed up. An account keeps 2000 on a list: take some cards off it and it goes up again.",
     refusedTooManyTrashed:

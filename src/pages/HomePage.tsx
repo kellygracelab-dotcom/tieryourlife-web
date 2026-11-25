@@ -72,10 +72,13 @@ function Explore({
   load,
   loadFresh,
   store,
+  signedIn,
 }: {
   load: LoadFeed | undefined;
   loadFresh: LoadFresh;
   store: SectionsStore | undefined;
+  /** Somebody signed in, or by this device's last word about to be. */
+  signedIn: boolean;
 }) {
   const popular = useFeed({ sort: "popular" }, load);
   const { sections, known } = useSections(store);
@@ -92,7 +95,8 @@ function Explore({
       <section className="home__popular" aria-labelledby="popular">
         <div className="home__heading">
           <h2 id="popular">{strings.sections.popular}</h2>
-          <p>{strings.home.popularNote}</p>
+          {/* "No account needed" is for a guest; signed in it says nothing (Danylo's walk, 25.11). */}
+          <p>{signedIn ? strings.home.popularNoteSignedIn : strings.home.popularNote}</p>
         </div>
         <FeedGrid
           state={withFreshOnTop(popular.state, top)}
@@ -169,7 +173,7 @@ export function HomePage({
         />
       ) : (
         <>
-          <Explore load={load} loadFresh={loadFresh} store={store} />
+          <Explore load={load} loadFresh={loadFresh} store={store} signedIn={tabs} />
           {/*
            * The app card after the lists, small: the first screen is for a board
            * one can open, a phone's too, not for an app that is not out yet.

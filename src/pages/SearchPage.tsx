@@ -7,7 +7,7 @@ import {
   topicNameOf,
   topicPath,
 } from "../features/sections/model";
-import { useSearchScope, type SearchScope } from "../app/searchScope";
+import { SEARCH_DEBOUNCE_MS, useSearchScope, type SearchScope } from "../app/searchScope";
 import { usePageTitle } from "../app/pageTitle";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
@@ -34,8 +34,8 @@ import "../ui/Button.css";
 import "../features/sections/sections.css";
 import "./SearchPage.css";
 
-/** Typing pauses this long before the address, and the feed, follow. */
-export const SEARCH_DEBOUNCE_MS = 300;
+/** Typing pauses this long before the address, and the feed, follow; the bar's field waits as long. */
+export { SEARCH_DEBOUNCE_MS };
 
 interface Filters {
   q: string;

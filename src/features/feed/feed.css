@@ -1,4 +1,10 @@
-/* The app's grid: two across on a phone, three on a tablet, four from 840. */
+/*
+ * The app's grid: two across on a phone, three on a tablet, four from 840,
+ * and once the column has room, as many as fit at 250 px. Every page's
+ * column is the same (--width-page), so Community, a section, search and
+ * Your lists have the same cards across at every width: six on a 2560
+ * screen (Danylo's walk, 25.11).
+ */
 .feed {
   --card-cover: 112px;
   --card-pad-top: 8px;
@@ -28,7 +34,7 @@
 
 @media (min-width: 840px) {
   .feed {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(250px, calc((100% - 48px) / 4)), 1fr));
   }
 }
 

@@ -3,6 +3,15 @@ const KINDS = ["published", "avatars", "sections", "topics"];
 const ID = /^[A-Za-z0-9_-]{1,128}$/;
 // Republished pictures can carry a publication UUID after the original picture ID.
 const PICTURE = /^[A-Za-z0-9_-]+$/;
+/*
+ * A published list's card picture at a tile's width: /img/{200|400}/published/{id}/{picture}.
+ * A 600 × 900 copy shown at 64 × 96 made a list of 177 cards 28 MB, its tiles
+ * grey for 10-17 s (Designer, 25.11). 200 is a tile on any screen, 400 a
+ * search answer's or a sheet's poster; Play and a picture's own window keep
+ * the original.
+ */
+export const CARD_WIDTHS: readonly number[] = [200, 400];
+
 const PREFIX = "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/";
 
 export function publicMediaPath(kind: string, id: string, picture: string): string | null {

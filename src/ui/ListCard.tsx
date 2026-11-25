@@ -71,8 +71,12 @@ export function ListCard({
   // How many people ranked it is not said: a small count makes the place look
   // empty, a big one is noise (Danylo, 01.11.2026). The cards are the list's own.
   const meta = [plural(strings.card.items, list.itemCount)];
+  // No author line to show: an anonymous or editorial list, or a page that is its author's own.
+  const authorless =
+    !showAuthor ||
+    (yours === null && (list.anonymous === true || isEditorialAuthor(list.authorUid)));
   return (
-    <article className="list-card">
+    <article className={authorless ? "list-card list-card--authorless" : "list-card"}>
       <Link className="list-card__main" to={`/l/${encodeURIComponent(list.id)}`}>
         <ListArt
           cover={list.coverImageUrl}

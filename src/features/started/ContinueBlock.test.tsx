@@ -136,12 +136,12 @@ describe("Continue", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.lastChild?.textContent),
-    ).toEqual(["Open", "Resume game", "Save my list", "Discard my arrangement"]);
-    await user.click(screen.getByRole("menuitem", { name: /Discard my arrangement/ }));
+    ).toEqual(["Open", "Resume game", "Save my list", "Discard your version"]);
+    await user.click(screen.getByRole("menuitem", { name: /Discard your version/ }));
     expect(screen.queryByRole("region", { name: /Continue/ })).toBeNull();
     expect(store.read(draftKey("a24"))).toBeNull();
     expect(store.read(playKey("list:a24"))).toBeNull();
-    expect(notices[0]?.text).toBe("Arrangement discarded");
+    expect(notices[0]?.text).toBe("Your version discarded");
     await act(async () => notices[0]?.action?.onClick());
     expect(screen.getByRole("region", { name: "Continue · 1" })).toBeInTheDocument();
     expect(store.read(playKey("list:a24"))).not.toBeNull();
@@ -188,7 +188,7 @@ describe("Continue", () => {
         expect(screen.queryByRole("region", { name: /Continue/ })).toBeNull();
         expect(store.read(draftKey("a24"))).toBeNull();
         expect(store.read(playKey("list:a24"))).toBeNull();
-        expect(notices[0]?.text).toBe("Arrangement discarded");
+        expect(notices[0]?.text).toBe("Your version discarded");
         expect(notices[0]?.action?.text).toBe("Undo");
         act(() => notices[0]?.action?.onClick());
         expect(screen.getByRole("region", { name: "Continue · 1" })).toBeInTheDocument();

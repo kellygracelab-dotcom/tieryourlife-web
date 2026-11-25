@@ -2,8 +2,8 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { useSession } from "../../app/session";
+import { signInFailedText } from "../../app/signInFailure";
 import { loadAllTopics, loadTopic } from "../../lib/api";
-import { IN_APP_BROWSER } from "../../lib/inAppBrowser";
 import type { SignInOutcome } from "../../lib/signIn";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -327,9 +327,7 @@ export function PublishWindow({
     setSignInNote(null);
     void (signInToPublish ?? signIn)().then((outcome) => {
       if (outcome.kind !== "failed") return;
-      setSignInNote(
-        outcome.code === IN_APP_BROWSER ? strings.keep.inApp : strings.nav.signInFailed,
-      );
+      setSignInNote(signInFailedText(outcome.code));
     });
   };
 
@@ -357,10 +355,7 @@ export function PublishWindow({
     setSignInNote(null);
     void signIn().then((outcome) => {
       if (outcome.kind === "signedIn") onProposeSection(name, latest().category);
-      else if (outcome.kind === "failed")
-        setSignInNote(
-          outcome.code === IN_APP_BROWSER ? strings.keep.inApp : strings.nav.signInFailed,
-        );
+      else if (outcome.kind === "failed") setSignInNote(signInFailedText(outcome.code));
     });
   };
 
@@ -673,15 +668,20 @@ export function PublishWindow({
               </div>
             </div>
           ) : (
+            // A plain button and what it does in a line under it: in a tinted
+            // block it read as a warning, not as something to press (Danylo's
+            // walk, 25.11). The question after it is where the danger is said.
             <div className="publish-window__down">
-              <button
-                type="button"
-                className="publish-window__down-button"
+              <Button
+                variant="outlined"
+                aria-describedby={`${id}-down-note`}
                 onClick={() => setAsking(true)}
               >
                 {strings.boards.takeDown}
-              </button>
-              <p className="publish-window__note">{strings.boards.takeDownBody}</p>
+              </Button>
+              <p id={`${id}-down-note`} className="publish-window__note">
+                {strings.boards.takeDownBody}
+              </p>
             </div>
           )}
         </fieldset>
@@ -690,7 +690,8 @@ export function PublishWindow({
           {published !== null && (
             <Link className="btn btn--outlined" to={published} state={AS_COMMUNITY}>
               <Icon name="open_in_new" className="btn__icon" />
-              <span>{strings.publishWindow.seeIt}</span>
+              {/* The Share menu's name for the same way there: one action, one name (Danylo's walk, 25.11). */}
+              <span>{strings.share.openInCommunity}</span>
             </Link>
           )}
           {behind || busy === "updating" ? (
