@@ -706,13 +706,7 @@ const de: Translation = {
     renameTitle: "Karte umbenennen",
     nameLabel: "Name der Karte",
     renameSave: "Speichern",
-    nameUploads: {
-      one: "Gib dem hochgeladenen Bild einen Namen",
-      other: "Gib den {n} hochgeladenen Bildern Namen",
-    },
     unnamed: "Karte",
-    nameHint: "Bleibt das Feld leer, zeigt die Karte nur ihr Bild.",
-    nameDone: "Fertig",
   },
   android: {
     title: "TierYourLife für Android",

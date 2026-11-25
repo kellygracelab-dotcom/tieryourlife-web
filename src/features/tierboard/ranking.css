@@ -1953,12 +1953,6 @@
   outline-offset: 2px;
 }
 
-/* Rows of 30 + 2 × 11 = 52 while there is no card to be as tall as (Danylo, 25.11). */
-.ranking--no-cards .board {
-  --tile-h: 30px;
-  --tier-pad: 11px;
-}
-
 @media (max-width: 839px) {
   .board-page--no-cards .list-head .play-button {
     display: none;

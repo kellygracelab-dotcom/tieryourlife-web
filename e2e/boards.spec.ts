@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { list, mockBackend } from "./fixtures";
-import { PIXEL } from "./signedIn";
+import { PIXEL, signIn } from "./signedIn";
 
 /** A press the way the project's device makes it: a finger taps, a mouse clicks. */
 const press = (target: Locator, touch: boolean) => (touch ? target.tap() : target.click());
@@ -118,6 +118,21 @@ test("New list opens a new board, where the list is made", async ({ page, hasTou
   await title.press("Enter");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Cheeses");
   await expect(page.getByRole("button", { name: "Add tier" })).toBeVisible();
+  // An empty tier is a row of cards high at every width, as tall as it will be with
+  // its first card: 52 px rows read as thin strips on a computer (Danylo, 25.11).
+  const row = await page
+    .locator(".tier")
+    .first()
+    .evaluate((tier) => {
+      const board = getComputedStyle(tier.closest(".board")!);
+      return {
+        height: tier.getBoundingClientRect().height,
+        card: parseFloat(board.getPropertyValue("--tile-h")),
+        pad: parseFloat(board.getPropertyValue("--tier-pad")),
+      };
+    });
+  expect(row.card).toBeGreaterThanOrEqual(64);
+  expect(Math.round(row.height)).toBe(Math.round(row.card + 2 * row.pad));
   // Nothing in the pool yet: it says so, and the catalogue's box takes the cursor at
   // once on a wide window; a phone asks for the first cards above the tiers, with no
   // tray, and its field opens the sheet that adds them (mobile BRIEF 25.11).
@@ -128,10 +143,34 @@ test("New list opens a new board, where the list is made", async ({ page, hasTou
     await press(page.getByRole("button", { name: "Search or type a name" }), hasTouch);
     await expect(page.getByRole("dialog", { name: "Add cards" })).toBeVisible();
   } else {
-    await expect(page.getByRole("heading", { name: "Cards left · 0" })).toBeVisible();
+    // In the window, not below it: the only way to add cards to an empty list here.
+    await expect(page.getByRole("heading", { name: "Cards left · 0" })).toBeInViewport();
     await expect(page.getByText("Add cards by name, or search the catalogue.")).toBeVisible();
   }
   await expect(page.getByRole("textbox", { name: "Add a card" })).toBeFocused();
+  await expect(page.getByRole("textbox", { name: "Add a card" })).toBeInViewport();
+});
+
+// A computer's window as wide as Danylo's (25.11): the tray with the field that adds
+// cards stands at the window's foot under an empty list's tiers, signed in or not.
+test("an empty list on a very wide window keeps its tray with the add field in view", async ({
+  page,
+}, info) => {
+  test.skip(info.project.use.hasTouch === true, "a computer's window");
+  await signIn(page);
+  for (const size of [
+    { width: 2000, height: 900 },
+    { width: 2560, height: 1300 },
+  ]) {
+    await page.setViewportSize(size);
+    await page.goto("/");
+    await page.getByRole("link", { name: "New list" }).first().click();
+    await expect(page).toHaveURL(/\/b\/[^?]+\?new=/);
+    await expect(page.getByRole("heading", { name: "Cards left · 0" })).toBeInViewport();
+    await expect(page.getByRole("textbox", { name: "Add a card" })).toBeInViewport();
+    const tier = (await page.locator(".tier").first().boundingBox())!;
+    expect(tier.height, `${size.width}px`).toBeGreaterThanOrEqual(100);
+  }
 });
 
 test("the old /new and a suggestion of the empty page make a list in its section", async ({

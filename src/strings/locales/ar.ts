@@ -795,17 +795,7 @@ const ar: Translation = {
     renameTitle: "إعادة تسمية البطاقة",
     nameLabel: "اسم البطاقة",
     renameSave: "حفظ",
-    nameUploads: {
-      zero: "سمِّ الصور التي رفعتها",
-      one: "سمِّ الصورة التي رفعتها",
-      two: "سمِّ الصورتين اللتين رفعتهما",
-      few: "سمِّ الصور الـ{n} التي رفعتها",
-      many: "سمِّ الصور الـ{n} التي رفعتها",
-      other: "سمِّ الصور الـ{n} التي رفعتها",
-    },
     unnamed: "بطاقة",
-    nameHint: "إن تُرك الاسم فارغًا، تظهر البطاقة بصورتها فقط.",
-    nameDone: "تم",
   },
   android: {
     title: "TierYourLife لنظام Android",

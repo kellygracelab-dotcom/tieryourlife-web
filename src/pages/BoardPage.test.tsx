@@ -319,7 +319,7 @@ describe("BoardPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Sign in to add your own pictures");
   });
 
-  it("names an uploaded picture's card right after it goes up, on the board that keeps it (W22)", async () => {
+  it("puts an uploaded picture on a card without a name, named later from its menu (Danylo, 25.11)", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());
     const upload = vi.fn<Upload>(async (file) => ({
@@ -331,14 +331,20 @@ describe("BoardPage", () => {
       screen.getByLabelText("Upload images"),
       new File(["a"], "garden.png", { type: "image/png" }),
     );
-    const field = await screen.findByRole("textbox", { name: "Card name" });
     const card = () =>
       liveItems(repository.get("films")!).find((item) => item.pictureId === "garden.png");
-    // A picture alone, no name until one is given (Danylo, 23.11).
-    expect(card()?.title).toBe("");
-    await userEvent.type(field, "Grandma's garden{Enter}");
-    expect(card()?.title).toBe("Grandma's garden");
+    // A picture alone, no name until one is given (Danylo, 23.11), and no panel asking for one.
+    await vi.waitFor(() => expect(card()?.title).toBe(""));
     expect(screen.queryByRole("textbox", { name: "Card name" })).toBeNull();
+    expect(screen.queryByRole("group", { name: /Name the/ })).toBeNull();
+
+    fireEvent.contextMenu(screen.getByRole("button", { name: "Card" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Card name" }),
+      "Grandma's garden{Enter}",
+    );
+    expect(card()?.title).toBe("Grandma's garden");
   });
 
   it("renames the board where it stands", async () => {

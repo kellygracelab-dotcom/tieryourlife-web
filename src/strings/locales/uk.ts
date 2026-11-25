@@ -741,15 +741,7 @@ const uk: Translation = {
     renameTitle: "Перейменувати картку",
     nameLabel: "Назва картки",
     renameSave: "Зберегти",
-    nameUploads: {
-      one: "Назвіть {n} завантажену картинку",
-      few: "Назвіть {n} завантажені картинки",
-      many: "Назвіть {n} завантажених картинок",
-      other: "Назвіть {n} завантаженої картинки",
-    },
     unnamed: "Картка",
-    nameHint: "Якщо залишити поле порожнім, на картці буде лише зображення.",
-    nameDone: "Готово",
   },
   android: {
     title: "TierYourLife для Android",

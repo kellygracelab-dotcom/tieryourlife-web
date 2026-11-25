@@ -688,13 +688,7 @@ const tr: Translation = {
     renameTitle: "Kartı yeniden adlandır",
     nameLabel: "Kart adı",
     renameSave: "Kaydet",
-    nameUploads: {
-      one: "Yüklediğiniz görsele ad verin",
-      other: "Yüklediğiniz {n} görsele ad verin",
-    },
     unnamed: "Kart",
-    nameHint: "Boş bırakılırsa kartta yalnızca resmi görünür.",
-    nameDone: "Tamam",
   },
   android: {
     title: "Android için TierYourLife",

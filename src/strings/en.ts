@@ -1742,14 +1742,8 @@ export const en = {
     renameTitle: "Rename card",
     nameLabel: "Card name",
     renameSave: "Save",
-    nameUploads: {
-      one: "Name the picture you uploaded",
-      other: "Name the {n} pictures you uploaded",
-    },
     // Where words are needed for a card with only a picture: a screen reader, a menu, a notice.
     unnamed: "Card",
-    nameHint: "Left empty, the card shows only its picture.",
-    nameDone: "Done",
   },
   // A picture from a link, a paste or a drop, and who made a picture
   // (docs/design-spec-picture-link.md).

@@ -739,15 +739,7 @@ const pl: Translation = {
     renameTitle: "Zmień nazwę karty",
     nameLabel: "Nazwa karty",
     renameSave: "Zapisz",
-    nameUploads: {
-      one: "Nazwij przesłany obraz",
-      few: "Nazwij {n} przesłane obrazy",
-      many: "Nazwij {n} przesłanych obrazów",
-      other: "Nazwij {n} przesłanego obrazu",
-    },
     unnamed: "Karta",
-    nameHint: "Gdy pole zostanie puste, karta pokazuje tylko obrazek.",
-    nameDone: "Gotowe",
   },
   android: {
     title: "TierYourLife na Androida",
