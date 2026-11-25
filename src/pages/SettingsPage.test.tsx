@@ -12,6 +12,7 @@ import { type CutFace, PictureRefused, type UploadedPicture } from "../lib/pictu
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { memoryStore } from "../lib/storage";
+import { THEME_KEY } from "../lib/theme";
 import { USAGE_OFF_KEY } from "../lib/usageSwitch";
 import { useCardFaceStoreForTests } from "../lib/cardFace";
 import {
@@ -901,5 +902,80 @@ describe("SettingsPage", () => {
     const { session } = open();
     await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
     expect(session.signOut).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("SettingsPage on a phone", () => {
+  // jsdom has no matchMedia: a phone answers every max-width query, and never turns.
+  const phone = (query: string) =>
+    ({
+      matches: query.includes("max-width"),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }) as unknown as MediaQueryList;
+
+  beforeEach(() => {
+    vi.stubGlobal("matchMedia", phone);
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+      localStorage.removeItem(THEME_KEY);
+      delete document.documentElement.dataset.theme;
+    });
+  });
+
+  it("asks a guest to sign in in one card at the top, beside the person", () => {
+    open({ kind: "guest", uid: "g1" });
+    const card = screen.getByText("Sign in to change your settings.").closest("section")!;
+    expect(card).toHaveClass("settings__card--row");
+    expect(within(card).getByRole("button", { name: "Continue with Google" })).toBeEnabled();
+    expect(document.querySelector(".settings__card")).toBe(card);
+  });
+
+  it("has the theme, the colour and the language as a row each, saying what each is now", () => {
+    open({ kind: "guest", uid: "g1" });
+    // The choices wait in their sheets.
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(screen.getByRole("button", { name: "Theme" })).toHaveAccessibleDescription("System");
+    expect(screen.getByRole("button", { name: "Colour" })).toHaveAccessibleDescription("Lavender");
+    for (const name of ["Theme", "Colour"]) {
+      expect(screen.getByRole("button", { name })).toHaveAttribute("aria-haspopup", "dialog");
+    }
+  });
+
+  it("opens the theme in a sheet; a press chooses and closes it, the arrows only choose", async () => {
+    open({ kind: "guest", uid: "g1" });
+    const row = screen.getByRole("button", { name: "Theme" });
+    await userEvent.click(row);
+    const sheet = screen.getByRole("dialog", { name: "Theme" });
+    // The focus starts on what is chosen now, and the guest's note is there.
+    expect(within(sheet).getByRole("radio", { name: "System" })).toHaveFocus();
+    expect(within(sheet).getByText("Kept on this device, signed in or not.")).toBeInTheDocument();
+    await userEvent.keyboard("{ArrowUp}");
+    expect(within(sheet).getByRole("radio", { name: "Dark" })).toBeChecked();
+    expect(screen.getByRole("dialog", { name: "Theme" })).toBeInTheDocument();
+
+    await userEvent.click(within(sheet).getByRole("radio", { name: "Light" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(localStorage.getItem(THEME_KEY)).toBe("light");
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(row).toHaveAccessibleDescription("Light");
+    expect(row).toHaveFocus();
+  });
+
+  it("opens the colour in a sheet that stays for another try, and Done closes it", async () => {
+    open({ kind: "guest", uid: "g1" });
+    await userEvent.click(screen.getByRole("button", { name: "Colour" }));
+    const sheet = screen.getByRole("dialog", { name: "Colour" });
+    expect(within(sheet).getByRole("radiogroup", { name: "Colour" })).toBeInTheDocument();
+    await userEvent.click(within(sheet).getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("closes a sheet on Escape", async () => {
+    open({ kind: "guest", uid: "g1" });
+    await userEvent.click(screen.getByRole("button", { name: "Theme" }));
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

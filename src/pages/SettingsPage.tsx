@@ -10,6 +10,7 @@ import {
   type RemovePhoto,
   type RestorePhoto,
 } from "../features/account/FaceSection";
+import { AppearanceRows } from "../features/account/AppearanceRows";
 import { LanguageCard } from "../features/account/LanguageCard";
 import { NameSection, type Rename } from "../features/account/NameSection";
 import type { Publish } from "../features/account/useSaving";
@@ -17,6 +18,7 @@ import { ColourPicker } from "../features/account/ColourPicker";
 import { HowItWorks } from "../features/account/HowItWorks";
 import { DataCard } from "../features/boards/DataCard";
 import { owners } from "../features/boards/owners";
+import { PHONE, useMedia } from "../features/play/media";
 import { forgetKeptOf } from "../features/ranking/kept";
 import { useHidden } from "../features/community/useHidden";
 import { useSession, useShowFace } from "../app/session";
@@ -362,6 +364,12 @@ export function SettingsPage({
   const { account, signOut, refresh } = useSession();
   const showFace = useShowFace();
   const navigate = useNavigate();
+  // A phone has the theme, the colour and the language as a row each (25.11.2026).
+  const phone = useMedia(PHONE);
+  // Sign in at the top, one compact card on a phone: the icon beside the words and the button.
+  const guestCard = phone
+    ? "settings__card settings__card--guest settings__card--row"
+    : "settings__card settings__card--guest";
 
   // The lists the person already published carry the name and face they were
   // published with; the backend rewrites them from the fresh token. Best
@@ -392,17 +400,18 @@ export function SettingsPage({
         // The guest card's shape while Firebase says who is here: it arrives some
         // 400 ms after the first paint, and a bare line in its place let the cards
         // below jump 200 px when it came (WebKit's click landed on the wrong one).
-        <section className="settings__card settings__card--guest" aria-busy="true">
-          <Skeleton height="34px" width="34px" />
-          <Skeleton height="26px" width="70%" />
-          <Skeleton height="44px" width="90%" />
+        <section className={guestCard} aria-busy="true">
+          <Skeleton height="34px" width="34px" className="settings__guest-icon" />
+          <Skeleton height={phone ? "22px" : "26px"} width="70%" />
+          <Skeleton height={phone ? "54px" : "44px"} width="90%" />
           <Skeleton height="40px" width="200px" />
         </section>
       )}
 
       {account?.kind === "guest" && (
-        <section className="settings__card settings__card--guest">
-          <Icon name="settings" className="settings__guest-icon" />
+        <section className={guestCard}>
+          {/* On a phone the person, as the app's sign-in card has; the gear says "settings" on a computer. */}
+          <Icon name={phone ? "person" : "settings"} className="settings__guest-icon" />
           <p className="settings__guest-title">{strings.settings.guestTitle}</p>
           <p className="settings__helper">{strings.settings.guestBody}</p>
           <SignInButton label={strings.keep.google} />
@@ -439,11 +448,20 @@ export function SettingsPage({
         </>
       )}
 
-      <ThemeCard
-        note={account?.kind === "guest" ? strings.settings.themeGuestNote : null}
-        signedIn={account?.kind === "signedIn"}
-      />
-      <LanguageCard />
+      {phone ? (
+        <AppearanceRows
+          signedIn={account?.kind === "signedIn"}
+          themeNote={account?.kind === "guest" ? strings.settings.themeGuestNote : null}
+        />
+      ) : (
+        <>
+          <ThemeCard
+            note={account?.kind === "guest" ? strings.settings.themeGuestNote : null}
+            signedIn={account?.kind === "signedIn"}
+          />
+          <LanguageCard />
+        </>
+      )}
       <DataCard />
       <HiddenCard />
       <AppCard share={share} />

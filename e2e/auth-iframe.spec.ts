@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { mockBackend } from "./fixtures";
+import { startFromScratch } from "./listVersion";
 
 // With getAuth()'s default resolver, Firebase fetched apis.google.com/js/api.js
 // on every page a phone opened, to look for a redirect sign-in that had not
@@ -13,7 +14,7 @@ test("opening a list asks nothing of apis.google.com", async ({ page }) => {
   await mockBackend(page);
   await page.goto("/l/abc");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
-  await page.getByRole("button", { name: "Mine", exact: true }).click();
+  await startFromScratch(page);
   await page.getByRole("button", { name: "Ex Machina", exact: true }).click();
   await page.waitForLoadState("networkidle");
   expect(google).toEqual([]);

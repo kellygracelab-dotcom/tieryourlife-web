@@ -16,7 +16,6 @@ import { isEditorial } from "../lib/editorial";
 import { fill, formatCount, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { AboutPicture } from "../features/tierboard/AboutPicture";
-import { ResetPoolItem } from "../features/tierboard/ResetPoolItem";
 import { CardNamesItem } from "../features/boards/ViewButton";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
@@ -82,6 +81,71 @@ function CopyLinkButton({ list, notify }: { list: PublishedList; notify: Notify 
       <Icon name={copied ? "check" : "link"} />
       <span aria-live="polite">{copied ? strings.list.linkCopied : strings.list.copyLink}</span>
     </button>
+  );
+}
+
+/**
+ * A phone's Share beside Play and Save (25.11.2026): the device's own share
+ * sheet where there is one, the link on the clipboard where there is not.
+ * Wider windows have Copy link in the head and Share in the menu instead.
+ */
+function ShareButton({ list, notify }: { list: PublishedList; notify: Notify }) {
+  const { copy, refused, canShare, share } = useListLink(list);
+  return (
+    <button
+      type="button"
+      className="btn btn--outlined list-head__share"
+      aria-label={strings.list.share}
+      title={strings.list.share}
+      onClick={() => {
+        if (canShare) share();
+        else
+          copy().then(
+            () => notify({ text: strings.list.linkCopied }),
+            () => notify(refused()),
+          );
+      }}
+    >
+      <Icon name="share" />
+    </button>
+  );
+}
+
+/**
+ * Two ways over one's own version, each at once and taken back by the
+ * snackbar's Undo: every card back in the deck, or the author's arrangement
+ * in its place (Danylo and Android, 25.11.2026). Each is offered only when it
+ * has something to do.
+ */
+export interface BackToAuthors {
+  label: string;
+  run: () => void;
+}
+
+function VersionItems({
+  startFromScratch,
+  backToAuthors,
+}: {
+  startFromScratch: (() => void) | null;
+  backToAuthors: BackToAuthors | null;
+}) {
+  return (
+    <>
+      {startFromScratch !== null && (
+        <li>
+          <button type="button" className="menu__action" onClick={startFromScratch}>
+            {strings.list.startFromScratch}
+          </button>
+        </li>
+      )}
+      {backToAuthors !== null && (
+        <li>
+          <button type="button" className="menu__action" onClick={backToAuthors.run}>
+            {backToAuthors.label}
+          </button>
+        </li>
+      )}
+    </>
   );
 }
 
@@ -248,7 +312,8 @@ function VisitorMenu({
   saving,
   rankings,
   showMine,
-  resetMine,
+  startFromScratch,
+  backToAuthors,
 }: {
   list: PublishedList;
   report: Report;
@@ -256,7 +321,8 @@ function VisitorMenu({
   saving: SaveButton;
   rankings: RankingsEntry | null;
   showMine: ShowMineEntry | null;
-  resetMine?: (() => void) | null;
+  startFromScratch: (() => void) | null;
+  backToAuthors: BackToAuthors | null;
 }) {
   const { hideList } = useHidden();
   const leave = useLeave();
@@ -276,7 +342,7 @@ function VisitorMenu({
         <>
           <RankingsItem rankings={rankings} />
           <ShowMineItem showMine={showMine} />
-          {resetMine !== undefined && <ResetPoolItem onReset={resetMine} />}
+          <VersionItems startFromScratch={startFromScratch} backToAuthors={backToAuthors} />
           <CardNamesItem plain />
           {author !== null && (
             <li>
@@ -326,8 +392,9 @@ function VisitorMenu({
 }
 
 /**
- * The one Save, with the words for what it keeps: "Save author’s list" or
- * "Save my list" as the switch says, "Saved" once one's lists hold it.
+ * The one Save, with the words for what it keeps: "Save my list" once there
+ * is a version of one's own, "Save author’s list" before, "Saved" once one's
+ * lists hold it.
  */
 export interface SaveButton extends SaveToMine {
   label: string;
@@ -347,8 +414,9 @@ function SaveListButton({ saving }: { saving: SaveButton }) {
 }
 
 /**
- * A visitor's head: Save as a button beside Copy link, the menu with the
- * rest. One saving flow serves the button and the menu's copy of it.
+ * A visitor's head: Save as a button beside Copy link, or beside Share on a
+ * phone, the menu with the rest. One saving flow serves the button and the
+ * menu's copy of it.
  */
 export function VisitorTools({
   list,
@@ -357,7 +425,8 @@ export function VisitorTools({
   saving,
   rankings = null,
   showMine = null,
-  resetMine,
+  startFromScratch = null,
+  backToAuthors = null,
 }: {
   list: PublishedList;
   report: Report;
@@ -366,11 +435,13 @@ export function VisitorTools({
   rankings?: RankingsEntry | null;
   /** Mine among the list's rankings, once there is a Mine to show. */
   showMine?: ShowMineEntry | null;
-  resetMine?: (() => void) | null;
+  startFromScratch?: (() => void) | null;
+  backToAuthors?: BackToAuthors | null;
 }) {
   return (
     <>
       <SaveListButton saving={saving} />
+      <ShareButton list={list} notify={notify} />
       <CopyLinkButton list={list} notify={notify} />
       <VisitorMenu
         list={list}
@@ -379,7 +450,8 @@ export function VisitorTools({
         saving={saving}
         rankings={rankings}
         showMine={showMine}
-        resetMine={resetMine}
+        startFromScratch={startFromScratch}
+        backToAuthors={backToAuthors}
       />
     </>
   );
@@ -477,8 +549,8 @@ function AuthorMenu({
 
 /**
  * The author's head: Save my list for the board the list is changed on, or
- * Saved once one's lists have it, the link, the menu. There is no switch on
- * one's own list. A list held for a moderator has no link to give: it
+ * Saved once one's lists have it, the link, the menu. One's own list has no
+ * version of one's own beside it. A list held for a moderator has no link to give: it
  * answers nobody else until a moderator looks.
  */
 export function AuthorTools({

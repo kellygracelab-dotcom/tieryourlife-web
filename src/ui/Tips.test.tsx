@@ -74,6 +74,21 @@ describe("the newcomer's tips", () => {
     vi.unstubAllGlobals();
   });
 
+  it("is a strip at the window's foot on a phone, its buttons kept and its element ringed", async () => {
+    const matchMedia = vi.fn((query: string) => ({ matches: query === "(max-width: 599px)" }));
+    vi.stubGlobal("matchMedia", matchMedia);
+    page([{ tip: "add" }]);
+    await wait();
+    const tip = screen.getByRole("status").closest(".tip");
+    expect(tip).toHaveClass("tip--strip");
+    expect(tip).not.toHaveStyle({ visibility: "hidden" });
+    expect(screen.getByRole("button", { name: "add" })).toHaveClass(TIP_RING);
+    expect(screen.getByRole("button", { name: "Got it" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "No more tips" })).toBeInTheDocument();
+    expect(document.activeElement).toBe(document.body);
+    vi.unstubAllGlobals();
+  });
+
   it("shows one at a time, in their order, and the next only once the first is gone", async () => {
     const view = page([{ tip: "add" }, { tip: "play", n: 25 }]);
     await wait();

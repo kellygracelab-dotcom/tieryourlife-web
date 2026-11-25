@@ -18,7 +18,13 @@ import { newGame } from "../features/play/game";
 import { localGames, playKey } from "../features/play/savedGames";
 import { loadPlayScreens } from "../features/play/usePlay";
 import { writeKept } from "../features/ranking/kept";
-import { draftKey, loadDraft, saveDraft, scopeOf } from "../features/tierboard/draft";
+import {
+  draftKey,
+  loadDraft,
+  loadPlacedDraft,
+  saveDraft,
+  scopeOf,
+} from "../features/tierboard/draft";
 import { localStorageStore, memoryStore } from "../lib/storage";
 import { usage } from "../lib/usage";
 import { sayOnTheSite } from "../ui/siteNotice";
@@ -113,7 +119,14 @@ const openAs = (
   return router;
 };
 
-const whose = () => screen.getByRole("group", { name: "Whose arrangement to show" });
+/** The menu's line, pressed: "Start from scratch", "Back to danylo’s ranking". */
+const fromMenu = async (line: string) => {
+  await userEvent.click(screen.getByLabelText("More about this list"));
+  await userEvent.click(screen.getByRole("button", { name: line }));
+};
+
+/** One's own version with every card in the deck, as the menu's Start from scratch makes it. */
+const fromScratch = () => fromMenu("Start from scratch");
 
 /** The menu's lines in their order, the separator as "—". */
 /** The menu's lines as read; a toggle's check is its state, said by aria-checked, not a word. */
@@ -188,8 +201,8 @@ describe("ListPage save to my lists", () => {
     expect(itemsIn(saved!, poolTier(saved!)!.uid).map((item) => item.title)).toEqual(["The Witch"]);
     expect(screen.getAllByRole("button", { name: "Saved" })).not.toHaveLength(0);
 
-    // On Mine the same button saves one's own version, over the same board.
-    await userEvent.click(within(whose()).getByRole("button", { name: "Mine" }));
+    // Once there is a version of one's own, the same button saves it, over the same board.
+    await fromScratch();
     await userEvent.click(screen.getAllByRole("button", { name: "Save my list" })[0]!);
     expect(boards.all()).toHaveLength(1);
     const mine = boards.get(saved!.uid)!;
@@ -313,7 +326,7 @@ describe("ListPage report and hide", () => {
 
     await act(async () => fail(new ApiFailure({ kind: "unavailable" })));
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(whose()).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Their ranking" })).toBeInTheDocument();
     expect(hiddenStore.read(HIDDEN_KEY)).toBeNull();
     const snackbar = screen
       .getAllByRole("status")
@@ -437,7 +450,9 @@ describe("ListPage report and hide", () => {
     openAs(member);
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
-    expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
+    // The menu's Share; a phone's head has a Share of its own, beside Save.
+    const inMenu = () => within(screen.getByLabelText("More about this list").closest("details")!);
+    expect(inMenu().queryByRole("button", { name: "Share" })).toBeNull();
     cleanup();
 
     const share = vi.fn(() => Promise.reject(new DOMException("closed", "AbortError")));
@@ -446,7 +461,7 @@ describe("ListPage report and hide", () => {
       openAs(member);
       await screen.findByRole("heading", { level: 1 });
       await userEvent.click(screen.getByLabelText("More about this list"));
-      await userEvent.click(screen.getByRole("button", { name: "Share" }));
+      await userEvent.click(inMenu().getByRole("button", { name: "Share" }));
       expect(share).toHaveBeenCalledWith({ title: list.title, url: "http://localhost:3000/l/abc" });
       expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
     } finally {
@@ -482,7 +497,7 @@ describe("ListPage menu", () => {
     // Who else ranked it comes first, the one place the number is said.
     expect(menuLines()).toEqual([
       "Rankings · 3",
-      "Return all cards to the deck",
+      "Start from scratch",
       "Names on cards",
       "View danylo",
       "Copy link",
@@ -512,7 +527,7 @@ describe("ListPage menu", () => {
     await userEvent.click(screen.getByLabelText("More about this list"));
     expect(menuLines().slice(0, 4)).toEqual([
       "Rankings · 3",
-      "Return all cards to the deck",
+      "Start from scratch",
       "Names on cards",
       "Copy link",
     ]);
@@ -527,7 +542,7 @@ describe("ListPage", () => {
       mocks.loadList.mockResolvedValue(list);
       open();
       await screen.findByRole("heading", { level: 1 });
-      await userEvent.click(screen.getByRole("button", { name: "Mine" }));
+      await fromScratch();
       const article = document.querySelector(".list-page")!;
       // Somebody else's list on a wide window has its cards beside the board at first (artboard 21).
       expect(article).toHaveClass("list-page--beside");
@@ -564,18 +579,22 @@ describe("ListPage", () => {
     );
     const author = screen.getByRole("link", { name: "by danylo" });
     expect(author).toHaveAttribute("href", "/u/u1");
+    // A phone's head counts the cards in the author's line, before Follow.
+    expect(author.closest(".byline")!.querySelector(".byline__count")).toHaveTextContent(
+      "· 2 cards",
+    );
     // How many ranked it is not said in the head: it is a line of the ⋮ menu.
     expect(screen.queryByRole("button", { name: /rankings$/ })).toBeNull();
     expect(document.querySelector(".list-head__lines")).not.toHaveTextContent(/2,140|rankings/);
     // The address is not spelled out any more: one press copies it.
     expect(screen.queryByText(`${window.location.host}/l/abc`)).toBeNull();
 
-    // Author has no tray and no Finish: the author's cards where they put them,
-    // what they left unranked in the board's pool, and how to start.
-    expect(within(whose()).getByRole("button", { name: "Author" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    // No Author | Mine (25.11.2026), and no version of one's own to name yet.
+    // The author's cards where they put them, what they left unranked in the
+    // board's pool, and how to start; no tray and no Finish.
+    expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
+    expect(screen.queryByText(/Your version/)).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Save author’s list" })).not.toHaveLength(0);
     const theirs = screen.getByRole("region", { name: "Their ranking" });
     expect(within(theirs).getByRole("list", { name: "S" })).toHaveTextContent("Ex Machina");
     expect(theirs.querySelector(".board")).not.toHaveTextContent("The Witch");
@@ -635,32 +654,107 @@ describe("ListPage", () => {
     expect(screen.queryByRole("region", { name: "Picture credits" })).toBeNull();
   });
 
-  it("switches to an empty board of one's own and back, in the phone app's words", async () => {
+  it("starts from scratch from the menu at once: every card in the deck, and Undo brings the author's back", async () => {
     const animate = vi.fn();
     HTMLElement.prototype.animate = animate as unknown as HTMLElement["animate"];
     try {
       mocks.loadList.mockResolvedValue(list);
       open();
       await screen.findByRole("heading", { level: 1 });
-      await userEvent.click(within(whose()).getByRole("button", { name: "Mine" }));
-      expect(within(whose()).getByRole("button", { name: "Mine" })).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
+      await fromScratch();
+      // No question asked.
+      expect(screen.queryByRole("dialog")).toBeNull();
       const yours = screen.getByRole("region", { name: "Your ranking" });
       expect(document.querySelector(".list-head")).toHaveTextContent("0 of 2 placed");
       expect(yours).toHaveTextContent("2 cards left");
+      expect(document.querySelector(".list-head__version")).toHaveTextContent(
+        "Your version · see danylo’s",
+      );
+      expect(screen.getAllByRole("button", { name: "Save my list" })).not.toHaveLength(0);
       // The same cards move between the boards rather than the boards swapping.
       const durations = animate.mock.calls.map(
         ([, options]) => (options as KeyframeAnimationOptions).duration,
       );
       expect(durations).toContain(200);
 
-      await userEvent.click(within(whose()).getByRole("button", { name: "Author" }));
+      await userEvent.click(
+        snackbar("All cards are back in the deck").getByRole("button", { name: "Undo" }),
+      );
       expect(screen.getByRole("region", { name: "Their ranking" })).toHaveTextContent("Ex Machina");
+      expect(localStorageStore.read(draftKey("abc"))).toBeNull();
+      expect(screen.queryByText(/Your version/)).toBeNull();
     } finally {
       Reflect.deleteProperty(HTMLElement.prototype, "animate");
     }
+  });
+
+  it("puts the author's ranking in place of one's own from the menu at once, and Undo puts it back", async () => {
+    saveDraft(localStorageStore, scopeOf(list), [[1]]);
+    const before = keptDraft();
+    mocks.loadList.mockResolvedValue(list);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await fromMenu("Back to danylo’s ranking");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // Still one's own version, now the author's arrangement.
+    expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
+    expect(loadPlacedDraft(localStorageStore, scopeOf(list))).toEqual([[0]]);
+    await userEvent.click(
+      snackbar("Replaced your version with danylo’s ranking").getByRole("button", { name: "Undo" }),
+    );
+    expect(keptDraft()).toEqual(before);
+    expect(document.querySelector(".list-head")).toHaveTextContent("1 of 2 placed");
+
+    // Start from scratch over one's own version: its Undo gives the same version back.
+    await fromScratch();
+    expect(loadPlacedDraft(localStorageStore, scopeOf(list))).toBeNull();
+    await userEvent.click(
+      snackbar("All cards are back in the deck").getByRole("button", { name: "Undo" }),
+    );
+    expect(keptDraft()).toEqual(before);
+    expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
+  });
+
+  it("looks at the author's ranking read-only from the line under the title, and goes back to one's own", async () => {
+    saveDraft(localStorageStore, scopeOf(list), [[1]]);
+    mocks.loadList.mockResolvedValue(list);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    const see = screen.getByRole("button", { name: "see danylo’s" });
+    expect(see.closest(".list-head__version")).toHaveTextContent("Your version · see danylo’s");
+    await userEvent.click(see);
+    const strip = screen.getByRole("region", { name: "danylo’s ranking" });
+    expect(strip).toHaveTextContent("danylo’s ranking");
+    const back = within(strip).getByRole("button", { name: "Back to yours" });
+    expect(back).toHaveFocus();
+    // Read-only: the author's cards, no Undo, no version line; Save still keeps one's own.
+    const theirs = screen.getByRole("region", { name: "Their ranking" });
+    expect(theirs).toHaveTextContent("Ex Machina");
+    expect(screen.queryByRole("region", { name: "Your ranking" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(screen.queryByText(/Your version/)).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Save my list" })).not.toHaveLength(0);
+
+    await userEvent.click(back);
+    expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "danylo’s ranking" })).toBeNull();
+    expect(screen.getByRole("button", { name: "see danylo’s" })).toHaveFocus();
+    expect(loadPlacedDraft(localStorageStore, scopeOf(list))).toEqual([[1]]);
+  });
+
+  it("says the author’s for a list without the author's name, everywhere it would name them", async () => {
+    saveDraft(localStorageStore, scopeOf(list), [[1]]);
+    mocks.loadList.mockResolvedValue({ ...list, authorName: "" });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    expect(document.querySelector(".list-head__version")).toHaveTextContent(
+      "Your version · see the author’s",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "see the author’s" }));
+    const strip = screen.getByRole("region", { name: "The author’s ranking" });
+    await userEvent.click(within(strip).getByRole("button", { name: "Back to yours" }));
+    await fromMenu("Back to the author’s ranking");
+    expect(screen.getByText("Replaced your version with the author’s ranking")).toBeInTheDocument();
   });
 
   it("opens on Mine where this device has begun a ranking of the list", async () => {
@@ -668,12 +762,11 @@ describe("ListPage", () => {
     mocks.loadList.mockResolvedValue(list);
     open();
     await screen.findByRole("heading", { level: 1 });
-    expect(within(whose()).getByRole("button", { name: "Mine" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
     expect(document.querySelector(".list-head")).toHaveTextContent("1 of 2 placed");
+    expect(document.querySelector(".list-head__version")).toHaveTextContent(
+      "Your version · see danylo’s",
+    );
   });
 
   it("opens on Mine where this device finished a ranking of the list, and not for an untouched board", async () => {
@@ -691,12 +784,16 @@ describe("ListPage", () => {
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
   });
 
-  it("has no switch where the author arranged nothing, and opens on Mine", async () => {
+  it("opens a house list, with no author's arrangement, on one's own board, its cards in the deck, as before", async () => {
     mocks.loadList.mockResolvedValue(unarranged);
     open();
     await screen.findByRole("heading", { level: 1 });
-    expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
-    expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Your ranking" })).toHaveTextContent("2 cards left");
+    // No author's arrangement to look at or go back to, and nothing placed to clear.
+    expect(screen.queryByText(/Your version/)).toBeNull();
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    expect(menuLines()).not.toContain("Start from scratch");
+    expect(menuLines().some((line) => line.startsWith("Back to"))).toBe(false);
   });
 
   it("stands without an author when the list is editorial", async () => {
@@ -811,8 +908,8 @@ const twoTiers: PublishedList = {
   ],
 };
 
-const theirsPressed = () =>
-  within(whose()).getByRole("button", { name: "Author" }).getAttribute("aria-pressed");
+/** The author's arrangement is the board on show, not one's own version. */
+const onTheirs = () => screen.queryByRole("region", { name: "Their ranking" }) !== null;
 /** The snackbar holding these words, for its Undo: the board's bar has an Undo of its own. */
 const snackbar = (words: string) => within(screen.getByText(words).closest(".snackbar")!);
 
@@ -828,17 +925,17 @@ describe("ListPage, starting Mine from Theirs", () => {
       "aria-pressed",
       "true",
     );
-    expect(theirsPressed()).toBe("true");
+    expect(onTheirs()).toBe(true);
     expect(localStorage.getItem(draftKey("abc"))).toBeNull();
     expect(screen.getByText("Placing it starts your version from danylo’s.")).toBeInTheDocument();
 
-    // The switch's fill slides across to Mine as the page goes there.
-    expect(whose()).not.toHaveClass("whose--mine");
     await userEvent.keyboard("2");
-    // Nothing of Mine to lose: no question.
+    // Nothing of one's own to lose: no question, and the version is one's own now.
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(theirsPressed()).toBe("false");
-    expect(whose()).toHaveClass("whose--mine");
+    expect(onTheirs()).toBe(false);
+    expect(document.querySelector(".list-head__version")).toHaveTextContent(
+      "Your version · see danylo’s",
+    );
     const yours = screen.getByRole("region", { name: "Your ranking" });
     expect(within(yours).getByRole("list", { name: "A" })).toHaveTextContent("The WitchEx Machina");
     expect(within(yours).getByRole("list", { name: "S" })).toHaveTextContent("Climax");
@@ -847,7 +944,8 @@ describe("ListPage, starting Mine from Theirs", () => {
     const said = snackbar("Your version starts from danylo’s ranking");
     await userEvent.click(said.getByRole("button", { name: "Undo" }));
     expect(localStorage.getItem(draftKey("abc"))).toBeNull();
-    expect(theirsPressed()).toBe("true");
+    expect(onTheirs()).toBe(true);
+    expect(screen.queryByText(/Your version ·/)).toBeNull();
     expect(
       within(screen.getByRole("region", { name: "Their ranking" })).getByRole("list", {
         name: "S",
@@ -855,60 +953,30 @@ describe("ListPage, starting Mine from Theirs", () => {
     ).toHaveTextContent("Ex MachinaClimax");
   });
 
-  it("asks before it replaces a Mine already begun, says so, and Undo puts the old one back as it was", async () => {
+  it("opens a version begun here as one's own, the author's only to look at: no move there replaces it", async () => {
     saveDraft(localStorageStore, scopeOf(twoTiers), [[1], []]);
     const before = keptDraft();
     mocks.loadList.mockResolvedValue(twoTiers);
     open();
     await screen.findByRole("heading", { level: 1 });
-    // Begun here, so the page opens on Mine; Theirs is a press away.
-    await userEvent.click(within(whose()).getByRole("button", { name: "Author" }));
-
-    // The card's menu moves it too.
+    expect(onTheirs()).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "see danylo’s" }));
     const theirs = screen.getByRole("region", { name: "Their ranking" });
+    // Read-only: a card opens what its picture says, and nothing moves.
     await userEvent.dblClick(within(theirs).getByRole("button", { name: "Climax" }));
-    const menu = within(screen.getByRole("menu", { name: "Climax" }));
-    expect(menu.queryByRole("menuitem", { name: "Remove from list" })).toBeNull();
-    await userEvent.click(menu.getByRole("menuitem", { name: "Move to a tier" }));
-    await userEvent.click(
-      within(screen.getByRole("menu", { name: "Move to a tier" })).getByRole("menuitem", {
-        name: "A",
-      }),
-    );
-    // Mine has a card placed: it is not replaced before a yes.
-    const ask = within(screen.getByRole("dialog", { name: "Start from danylo’s ranking?" }));
-    expect(ask.getByText("Your version will be replaced.")).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Move to a tier" })).toBeNull();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: /Start from/ })).toBeNull();
     expect(keptDraft()).toEqual(before);
-    await userEvent.click(ask.getByRole("button", { name: "Replace" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(theirsPressed()).toBe("false");
-    expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[0], [1, 2]]);
-
-    const said = snackbar("Replaced your version with danylo’s ranking");
-    await userEvent.click(said.getByRole("button", { name: "Undo" }));
-    expect(keptDraft()).toEqual(before);
-    expect(theirsPressed()).toBe("true");
-    await userEvent.click(within(whose()).getByRole("button", { name: "Mine" }));
-    expect(
-      within(screen.getByRole("region", { name: "Your ranking" })).getByRole("list", {
-        name: "S",
-      }),
-    ).toHaveTextContent("The Witch");
   });
 
-  it("gives a replaced Mine back from the board's own Undo and Ctrl+Z too", async () => {
+  it("gives the author's ranking put in place of one's own back from the board's own Undo and Ctrl+Z too", async () => {
     saveDraft(localStorageStore, scopeOf(twoTiers), [[1], []]);
     mocks.loadList.mockResolvedValue(twoTiers);
     open();
     await screen.findByRole("heading", { level: 1 });
-    await userEvent.click(within(whose()).getByRole("button", { name: "Author" }));
-    const theirs = screen.getByRole("region", { name: "Their ranking" });
-    await userEvent.click(within(theirs).getByRole("button", { name: "Climax" }));
-    await userEvent.keyboard("2");
-    await userEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", { name: "Replace" }),
-    );
-    expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[0], [1, 2]]);
+    await fromMenu("Back to danylo’s ranking");
+    expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[0, 2], [1]]);
 
     // The bar's Undo, not the snackbar's.
     const barUndo = () =>
@@ -917,42 +985,6 @@ describe("ListPage, starting Mine from Theirs", () => {
     await userEvent.keyboard("{Control>}z{/Control}");
     expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[1], []]);
     expect(barUndo()).toBeDisabled();
-  });
-
-  it("takes the move back on Cancel, keeps Mine, and asks again on the next move", async () => {
-    saveDraft(localStorageStore, scopeOf(twoTiers), [[1], []]);
-    const before = keptDraft();
-    mocks.loadList.mockResolvedValue(twoTiers);
-    open();
-    await screen.findByRole("heading", { level: 1 });
-    await userEvent.click(within(whose()).getByRole("button", { name: "Author" }));
-    const theirsS = () =>
-      within(screen.getByRole("region", { name: "Their ranking" })).getByRole("list", {
-        name: "S",
-      });
-    await userEvent.click(within(theirsS()).getByRole("button", { name: "Climax" }));
-    await userEvent.keyboard("2");
-    const ask = screen.getByRole("dialog", { name: "Start from danylo’s ranking?" });
-    // Cancel has the focus, for anybody who pressed Enter before reading.
-    expect(within(ask).getByRole("button", { name: "Cancel" })).toHaveFocus();
-    await userEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
-
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(keptDraft()).toEqual(before);
-    expect(theirsPressed()).toBe("true");
-    expect(theirsS()).toHaveTextContent("Ex MachinaClimax");
-    expect(screen.queryByText("Replaced your version with danylo’s ranking")).toBeNull();
-
-    // Each move over a Mine with cards in it asks; Escape is a Cancel too.
-    await userEvent.click(within(theirsS()).getByRole("button", { name: "Climax" }));
-    await userEvent.keyboard("2");
-    expect(
-      screen.getByRole("dialog", { name: "Start from danylo’s ranking?" }),
-    ).toBeInTheDocument();
-    await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(keptDraft()).toEqual(before);
-    expect(theirsS()).toHaveTextContent("Ex MachinaClimax");
   });
 
   it("asks nothing over a Mine with no card placed", async () => {
@@ -968,26 +1000,21 @@ describe("ListPage, starting Mine from Theirs", () => {
     expect(screen.getByText("Your version starts from danylo’s ranking")).toBeInTheDocument();
   });
 
-  it("asks a signed-in reader the same, names nobody on a list without an author's name, and goes on after Replace", async () => {
+  it("puts the author's back for a signed-in reader with no question, names nobody without the author's name, and goes on", async () => {
     saveDraft(localStorageStore, scopeOf(twoTiers), [[1], []]);
     mocks.loadList.mockResolvedValue({ ...twoTiers, authorName: " " });
     openAs(member);
     await screen.findByRole("heading", { level: 1 });
-    await userEvent.click(within(whose()).getByRole("button", { name: "Author" }));
-    const theirs = screen.getByRole("region", { name: "Their ranking" });
-    await userEvent.click(within(theirs).getByRole("button", { name: "Climax" }));
-    await userEvent.keyboard("2");
-    const ask = within(screen.getByRole("dialog", { name: "Start from this ranking?" }));
-    await userEvent.click(ask.getByRole("button", { name: "Replace" }));
-    expect(theirsPressed()).toBe("false");
-    expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[0], [1, 2]]);
-    expect(screen.getByText("Replaced your version with this ranking")).toBeInTheDocument();
-    // On Mine now, the next move is Mine's own: no question.
-    const yours = screen.getByRole("region", { name: "Your ranking" });
-    await userEvent.click(within(yours).getByRole("button", { name: "Climax" }));
-    await userEvent.keyboard("1");
+    await fromMenu("Back to the author’s ranking");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[0, 2], [1]]);
+    expect(screen.getByText("Replaced your version with the author’s ranking")).toBeInTheDocument();
+    // One's own version still: the next move is its own, with no question.
+    const yours = screen.getByRole("region", { name: "Your ranking" });
+    await userEvent.click(within(yours).getByRole("button", { name: "Climax" }));
+    await userEvent.keyboard("2");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[0], [1, 2]]);
   });
 
   it("starts from an arrow key too, and names nobody where the list has no author's name", async () => {
@@ -996,12 +1023,12 @@ describe("ListPage, starting Mine from Theirs", () => {
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByRole("button", { name: "Ex Machina" }));
     expect(
-      screen.getByText("Placing it starts your version from this ranking."),
+      screen.getByText("Placing it starts your version from the author’s."),
     ).toBeInTheDocument();
     await userEvent.keyboard("{ArrowRight}");
-    expect(theirsPressed()).toBe("false");
+    expect(onTheirs()).toBe(false);
     expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[2, 0], [1]]);
-    expect(screen.getByText("Your version starts from this ranking")).toBeInTheDocument();
+    expect(screen.getByText("Your version starts from the author’s ranking")).toBeInTheDocument();
   });
 });
 
@@ -1668,9 +1695,15 @@ describe("ListPage usage statistics", () => {
       await waitFor(() => expect(count.mock.calls).toEqual([["share.link"], ["share.link"]]));
 
       await userEvent.click(screen.getByLabelText("More about this list"));
-      await userEvent.click(screen.getByRole("button", { name: "Share" }));
+      await userEvent.click(menu.getByRole("button", { name: "Share" }));
       await waitFor(() => expect(count).toHaveBeenCalledTimes(3));
       expect(count).toHaveBeenLastCalledWith("share.link");
+
+      // A phone's Share beside Play and Save hands it to the same sheet.
+      const head = document.querySelector<HTMLElement>(".list-head__share")!;
+      expect(head).toHaveAccessibleName("Share");
+      await userEvent.click(head);
+      await waitFor(() => expect(count).toHaveBeenCalledTimes(4));
     } finally {
       Reflect.deleteProperty(navigator, "share");
     }
@@ -1689,7 +1722,8 @@ describe("ListPage usage statistics", () => {
       await userEvent.click(screen.getAllByRole("button", { name: "Copy link" })[0]!);
       await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
       await userEvent.click(screen.getByLabelText("More about this list"));
-      await userEvent.click(screen.getByRole("button", { name: "Share" }));
+      const menu = within(screen.getByLabelText("More about this list").closest("details")!);
+      await userEvent.click(menu.getByRole("button", { name: "Share" }));
       await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
       expect(count).not.toHaveBeenCalledWith("share.link");
     } finally {

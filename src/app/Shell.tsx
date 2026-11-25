@@ -20,6 +20,7 @@ import {
 } from "react-router";
 import { useAdminCounts } from "../features/admin/useAdminCounts";
 import { useModerator } from "../features/moderation/useModerator";
+import { PHONE, useMedia } from "../features/play/media";
 import { appIsLive, onApple, playUrl } from "../lib/links";
 import { IN_APP_BROWSER } from "../lib/inAppBrowser";
 import { lastSeen } from "../lib/signedInHint";
@@ -39,8 +40,12 @@ import { useRedirectFailed, useSession } from "./session";
 import { initialOf } from "../lib/initial";
 import "./Shell.css";
 
-/** The app in the footer: a link once anyone can get it, plain words until then, nothing on an iPhone. */
-function AppFooterLink() {
+/**
+ * The app in the footer: a link once anyone can get it, plain words until
+ * then, nothing on an iPhone. On a phone the words have a line of their own
+ * under the links, so they can say where the app is coming.
+ */
+function AppFooterLink({ phone }: { phone: boolean }) {
   if (onApple()) return null;
   return appIsLive() ? (
     <a className="foot__app" href={playUrl("footer")} target="_blank" rel="noopener">
@@ -48,7 +53,9 @@ function AppFooterLink() {
       {strings.android.footer}
     </a>
   ) : (
-    <span className="foot__app">{strings.android.footerSoon}</span>
+    <span className="foot__app">
+      {phone ? strings.android.footerSoonPhone : strings.android.footerSoon}
+    </span>
   );
 }
 
@@ -134,8 +141,9 @@ const OWN_PAGES = /^\/(b|trash)(\/|$)/;
 const COMMUNITY_PAGES = /^\/(following|s|search|l|u|r)?(\/|$)/;
 
 /**
- * The app's two places, Your lists and Community, as tabs: in the bar from
- * 600, and on a phone in a row under it on the pages they lead to.
+ * The app's two places, Your lists and Community, as tabs in the bar: from
+ * 600 on every page, and on a phone on the pages they lead to, where they
+ * take the brand's place (one bar of 56 px, as the app has it, 25.11.2026).
  */
 function SiteTabs({ className, pathname }: { className: string; pathname: string }) {
   const own = OWN_PAGES.test(pathname);
@@ -274,6 +282,13 @@ const LIST_PAGES = /^\/(b|l|r)\/[^/]+/;
  */
 const OWN_LIST = /^\/b\/(?!new$)[^/]+$/;
 
+/**
+ * The pages the two tabs lead to: Community (with Following) and Your lists.
+ * On a phone their bar is the tabs themselves, and New list is a round button
+ * at the window's lower corner, as on the app's home screens.
+ */
+const TAB_PAGES = /^\/(following|b)?$/;
+
 /** Below this the bar always shows: the page's top is where it is. */
 const AWAY_AFTER_PX = 120;
 
@@ -283,13 +298,15 @@ const SCROLL_NOISE_PX = 4;
 /**
  * On a list's page in a narrow window, the bar goes up out of the way as the
  * page scrolls down and comes back as soon as it scrolls up (audit C2): the
- * board is what the screen is for. A wide window has room for both.
+ * board is what the screen is for. A wide window has room for both. The tabs'
+ * pages do the same on a phone, as the app's home screens do (25.11.2026).
+ * `query` is the width it happens below, or null where it never does.
  */
-function useAwayOnScroll(listPage: boolean): boolean {
+function useAwayOnScroll(query: string | null): boolean {
   const [away, setAway] = useState(false);
   useEffect(() => {
-    if (!listPage || typeof window.matchMedia !== "function") return;
-    const narrow = window.matchMedia("(max-width: 839px)");
+    if (query === null || typeof window.matchMedia !== "function") return;
+    const narrow = window.matchMedia(query);
     let last = window.scrollY;
     const onScroll = () => {
       const y = window.scrollY;
@@ -302,11 +319,11 @@ function useAwayOnScroll(listPage: boolean): boolean {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
-      // Off the list's page the bar is back, and back again on the next one.
+      // Off the page the bar is back, and back again on the next one.
       setAway(false);
     };
-  }, [listPage]);
-  return listPage && away;
+  }, [query]);
+  return query !== null && away;
 }
 
 export function Shell() {
@@ -337,8 +354,14 @@ export function Shell() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   const titled = page !== null && page.inBar && scrolled;
-  const away = useAwayOnScroll(LIST_PAGES.test(location.pathname));
+  const tabsPage = TAB_PAGES.test(location.pathname);
+  const away = useAwayOnScroll(
+    LIST_PAGES.test(location.pathname) ? "(max-width: 839px)" : tabsPage ? PHONE : null,
+  );
   const ownList = OWN_LIST.test(location.pathname);
+  // What a phone's bar and foot hold, not only how they are drawn: the round
+  // New list button, and the foot's shorter and longer words.
+  const phone = useMedia(PHONE);
   useEffect(() => {
     document.title = documentTitleOf(page, strings.brand);
   }, [page]);
@@ -408,7 +431,13 @@ export function Shell() {
         {strings.nav.skipToContent}
       </a>
       <header
-        className={["top", titled && "top--titled", away && "top--away", ownList && "top--own-list"]
+        className={[
+          "top",
+          titled && "top--titled",
+          away && "top--away",
+          ownList && "top--own-list",
+          tabsPage && "top--tabs",
+        ]
           .filter(Boolean)
           .join(" ")}
       >
@@ -426,7 +455,8 @@ export function Shell() {
         {!home && <BarSearch asked={asked} scope={scope} />}
         {/* Not a second navigation: what is here acts rather than leads somewhere. */}
         <div className="top__actions">
-          {!home && (
+          {/* The home page's own box is its search, but scrolls away with it: on a phone the bar's icon stays at hand. */}
+          {(!home || phone) && (
             <Link
               className="top__search-link"
               to={searchPathOf("", scope)}
@@ -449,7 +479,8 @@ export function Shell() {
             // Who was here last time, until Firebase says: Sign in flashed first.
             <AccountMenu name={seen.displayName} photoUrl={seen.photoUrl} />
           ) : (
-            <Button onClick={onSignIn} disabled={signing}>
+            // On the tabs' pages of a phone only the person icon shows; the words still name it.
+            <Button className="top__sign-in" icon="person" onClick={onSignIn} disabled={signing}>
               {strings.nav.signIn}
             </Button>
           )}
@@ -458,9 +489,6 @@ export function Shell() {
           <span className="top__pending" role="progressbar" aria-label={strings.nav.opening} />
         )}
       </header>
-      {/^\/(following|b)?$/.test(location.pathname) && (
-        <SiteTabs className="site-tabs--row" pathname={location.pathname} />
-      )}
       {/* Under the bar, not in it: there a phone's buttons were squeezed off the screen. */}
       {note !== null && (
         <p
@@ -492,9 +520,15 @@ export function Shell() {
           </SearchScopeContext.Provider>
         </PageTitleContext.Provider>
       </main>
-      <footer className="foot">
-        <a href="/privacy.html">{strings.footer.privacy}</a>
-        <AppFooterLink />
+      {/* New list on a phone, where the tabs took the bar: the app's round button (25.11.2026). */}
+      {tabsPage && phone && (
+        <Link className="fab" to="/b/new" aria-label={strings.nav.newList}>
+          <Icon name="add" />
+        </Link>
+      )}
+      <footer className={tabsPage && phone ? "foot foot--fab" : "foot"}>
+        <a href="/privacy.html">{phone ? strings.footer.privacyShort : strings.footer.privacy}</a>
+        <AppFooterLink phone={phone} />
         <Link to="/about">{strings.footer.about}</Link>
         {/* The theme is a setting a guest has too, and a guest has no account menu to find it in. */}
         <Link to="/settings">{strings.nav.settings}</Link>

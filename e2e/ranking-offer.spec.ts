@@ -77,10 +77,8 @@ test("the author's arrangement starts no offer; placing every card of a saved co
   page,
 }) => {
   await visit(page, 0);
-  await expect(page.getByRole("button", { name: "Author", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(page.getByRole("region", { name: "Their ranking" })).toBeVisible();
+  await expect(page.locator(".list-head__version")).toHaveCount(0);
   await expect(offer(page)).toHaveCount(0);
   const save = page.getByRole("button", { name: "Save author’s list" }).first();
   if (!(await save.isVisible())) await page.getByLabel("More about this list").click();

@@ -74,16 +74,17 @@ async function pasteBox(page: Page, touch: boolean) {
   // The first page of a cold server is slow to come.
   await expect(title).toHaveValue("Football clubs", { timeout: 20_000 });
   await title.press("Enter");
-  if (touch) await press(page.getByRole("button", { name: "Add", exact: true }), touch);
+  // On a phone the empty list's own Paste a list opens the sheet with the paste box.
   await press(page.getByRole("button", { name: "Paste a list" }), touch);
 }
 
-/** The box stands inside the pool's panel on a wide window, and inside the window on a phone. */
+/** The box stands inside the pool's panel on a wide window, and inside the window's sheet on a phone. */
 async function expectInside(page: Page, box: Locator) {
   const at = (await box.boundingBox())!;
-  const pool = (await page.locator(".pool").first().boundingBox())!;
   const width = page.viewportSize()!.width;
-  const [left, right] = width >= 840 ? [pool.x, pool.x + pool.width] : [0, width];
+  // A phone's list with no card yet has no tray: the box is in the sheet, as wide as the window.
+  const pool = width >= 840 ? (await page.locator(".pool").first().boundingBox())! : null;
+  const [left, right] = pool === null ? [0, width] : [pool.x, pool.x + pool.width];
   expect(at.x).toBeGreaterThanOrEqual(left - 0.5);
   expect(at.x + at.width).toBeLessThanOrEqual(right + 0.5);
 }

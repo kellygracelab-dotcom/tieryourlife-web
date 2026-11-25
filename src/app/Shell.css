@@ -228,6 +228,11 @@
   }
 }
 
+/* The person icon stands for Sign in only in a phone's bar on the tabs' pages. */
+.top__sign-in .btn__icon {
+  display: none;
+}
+
 @media (max-width: 599px) {
   .top--titled .brand__name {
     display: none;
@@ -545,6 +550,37 @@
   .foot {
     padding-inline: var(--space-4);
   }
+
+  /*
+   * Two lines in the middle (25.11.2026): Privacy · About · Settings, and
+   * under them the app in grey, words rather than a link until it is out.
+   */
+  .foot {
+    justify-content: center;
+    gap: var(--space-2) var(--space-6);
+    padding-top: var(--space-5);
+    text-align: center;
+    font-size: 14px;
+  }
+
+  .foot a:not(.foot__app) {
+    color: var(--ink-dim);
+  }
+
+  .foot a:not(.foot__app):hover {
+    color: var(--ink);
+  }
+
+  .foot__app {
+    order: 1;
+    flex-basis: 100%;
+    justify-content: center;
+    font-size: 13px;
+  }
+
+  span.foot__app {
+    color: var(--ink-faint);
+  }
 }
 
 /* Someone who asked their system for less transparency gets none. */
@@ -584,30 +620,182 @@
   background: var(--primary-container);
 }
 
-.site-tabs--row {
-  display: none;
-}
-
+/*
+ * A phone (25.11.2026, as the app's home screens): one bar of 56 px. On the
+ * tabs' own pages it holds the icon, the two tabs as words with a line under
+ * the one that is here, search and the account; New list is the round button
+ * at the lower corner. Elsewhere the bar keeps the brand and no tabs.
+ */
 @media (max-width: 599px) {
+  .top {
+    height: var(--header-height);
+    padding-block: 8px;
+  }
+
+  /*
+   * The page a bar's height longer than the window, never exactly as tall:
+   * with the bar at exactly 56 the page fitted the window to the pixel, and
+   * WebKit crashed going Back to a feed (e2e account "reopens illustrated").
+   */
+  .shell__main {
+    min-height: 100vh;
+  }
+
   .top__tabs {
     display: none;
   }
 
-  .site-tabs--row {
-    position: sticky;
-    top: var(--header-height);
-    z-index: 55;
-    display: flex;
-    justify-content: stretch;
-    padding: 8px 16px;
-    border-bottom: 1px solid var(--line);
-    background: var(--paper);
+  .top--tabs {
+    gap: var(--space-2);
   }
 
-  .site-tabs--row .site-tabs__tab {
-    flex: 1;
-    justify-content: center;
+  /* Still the link's name for a screen reader; the icon is enough for the eye. */
+  .top--tabs .brand__name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
+
+  .top--tabs .brand__mark {
+    width: 28px;
+    height: 28px;
+  }
+
+  .top--tabs .top__tabs {
+    display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
+    gap: 14px;
+  }
+
+  .top--tabs .site-tabs__tab {
+    position: relative;
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 0;
+    border-radius: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font: 500 15px/20px var(--font);
+  }
+
+  .top--tabs .site-tabs__tab:hover {
+    background: none;
+  }
+
+  .top--tabs .site-tabs__tab[aria-current="page"] {
+    color: var(--link);
+    background: none;
+  }
+
+  /* Russian's and Japanese tabs whole on a 360 px phone: a size smaller, as the app's tabs shrink. */
+  @media (max-width: 380px) {
+    .top--tabs .site-tabs__tab {
+      font-size: 14px;
+    }
+  }
+
+  .top--tabs .site-tabs__tab[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 3px;
+    border-radius: 3px;
+    background: currentColor;
+  }
+
+  .top--tabs .top__make {
+    display: none;
+  }
+
+  /* The face alone, as in the app; the menu still opens on it. */
+  .top--tabs .menu__chevron {
+    display: none;
+  }
+
+  .top--tabs .menu__button--face {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+  }
+
+  .top--tabs .top__sign-in {
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    color: var(--ink-dim);
+  }
+
+  /* The person in a ring: the app's account icon, drawn from the icons the site's font has. */
+  .top--tabs .top__sign-in .btn__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    font-size: 18px;
+  }
+
+  .top--tabs .top__sign-in > span:not(.btn__icon) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/*
+ * New list on the tabs' pages of a phone: the app's round button at the lower
+ * corner, over the page, clear of the home indicator. Drawn only there.
+ */
+.fab {
+  position: fixed;
+  inset-inline-end: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.24);
+}
+
+.fab:hover {
+  color: var(--on-primary-container);
+  background: color-mix(in srgb, var(--on-primary-container) 8%, var(--primary-container));
+}
+
+.fab .ms {
+  font-size: 24px;
+}
+
+@media (min-width: 600px) {
+  .fab {
+    display: none;
+  }
+}
+
+/* A notice stands over the round button, not under it, as Material has it. */
+body:has(.fab) .snackbar {
+  bottom: calc(88px + env(safe-area-inset-bottom) + var(--snackbar-lift, 0px));
+}
+
+/* The foot's last line clear of the round button at the end of the scroll. */
+.foot--fab {
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 
 /*

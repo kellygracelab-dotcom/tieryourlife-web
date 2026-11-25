@@ -1734,30 +1734,235 @@
   padding: 4px 12px;
 }
 
+/*
+ * On a narrower window the tools are a sheet of the window's height, as the
+ * phone app has it (mobile BRIEF 25.11, 2): the field and its answers three
+ * posters across, Upload images and Paste a list held at the bottom, Done at
+ * the top with the count of cards added.
+ */
+.add-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink);
+  overscroll-behavior: contain;
+}
+
+.add-sheet[hidden] {
+  display: none;
+}
+
+.add-sheet__head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(12px, env(safe-area-inset-top)) 16px 8px;
+}
+
+.add-sheet__title {
+  margin: 0;
+  font: 500 20px/28px var(--font);
+}
+
+.add-sheet__done {
+  flex: none;
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font: var(--text-label);
+  cursor: pointer;
+}
+
+.add-sheet__done:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* A wrapping row, not a grid: the buttons at the bottom stay in view as the answers scroll. */
 .pool__tools--sheet {
   display: flex;
-  flex: 1 1 100%;
+  flex: 1 1 auto;
   flex-wrap: wrap;
-  align-items: flex-start;
-  order: 10;
-  gap: 10px 16px;
-  max-height: 44vh;
-  padding: 4px 0 6px;
+  align-content: space-between;
+  /* No gap between the two held buttons: the answers would show through it. */
+  gap: 8px 0;
+  min-height: 0;
+  padding: 0 16px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
-/* The head keeps to one row on a phone, except when the tools are out under it. */
-.pool__head:has(.pool__tools--sheet) {
-  flex-wrap: wrap;
+.pool__tools--sheet > * {
+  flex: 1 1 100%;
+  order: 1;
+  min-width: 0;
 }
 
-.pool__tools--sheet .cards__add {
-  flex: 1 1 240px;
+.pool__tools--sheet > .cards__add {
+  order: 0;
 }
 
-/* The pool's own words end above the sheet's paste box: its title stands apart from them. */
+.pool__tools--sheet > .cards__upload,
+.pool__tools--sheet > .cards__paste:not(.cards__paste--open) {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  flex: 1 1 40%;
+  order: 2;
+  padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+  background: var(--paper);
+}
+
+.pool__tools--sheet > .cards__upload {
+  padding-inline-end: 8px;
+}
+
+.pool__tools--sheet > .cards__upload .btn,
+.pool__tools--sheet > .cards__paste .btn {
+  width: 100%;
+}
+
+/* Paste a list as Upload images is: both a button with an outline. */
+.pool__tools--sheet > .cards__paste:not(.cards__paste--open) .btn {
+  background: var(--surface-soft);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--ink);
+}
+
+/* The sheet's title names it: the field's own label is for screen readers. */
+.pool__tools--sheet .editor__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.pool__tools--sheet .editor__field {
+  border-radius: 24px;
+}
+
+/* The answers are the sheet's page, not a box in it. */
+.pool__tools--sheet .cards__found:not(.cards__found--draft) {
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.pool__tools--sheet .cards__scopes {
+  padding-inline: 0;
+}
+
+.pool__tools--sheet .cards__picks {
+  padding-inline: 0;
+}
+
+.pool__tools--sheet .cards__pick-picture {
+  aspect-ratio: 2 / 3;
+}
+
+.pool__tools--sheet .cards__result--name {
+  padding-inline: 0;
+  border-top: 0;
+}
+
 .pool__tools--sheet .cards__paste--open {
   margin-top: var(--space-2);
+}
+
+/*
+ * One's own list with no card yet (mobile BRIEF 25.11, 1): a card that asks
+ * for the first ones above the tiers, and the empty tiers lower.
+ */
+.first-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.first-cards__title {
+  margin: 0;
+  font: 500 16px/24px var(--font);
+}
+
+.first-cards__caption {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.first-cards__field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--surface-soft);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink-dim);
+  font: var(--text-body);
+  text-align: start;
+  cursor: text;
+}
+
+.first-cards__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.first-cards__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--ink-quiet);
+  color: var(--ink);
+  font: var(--text-label);
+  cursor: pointer;
+}
+
+.first-cards__chip .ms {
+  font-size: 18px;
+}
+
+.first-cards__field:focus-visible,
+.first-cards__chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Rows of 30 + 2 × 11 = 52 while there is no card to be as tall as (Danylo, 25.11). */
+.ranking--no-cards .board {
+  --tile-h: 30px;
+  --tier-pad: 11px;
+}
+
+@media (max-width: 839px) {
+  .board-page--no-cards .list-head .play-button {
+    display: none;
+  }
 }
 
 /* Wider windows, a column of cards more each step, up to eight. */

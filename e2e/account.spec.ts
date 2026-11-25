@@ -38,14 +38,16 @@ async function newBoard(page: Page, touch: boolean, title: string) {
   const field = page.getByRole("textbox", { name: "Title" });
   await field.fill(title);
   await field.press("Enter");
-  // An empty pool has the box that brings cards in open on a wide window, behind + Add on a phone.
-  if (touch) await press(page.getByRole("button", { name: "Add", exact: true }), touch);
+  // An empty list has the box that brings cards in open on a wide window, in a sheet on a phone.
+  if (touch) await press(page.getByRole("button", { name: "Search or type a name" }), touch);
   for (const name of ["Ex Machina", "The Witch"]) {
     const box = page.getByRole("textbox", { name: "Add a card" });
     await box.fill(name);
     await box.press("Enter");
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
+  // On a phone the cards were added in a sheet of the window's height: Done closes it.
+  if (touch) await press(page.getByRole("button", { name: /^Done/ }), touch);
 }
 
 test("publishes a board, sends it again and takes it down, and says when a try failed", async ({

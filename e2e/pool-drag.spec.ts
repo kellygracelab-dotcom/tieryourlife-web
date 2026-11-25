@@ -23,19 +23,18 @@ async function newBoard(page: Page, touch: boolean) {
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Pool order");
   await title.press("Enter");
-  // The box that brings cards in is open on a wide window, behind + Add on a phone.
-  if (touch) await page.getByRole("button", { name: "Add", exact: true }).tap();
+  // The box that brings cards in is open on a wide window, in a sheet on a phone.
+  if (touch) await page.getByRole("button", { name: "Search or type a name" }).tap();
   for (const name of NAMES) {
     const add = page.getByRole("textbox", { name: "Add a card" });
     await add.fill(name);
     await add.press("Enter");
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
-  // The box closed again: the tray is short, and no row lies under it.
+  // The sheet closed again: the tray is short, and no row lies under it.
   if (touch) {
-    const add = page.getByRole("button", { name: "Add", exact: true });
-    await add.tap();
-    await expect(add).toHaveAttribute("aria-expanded", "false");
+    await page.getByRole("button", { name: /^Done/ }).tap();
+    await expect(page.getByRole("dialog", { name: "Add cards" })).toBeHidden();
   }
   await expect(poolCards(page)).toHaveCount(NAMES.length);
   await page.evaluate(() => window.scrollTo(0, 0));

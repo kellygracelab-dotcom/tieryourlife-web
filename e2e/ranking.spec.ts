@@ -1,14 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 import { LIST_ID, list, mockBackend } from "./fixtures";
+import { startFromScratch } from "./listVersion";
 import { PIXEL } from "./signedIn";
 
 const openList = async (page: Page) => {
   const backend = await mockBackend(page);
   await page.goto(`/l/${LIST_ID}`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
-  // The list opens on the author's ranking; one's own board is the switch's other half.
-  await page.getByRole("button", { name: "Mine", exact: true }).click();
-  // The switch moves the cards for 200 ms; a drag measured mid-flight starts in the wrong place.
+  // The list opens on the author's ranking; the menu's Start from scratch puts every card in the deck.
+  await startFromScratch(page);
+  // The cards move for 200 ms; a drag measured mid-flight starts in the wrong place.
   await page.waitForFunction(() => document.getAnimations().length === 0);
   return backend;
 };
@@ -73,11 +74,8 @@ test.describe("starting from the author's ranking", () => {
     await expect(page.getByText("Drop it to start your version.")).toBeVisible();
     expect((await theirs.getByRole("list", { name: "A" }).boundingBox())?.y).toBe(to.y);
     await page.mouse.up();
-    // The switch went over to Mine with the page.
-    await expect(page.getByRole("button", { name: "Mine" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    // The version is one's own now, and the line under the title says so.
+    await expect(page.locator(".list-head__version")).toHaveText("Your version · see danylo’s");
 
     // Mine now: the author's arrangement with that one card moved, and Climax still to place.
     const yours = page.getByRole("region", { name: "Your ranking" });
@@ -112,10 +110,7 @@ test.describe("starting from the author's ranking", () => {
     await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
     await expect(pool).toHaveClass(/pool--target/);
     await page.mouse.up();
-    await expect(page.getByRole("button", { name: "Mine" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(page.locator(".list-head__version")).toBeVisible();
     // Mine: The Witch where the author put it, Ex Machina back with Climax.
     const yours = page.getByRole("region", { name: "Your ranking" });
     await expect(yours.getByRole("list", { name: "S" }).getByRole("button")).toHaveCount(0);
@@ -124,10 +119,10 @@ test.describe("starting from the author's ranking", () => {
   });
 });
 
-// On every screen: a move on Author over a Mine with a card placed asks first.
-test("a move on Author over a begun Mine asks first: Cancel takes it back, Replace starts from it", async ({
+// On every screen: a version begun here opens as one's own; the author's is
+// looked at read-only, and the menu puts it in place of one's own at once.
+test("a begun version opens as one's own, the author's only to look at, and Back to the author's ranking asks nothing", async ({
   page,
-  hasTouch,
 }) => {
   await mockBackend(page);
   // Mine begun on this device: Climax in S.
@@ -145,57 +140,26 @@ test("a move on Author over a begun Mine asks first: Cancel takes it back, Repla
   );
   await page.goto(`/l/${LIST_ID}`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
-  await page.getByRole("button", { name: "Author", exact: true }).click();
-  const theirs = page.getByRole("region", { name: "Their ranking" });
-  await expect(theirs).toBeVisible();
-  await page.waitForFunction(() => document.getAnimations().length === 0);
-  const moveExMachinaToA = async () => {
-    if (hasTouch) {
-      await theirs.getByRole("button", { name: "Ex Machina" }).tap();
-      await theirs.locator(".tier__band").nth(1).tap();
-      return;
-    }
-    const from = await theirs.getByRole("button", { name: "Ex Machina" }).boundingBox();
-    const to = await theirs.getByRole("list", { name: "A" }).boundingBox();
-    if (from === null || to === null) throw new Error("board not laid out");
-    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
-    await page.mouse.up();
-  };
-  const mine = page.getByRole("button", { name: "Mine", exact: true });
-
-  await moveExMachinaToA();
-  const ask = page.getByRole("dialog", { name: "Start from danylo’s ranking?" });
-  await expect(ask).toContainText("Your version will be replaced.");
-  await ask.getByRole("button", { name: "Cancel" }).click();
-  await expect(ask).toHaveCount(0);
-  await expect(theirs.getByRole("list", { name: "S" })).toContainText("Ex Machina");
-  await expect(mine).toHaveAttribute("aria-pressed", "false");
-  // Mine as it was; a save also notes the list's name, section, first pictures
-  // and when, for Continue (audit B1, artboard 14).
-  const kept = await page.evaluate((key) => localStorage.getItem(key), `tyl:draft:${LIST_ID}`);
-  const {
-    title: _t,
-    picture: _p,
-    pictures: _ps,
-    category: _c,
-    savedAt: _s,
-    ...rest
-  } = JSON.parse(kept!) as Record<string, unknown>;
-  expect(rest).toEqual(JSON.parse(draft));
-
-  await moveExMachinaToA();
-  await ask.getByRole("button", { name: "Replace" }).click();
-  await expect(mine).toHaveAttribute("aria-pressed", "true");
   const yours = page.getByRole("region", { name: "Your ranking" });
-  await expect(yours.getByRole("list", { name: "A" }).getByRole("button")).toHaveText([
-    "The Witch",
-    "Ex Machina",
-  ]);
-  await expect(page.locator(".snackbar")).toContainText(
-    "Replaced your version with danylo’s ranking",
-  );
+  await expect(yours.getByRole("list", { name: "S" })).toContainText("Climax");
+
+  // A look at the author's, read-only, and back.
+  await page.getByRole("button", { name: "see danylo’s" }).click();
+  const strip = page.getByRole("region", { name: "danylo’s ranking" });
+  await expect(strip).toBeVisible();
+  await expect(page.getByRole("region", { name: "Their ranking" })).toContainText("Ex Machina");
+  await expect(yours).toHaveCount(0);
+  await strip.getByRole("button", { name: "Back to yours" }).click();
+  await expect(yours.getByRole("list", { name: "S" })).toContainText("Climax");
+
+  await page.getByLabel("More about this list").click();
+  await page.getByRole("button", { name: "Back to danylo’s ranking" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(yours.getByRole("list", { name: "S" })).toContainText("Ex Machina");
+  const said = page.locator(".snackbar");
+  await expect(said).toContainText("Replaced your version with danylo’s ranking");
+  await said.getByRole("button", { name: "Undo" }).click();
+  await expect(yours.getByRole("list", { name: "S" }).getByRole("button")).toHaveText(["Climax"]);
 });
 
 // On every screen: the mouse on a desktop and in Safari, a held finger on the
@@ -371,7 +335,8 @@ test.describe("ranking a list on a phone", () => {
     await expect(page.getByText("All 3 placed")).toBeVisible();
     await expect(page.getByText("3 of 3 placed")).toBeVisible();
 
-    await page.getByRole("button", { name: "Undo" }).tap();
+    // The board's own Undo: Start from scratch's snackbar may still offer one of its own.
+    await page.locator(".ranking").getByRole("button", { name: "Undo" }).tap();
     // Picked again, so the rows offer "Place Climax in …" too: the card itself is the exact name.
     await expect(page.getByRole("button", { name: "Climax", exact: true })).toHaveAttribute(
       "aria-pressed",

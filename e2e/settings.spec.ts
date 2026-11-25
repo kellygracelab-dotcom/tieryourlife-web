@@ -17,7 +17,11 @@ test("the settings page does not jump when the account arrives", async ({ page }
     await route.fallback();
   });
   await page.goto("/settings");
-  const languages = page.getByRole("heading", { name: "Language" });
+  // On a phone the language is a row of its own, under the theme's and the colour's.
+  const languages =
+    page.viewportSize()!.width < 600
+      ? page.getByRole("button", { name: "Language" })
+      : page.getByRole("heading", { name: "Language" });
   await expect(languages).toBeVisible();
   // Chromium has the account before the first paint (on a phone too, since #73
   // took Firebase's redirect check away), so it never shows the placeholder and

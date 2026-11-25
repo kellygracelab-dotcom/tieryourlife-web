@@ -128,11 +128,15 @@ const rowsOf = (sheet: HTMLElement) =>
         .join(" "),
     );
 
-const whose = () => screen.getByRole("group", { name: "Whose arrangement to show" });
+/** The strip over the board naming whose arrangement stands in for one's own, and its way back. */
+const strip = (name: string) => within(screen.getByRole("region", { name: `${name}’s ranking` }));
+const noStrip = () => screen.queryByRole("region", { name: /’s ranking$/ }) === null;
 
-/** The switch once the list has opened. */
-const opened = async () =>
-  within(await screen.findByRole("group", { name: "Whose arrangement to show" }));
+/** The menu's line, pressed: "Start from scratch" makes a version of one's own. */
+const fromMenu = async (line: string) => {
+  await userEvent.click(await screen.findByLabelText("More about this list"));
+  await userEvent.click(screen.getByRole("button", { name: line }));
+};
 
 beforeEach(() => {
   mocks.loadList.mockReset();
@@ -221,8 +225,8 @@ describe("ListPage rankings", () => {
     // The sheet came from the menu, which closed behind it: its button has the focus back.
     expect(screen.getByLabelText("More about this list")).toHaveFocus();
 
-    const left = within(whose()).getByRole("button", { name: "olena" });
-    expect(left).toHaveAttribute("aria-pressed", "true");
+    // No version of one's own yet: her placing is the board to start one from, named over it.
+    expect(strip("olena").getByText("olena’s ranking")).toBeInTheDocument();
     const board = screen.getByRole("region", { name: "olena" });
     // Their tier word, their placing: The Witch where the author had nothing.
     expect(within(board).getByRole("list", { name: "Best" })).toHaveTextContent("The Witch");
@@ -240,13 +244,8 @@ describe("ListPage rankings", () => {
     await userEvent.click(within(again).getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    await userEvent.click(
-      within(whose()).getByRole("button", { name: "Back to the author’s ranking" }),
-    );
-    expect(within(whose()).getByRole("button", { name: "Author" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await userEvent.click(strip("olena").getByRole("button", { name: "Back to danylo’s ranking" }));
+    expect(noStrip()).toBe(true);
     expect(screen.getByRole("region", { name: "Their ranking" })).toHaveTextContent("Ex Machina");
   });
 
@@ -332,23 +331,24 @@ describe("ListPage rankings", () => {
     localStorage.clear();
   });
 
-  it("goes back to the author's from the sheet's first row, and Mine stays a press away", async () => {
+  it("shows a reader's placing beside one's own version read-only, the author's from the sheet's first row, and goes back", async () => {
     openAs();
+    await fromMenu("Start from scratch");
     await userEvent.click(await within(await openSheet()).findByRole("button", { name: /^olena/ }));
-    await userEvent.click(within(whose()).getByRole("button", { name: "Mine" }));
-    expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
-    // Theirs is still olena's until the author's is chosen again.
-    expect(within(whose()).getByRole("button", { name: "olena" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    // One's own version stays as it is: her placing is only looked at.
+    expect(strip("olena").getByRole("button", { name: "Back to yours" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Your ranking" })).toBeNull();
+    expect(screen.getByRole("region", { name: "olena" })).toHaveTextContent("The Witch");
     await userEvent.click(within(await openSheet()).getByRole("button", { name: /^danylo/ }));
     expect(screen.getByRole("region", { name: "Their ranking" })).toBeInTheDocument();
+    await userEvent.click(strip("danylo").getByRole("button", { name: "Back to yours" }));
+    expect(noStrip()).toBe(true);
+    expect(screen.getByRole("region", { name: "Your ranking" })).toHaveTextContent("2 cards left");
   });
 
-  it("checks the arrangement on the board: one's own while Mine is shown (artboard 36)", async () => {
+  it("checks the arrangement on the board: one's own while it is shown (artboard 36)", async () => {
     openAs();
-    await userEvent.click((await opened()).getByRole("button", { name: "Mine" }));
+    await fromMenu("Start from scratch");
     const sheet = await openSheet();
     expect(await within(sheet).findByRole("button", { name: /^Reader/ })).toHaveAttribute(
       "aria-current",
@@ -465,22 +465,18 @@ describe("ListPage rankings", () => {
     });
     openAs();
     await screen.findByRole("region", { name: "Your ranking" });
-    expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
+    expect(noStrip()).toBe(true);
     await userEvent.click(await within(await openSheet()).findByRole("button", { name: /^olena/ }));
-    expect(within(whose()).getByRole("button", { name: "olena" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(screen.getByRole("region", { name: "olena" })).toBeInTheDocument();
     // The author has no arrangement to save: the one button saves one's own, and asks nothing.
     expect(screen.queryByRole("button", { name: "Save author’s list" })).toBeNull();
     await userEvent.click(screen.getAllByRole("button", { name: "Save my list" })[0]!);
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(await screen.findByText("Saved to your lists.")).toBeInTheDocument();
 
-    await userEvent.click(
-      within(whose()).getByRole("button", { name: "Back to the author’s ranking" }),
-    );
-    expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
+    // No author's arrangement to go back to: back to one's own board.
+    await userEvent.click(strip("olena").getByRole("button", { name: "Back to yours" }));
+    expect(noStrip()).toBe(true);
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
     // Saved already: the button says so, and there is still one board of the list.
     expect(screen.getAllByRole("button", { name: "Saved" })).not.toHaveLength(0);
@@ -499,18 +495,15 @@ describe("ListPage rankings", () => {
     expect(sheet.querySelector(".rankings__face--mark")).toHaveAttribute("src", "/favicon.svg");
   });
 
-  it("lets the author look at a reader's placing of their list, with no Mine to switch to", async () => {
+  it("lets the author look at a reader's placing of their list, and go back to their own", async () => {
     openAs({ kind: "signedIn", uid: "u1", displayName: "danylo", photoUrl: null });
     expect(await screen.findByRole("region", { name: "Your list" })).toBeInTheDocument();
+    expect(noStrip()).toBe(true);
     await userEvent.click(await within(await openSheet()).findByRole("button", { name: /^olena/ }));
-    expect(within(whose()).getByRole("button", { name: "olena" })).toBeInTheDocument();
-    expect(within(whose()).queryByRole("button", { name: "Mine" })).toBeNull();
     expect(screen.getByRole("region", { name: "olena" })).toHaveTextContent("The Witch");
-    await userEvent.click(
-      within(whose()).getByRole("button", { name: "Back to the author’s ranking" }),
-    );
+    await userEvent.click(strip("olena").getByRole("button", { name: "Back to yours" }));
     expect(screen.getByRole("region", { name: "Your list" })).toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
+    expect(noStrip()).toBe(true);
   });
   it("says Someone for a reader with no name, and draws a letter or a figure where a photo cannot be", async () => {
     mocks.loadListRankings.mockResolvedValue({
@@ -543,7 +536,7 @@ describe("ListPage rankings", () => {
     expect(lost.querySelector(".rankings__face--initial")).toHaveTextContent("L");
 
     await userEvent.click(within(sheet).getAllByRole("button", { name: /^Someone/ })[2]!);
-    expect(within(whose()).getByRole("button", { name: "Someone" })).toBeInTheDocument();
+    expect(strip("Someone").getByText("Someone’s ranking")).toBeInTheDocument();
   });
 
   it("says a failed withdrawal next to the row that came back", async () => {
@@ -581,33 +574,23 @@ describe("ListPage rankings", () => {
     await act(() => router.navigate(-1));
     expect(router.state.location.pathname).toBe("/");
     await act(() => router.navigate(1));
-    expect((await opened()).getByRole("button", { name: "olena" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(await screen.findByRole("region", { name: "olena’s ranking" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "olena" })).toHaveTextContent("The Witch");
 
     // A reload starts afresh from the entry's state.
     const kept = router.state.location.state;
     cleanup();
     const reloaded = openAs(member, [{ pathname: "/l/abc", state: kept }]);
-    expect((await opened()).getByRole("button", { name: "olena" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(await screen.findByRole("region", { name: "olena’s ranking" })).toBeInTheDocument();
     // Not one page of rankings had to be read again for it.
     expect(mocks.loadListRankings).toHaveBeenCalledTimes(1);
 
     // Back to the author's, and the entry forgets the reader.
-    await userEvent.click(
-      within(whose()).getByRole("button", { name: "Back to the author’s ranking" }),
-    );
+    await userEvent.click(strip("olena").getByRole("button", { name: "Back to danylo’s ranking" }));
     cleanup();
     openAs(member, [{ pathname: "/l/abc", state: reloaded.state.location.state }]);
-    expect((await opened()).getByRole("button", { name: "Author" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(await screen.findByRole("region", { name: "Their ranking" })).toBeInTheDocument();
+    expect(noStrip()).toBe(true);
   });
 
   it("does not bring back a reader chosen on the list before it was republished", async () => {
@@ -617,10 +600,8 @@ describe("ListPage rankings", () => {
     cleanup();
     mocks.loadList.mockResolvedValue({ ...list, updatedAt: 5 });
     openAs(member, [{ pathname: "/l/abc", state: kept }]);
-    expect((await opened()).getByRole("button", { name: "Author" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(await screen.findByRole("region", { name: "Their ranking" })).toBeInTheDocument();
+    expect(noStrip()).toBe(true);
   });
 
   it("opens again at the reader chosen further down", async () => {

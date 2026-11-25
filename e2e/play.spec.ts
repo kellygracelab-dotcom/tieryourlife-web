@@ -1,17 +1,12 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { LIST_ID, mockBackend } from "./fixtures";
+import { startFromScratch } from "./listVersion";
 
 const openMine = async (page: Page) => {
   await mockBackend(page);
   await page.goto(`/l/${LIST_ID}`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
-  // A press that lands before the page has woken up is lost, so it is
-  // repeated until Mine reads as pressed.
-  const mine = page.getByRole("button", { name: "Mine", exact: true });
-  await expect(async () => {
-    await mine.click();
-    await expect(mine).toHaveAttribute("aria-pressed", "true", { timeout: 1_000 });
-  }).toPass();
+  await startFromScratch(page);
   await settled(page);
 };
 
@@ -155,10 +150,7 @@ test.describe("Play on a phone", () => {
     await ready.getByRole("button", { name: "See my list" }).tap();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Your result" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Mine", exact: true })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(page.locator(".list-head__version")).toBeVisible();
     await expect(page.getByText("3 of 3 placed")).toBeVisible();
   });
 });

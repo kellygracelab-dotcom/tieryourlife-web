@@ -48,10 +48,12 @@ async function boardWithPortrait(page: Page, touch: boolean) {
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Portraits");
   await title.press("Enter");
-  if (touch) await press(page.getByRole("button", { name: "Add", exact: true }), touch);
+  if (touch) await press(page.getByRole("button", { name: "Search or type a name" }), touch);
   await page.getByRole("textbox", { name: "Add a card" }).fill("Portrait");
   await press(page.getByRole("button", { name: "Portrait Film" }), touch);
   await expect(page.getByRole("button", { name: "Portrait", exact: true })).toBeVisible();
+  // On a phone the cards were added in a sheet of the window's height: Done closes it.
+  if (touch) await press(page.getByRole("button", { name: /^Done/ }), touch);
 }
 
 /** Where the picture's top edge is drawn, as a share of its own box. */

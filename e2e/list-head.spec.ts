@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { LIST_ID, mockBackend } from "./fixtures";
+import { startFromScratch } from "./listVersion";
 
 // Artboard 13: on a phone somebody else's list keeps its whole title on a row
 // of its own with ⋮ beside it, and Play and Save my list, 48 high, below.
@@ -39,9 +40,12 @@ test("a phone gives one's own list its buttons over the whole name, and one row 
   await title.press("Enter");
   const add = page.getByRole("textbox", { name: "Add a card" });
   if (!(await add.isVisible()))
-    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await page.getByRole("button", { name: "Search or type a name" }).click();
   await add.fill("Fern");
   await add.press("Enter");
+  // A phone added it in a sheet of the window's height: Done closes it.
+  const done = page.getByRole("button", { name: /^Done/ });
+  if (await done.isVisible()) await done.click();
   await expect(page.locator(".top")).toBeHidden();
   const head = page.locator(".list-head");
   const heading = head.getByRole("heading", { level: 1 });
@@ -120,7 +124,7 @@ test("a laptop shows somebody else's cards four to a row in a column with no scr
   await mockBackend(page);
   await page.setViewportSize({ width: 1351, height: 870 });
   await page.goto(`/l/${LIST_ID}`);
-  await page.getByRole("button", { name: "Mine", exact: true }).click();
+  await startFromScratch(page);
   await page.getByRole("button", { name: "Cards beside the tiers" }).click();
   const pool = page.locator(".ranking:not(.ranking--under) .pool");
   await expect(pool).toBeVisible();

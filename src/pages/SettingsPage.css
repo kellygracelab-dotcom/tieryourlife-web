@@ -464,3 +464,207 @@
   margin-block-start: 4px;
   margin-inline-start: -12px;
 }
+
+/*
+ * A phone (25.11.2026, as in the app): Sign in is one compact card at the
+ * top, the icon beside the words and the button under them.
+ */
+.settings__card--row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 4px 14px;
+  padding: 16px;
+  text-align: start;
+}
+
+.settings__card--row > * {
+  grid-column: 2;
+}
+
+.settings__card--row > .settings__guest-icon {
+  grid-row: 1 / span 4;
+  grid-column: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 24px;
+}
+
+.settings__card--row > .ms.settings__guest-icon {
+  box-shadow: inset 0 0 0 2px var(--ink-faint);
+}
+
+.settings__card--row .settings__guest-title {
+  font: 500 16px/22px var(--font);
+}
+
+.settings__card--row .settings__helper {
+  font: var(--text-small);
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.settings__card--row .sign-in {
+  margin-top: 8px;
+}
+
+/* Theme, colour and language: a row each with what it is now; a press opens the choice's sheet. */
+.settings__card--picks {
+  gap: 0;
+  padding: 4px 0;
+}
+
+.settings__pick {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 12px 0 16px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: var(--text-body);
+  text-align: start;
+  cursor: pointer;
+}
+
+.settings__pick + .settings__pick {
+  border-top: 1px solid var(--line);
+}
+
+.settings__pick:hover {
+  background: var(--hover);
+}
+
+.settings__pick:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.settings__pick-icon {
+  font-size: 22px;
+  color: var(--ink-dim);
+}
+
+.settings__pick-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings__pick-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--text-small);
+  font-size: 14px;
+  color: var(--ink-faint);
+}
+
+/* The colour the site is drawn in now: its main tone, light or dark as shown. */
+.settings__pick-swatch {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--link);
+}
+
+.settings__pick-chevron {
+  font-size: 20px;
+  color: var(--ink-faint);
+}
+
+/* The theme sheet's rows are drawn as the languages are. */
+.settings__options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/*
+ * A choice's sheet: from the window's lower edge, the width of the window,
+ * a handle at the top as the app's sheets have. Taller than the window, the
+ * languages scroll inside it.
+ */
+.choice-sheet__scrim {
+  align-items: flex-end;
+  padding: 0;
+}
+
+.choice-sheet {
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  padding: 8px 16px calc(12px + env(safe-area-inset-bottom));
+  border-radius: 28px 28px 0 0;
+  animation: choice-sheet-up 250ms cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+
+.choice-sheet__grip {
+  flex: none;
+  width: 32px;
+  height: 4px;
+  margin: 4px auto 12px;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+
+.choice-sheet__title {
+  margin: 0 0 12px;
+  padding-inline: 12px;
+  font: 400 22px/28px var(--font);
+  color: var(--ink);
+}
+
+.choice-sheet .settings__languages {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.choice-sheet .settings__language {
+  min-height: 48px;
+  font-size: 16px;
+}
+
+.choice-sheet > .settings__note,
+.choice-sheet .colour,
+.choice-sheet .colour + .settings__note {
+  padding-inline: 12px;
+}
+
+/* The sheet's title already names it. */
+.choice-sheet .colour {
+  margin-top: 0;
+}
+
+.choice-sheet .colour__title {
+  display: none;
+}
+
+.choice-sheet > .settings__note {
+  margin-top: 12px;
+}
+
+.choice-sheet .dialog__actions {
+  margin-top: 12px;
+}
+
+@keyframes choice-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .choice-sheet {
+    animation: none;
+  }
+}

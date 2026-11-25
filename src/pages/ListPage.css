@@ -190,9 +190,12 @@
   background: var(--tier-b);
 }
 
-/* A phone's head is the name and its buttons (artboard 13); the count is a wider window's. */
+/*
+ * A phone's head is the name and its buttons (artboard 13); the count stands
+ * in the author's line, and in its own only where there is no author to name.
+ */
 @media (max-width: 599px) {
-  .list-head__count {
+  .list-head__count:not(.list-head__count--alone) {
     display: none;
   }
 }
@@ -227,126 +230,68 @@
 }
 
 /*
- * Theirs | Mine: one pill, two equal halves, the chosen one filled and
- * ticked. Equal grid columns are each as wide as the widest half needs.
+ * "Your version · see danylo’s" under the title, grey as the meta line: the
+ * board is one's own, and the author's arrangement is a press away.
  */
-.whose {
-  position: relative;
-  isolation: isolate;
-  display: grid;
-  flex: none;
-  grid-auto-columns: 1fr;
-  grid-auto-flow: column;
-  height: 40px;
-  border-radius: 20px;
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-  overflow: hidden;
-}
-
-/*
- * The fill under the chosen half is one piece that slides between the two,
- * so a first move on Theirs is seen to carry the page over to Mine.
- */
-.whose::before {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  z-index: -1;
-  width: 50%;
-  background: var(--primary-container);
-  transition: transform 250ms cubic-bezier(0.2, 0, 0, 1);
-}
-
-.whose--one::before {
-  width: 100%;
-}
-
-.whose--mine::before {
-  transform: translateX(100%);
-}
-
-[dir="rtl"] .whose--mine::before {
-  transform: translateX(-100%);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .whose::before {
-    transition: none;
-  }
-}
-
-.whose__half {
-  display: flex;
-  align-items: center;
-  min-width: 0;
+.list-head__version {
+  margin-top: 2px;
+  font: var(--text-small);
   color: var(--ink-dim);
-  transition: color 250ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-.whose__half + .whose__half {
-  border-inline-start: 1px solid var(--line-strong);
-}
-
-.whose__half:hover:not(.whose__half--on) {
-  background: var(--hover);
-  color: var(--ink);
-}
-
-.whose__half--on {
-  color: var(--on-primary-container);
-}
-
-.whose__segment {
-  display: inline-flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: 0;
-  height: 100%;
-  padding: 0 16px;
-  border: none;
-  background: transparent;
-  color: inherit;
-  font: var(--text-label);
+/* The way to the author's: a link in the sentence, a button since it stays on the page. */
+.list-head__see {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-weight: 500;
   cursor: pointer;
+  text-align: start;
 }
 
-.whose__check {
-  font-size: 16px;
+.list-head__see:hover {
+  text-decoration: underline;
 }
 
-/* A reader's name can be long; the half keeps to the width of a word or two. */
-.whose__label {
-  max-width: 140px;
+/* Whose arrangement is on show in place of one's own, and the way back, over the board. */
+.list-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding-block: 6px;
+  padding-inline: 16px 6px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.list-strip__title {
+  min-width: 0;
+  margin: 0;
   overflow: hidden;
+  font: var(--text-label);
+  color: var(--ink);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.whose__back {
-  display: inline-flex;
+.list-strip__back {
   flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  margin-inline-end: 6px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
+  min-height: 36px;
 }
 
-.whose__back .ms {
-  font-size: 18px;
+/* The author's line counts the cards only on a phone; wider, the meta line does. */
+.byline__count {
+  display: none;
 }
 
-.whose__back:hover {
-  background: var(--hover);
+/* A phone's Share beside Play and Save; wider, Copy link and the menu's Share do it. */
+.list-head__share {
+  display: none;
 }
 
 .list-head__copy {
@@ -442,6 +387,13 @@
   }
 
   .list-page > .board {
+    width: 100%;
+    max-width: var(--board-max);
+    margin-inline: auto;
+  }
+
+  /* A look at somebody else's arrangement: its strip keeps to the read-only board's edges. */
+  .list-page:has(> .board) > .list-strip {
     width: 100%;
     max-width: var(--board-max);
     margin-inline: auto;
@@ -608,8 +560,8 @@
 }
 
 /*
- * On a phone the menu stays beside the title, and the switch is a row of its
- * own under them, 32 high and the full width.
+ * On a phone the menu stays beside the title; the buttons and the board's
+ * bar take rows of their own under them.
  */
 @media (max-width: 599px) {
   .list-head__text {
@@ -632,12 +584,6 @@
 
   .list-head__tools {
     order: 1;
-  }
-
-  .whose {
-    flex-basis: 100%;
-    order: 2;
-    height: 32px;
   }
 
   .list-head__bar {
@@ -688,10 +634,78 @@
 
   .list-head--visitor > .list-head__tools > .list-head__save {
     display: inline-flex;
+    flex: 0 1 auto;
+    min-width: 0;
     padding: 0 18px 0 14px;
     background: transparent;
     box-shadow: inset 0 0 0 1px var(--line-strong);
     color: var(--ink);
+  }
+
+  /* A long "Save author’s list" gives way before Play or Share does. */
+  .list-head--visitor > .list-head__tools > .list-head__save > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /*
+   * Play, Save and Share in one row (25.11.2026): Share a round button as
+   * tall as the others, its words in its label.
+   */
+  .list-head--visitor > .list-head__tools > .list-head__share {
+    display: inline-flex;
+    flex: none;
+    order: 1;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    min-height: 48px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  /*
+   * The author, the count and Follow in one line: Follow as words at its
+   * end, the line the width of the head, the name cut short before them.
+   */
+  .list-head--visitor .list-head__lines,
+  .list-head--visitor .byline {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .list-head--visitor .byline {
+    column-gap: 4px;
+    font: 400 13px/18px var(--font);
+  }
+
+  .list-head--visitor .byline__count {
+    display: inline;
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .list-head--visitor .byline .follow--chip,
+  .list-head--visitor .byline .byline__waiting {
+    margin-inline-start: auto;
+  }
+
+  .list-head--visitor .byline .follow--chip,
+  .list-head--visitor .byline .follow--chip:hover:not(:disabled) {
+    min-height: 32px;
+    height: 32px;
+    padding: 0 4px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--link);
+    font: 500 14px/20px var(--font);
+  }
+
+  .list-head--visitor .byline .follow--on,
+  .list-head--visitor .byline .follow--on:hover:not(:disabled) {
+    color: var(--ink-dim);
   }
 }
 

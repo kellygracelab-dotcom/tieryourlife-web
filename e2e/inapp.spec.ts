@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { mockBackend } from "./fixtures";
+import { startFromScratch } from "./listVersion";
 
 // Instagram's browser on an iPhone: a WKWebView with the app's name appended.
 test.use({
@@ -16,7 +17,7 @@ test("in an app's browser the site says to open the page in a real one", async (
   await expect(page.getByRole("note")).toContainText("Open this page in Chrome or Safari");
 
   await page.goto("/l/abc");
-  await page.getByRole("button", { name: "Mine", exact: true }).click();
+  await startFromScratch(page);
   await page.getByRole("button", { name: "Ex Machina", exact: true }).click();
   await page.getByRole("button", { name: "Place Ex Machina in S · Masterpiece" }).click();
   await page.getByRole("button", { name: "Place The Witch in A · Great" }).click();

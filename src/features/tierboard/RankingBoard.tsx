@@ -21,7 +21,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import type { ApiError } from "../../api/errors";
 import type { EditorCredit } from "../../api/pictureAttribution";
 import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
@@ -686,16 +686,43 @@ export function RankingBoard({
   const [adding, setAdding] = useState(edit?.owner?.toolsOpen === true);
   const tools = edit?.owner?.tools;
   const emptyPool = edit?.owner?.live === true && pool(state).length === 0;
+  // One's own list with no card at all: on a phone the board asks for its
+  // first cards above the tiers, and has no tray, count or Play until then
+  // (mobile BRIEF 25.11, 1).
+  const noCards = edit?.owner?.live === true && list.items.length === 0;
+  // On a phone the tools are a sheet of the window's height (mobile BRIEF
+  // 25.11, 2), kept in the page while closed so that Upload images and Paste
+  // a list open it from the tap that asked, as the browser wants.
+  const sheet = useRef<HTMLDivElement>(null);
+  // The cards there were when the sheet opened: its Done counts those added since.
+  const [addedFrom, setAddedFrom] = useState(list.items.length);
   const openTools = useRef(false);
+  const toolsBox = () => (wide ? poolBox.current : sheet.current);
+  const openAdding = () => {
+    setAddedFrom(list.items.length);
+    setAdding(true);
+  };
   const toggleAdding = () => {
     openTools.current = !adding;
-    setAdding(!adding);
+    if (adding) setAdding(false);
+    else openAdding();
   };
   useEffect(() => {
     if (!adding || !openTools.current) return;
     openTools.current = false;
-    poolBox.current?.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
+    toolsBox()?.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
   }, [adding]);
+  // From the first cards' card: the sheet opens at once, then the field takes
+  // the cursor or the picker or the paste box opens, in the same tap.
+  const openSheetFor = (then: "field" | "upload" | "paste") => {
+    flushSync(() => openAdding());
+    const box = sheet.current;
+    if (box === null) return;
+    if (then === "upload") box.querySelector<HTMLInputElement>(".cards__upload input")?.click();
+    else if (then === "paste")
+      box.querySelector<HTMLButtonElement>(".cards__paste button")?.click();
+    else box.querySelector<HTMLInputElement>("input[type='text']")?.focus();
+  };
   const addButton = tools !== undefined && !wide && (
     <button
       type="button"
@@ -713,15 +740,73 @@ export function RankingBoard({
       <span>{strings.new.add}</span>
     </button>
   );
-  const toolsPanel = tools !== undefined && (adding || wide) && (
-    <div className={wide ? "pool__tools" : "pool__tools pool__tools--sheet"}>{tools}</div>
+  const added = list.items.length - addedFrom;
+  const toolsPanel =
+    tools === undefined ? null : wide ? (
+      <div className="pool__tools">{tools}</div>
+    ) : (
+      createPortal(
+        <div
+          ref={sheet}
+          className="add-sheet"
+          // A dialog only while open: a closed one kept in the page must not
+          // stop the board's keys, which wait while a modal is up (ui/covered).
+          {...(adding
+            ? { role: "dialog", "aria-modal": true, "aria-labelledby": "add-sheet-title" }
+            : {})}
+          hidden={!adding}
+          onKeyDown={(event) => {
+            if (event.key !== "Escape" || event.defaultPrevented) return;
+            event.preventDefault();
+            setAdding(false);
+          }}
+        >
+          <div className="add-sheet__head">
+            <h2 id="add-sheet-title" className="add-sheet__title">
+              {strings.new.sheetTitle}
+            </h2>
+            <button type="button" className="add-sheet__done" onClick={() => setAdding(false)}>
+              {added > 0 ? fill(strings.new.sheetDoneAdded, { n: added }) : strings.new.sheetDone}
+            </button>
+          </div>
+          <div className="pool__tools pool__tools--sheet">{tools}</div>
+        </div>,
+        document.body,
+      )
+    );
+  // The first cards' card: a field that opens the sheet, and its two other ways in.
+  const firstCards = noCards && !wide && tools !== undefined && (
+    <div className="first-cards">
+      <h2 className="first-cards__title">{strings.new.firstTitle}</h2>
+      <p className="first-cards__caption">{strings.new.firstCaption}</p>
+      {/* The newcomer's third tip points here on a phone: the sheet's own field waits closed (ui/Tips). */}
+      <button
+        type="button"
+        className="first-cards__field"
+        data-tip="add"
+        onClick={() => openSheetFor("field")}
+      >
+        <Icon name="search" />
+        <span>{strings.new.firstField}</span>
+      </button>
+      <div className="first-cards__chips">
+        <button type="button" className="first-cards__chip" onClick={() => openSheetFor("upload")}>
+          <Icon name="upload" />
+          <span>{strings.new.upload}</span>
+        </button>
+        <button type="button" className="first-cards__chip" onClick={() => openSheetFor("paste")}>
+          <Icon name="content_paste" />
+          <span>{strings.new.paste}</span>
+        </button>
+      </div>
+    </div>
   );
   // A picture or a link pasted or dropped: on a card it takes that card's
   // picture, anywhere else it makes a new card, in the tools, opened for it.
   const takePictures = edit?.owner?.pictures;
   const canTake = takePictures !== undefined && !locked;
   usePastedPictures(canTake, (incoming) => {
-    if (selected === null) setAdding(true);
+    if (selected === null && !adding) openAdding();
     takePictures?.(incoming, selected);
   });
   const [dropping, setDropping] = useState(false);
@@ -762,7 +847,7 @@ export function RankingBoard({
     event.preventDefault();
     const item = tile === null ? null : Number(tile.dataset.item);
     if (item === null || Number.isNaN(item)) {
-      setAdding(true);
+      if (!adding) openAdding();
       takePictures(incoming, null);
     } else takePictures(incoming, item);
   };
@@ -1214,7 +1299,12 @@ export function RankingBoard({
   // The board, its tiles told whether a house editor may credit their pictures.
   const drawn = (
     <section
-      className={["ranking", docked && "ranking--under", lifted !== null && "ranking--drag"]
+      className={[
+        "ranking",
+        docked && "ranking--under",
+        lifted !== null && "ranking--drag",
+        noCards && "ranking--no-cards",
+      ]
         .filter(Boolean)
         .join(" ")}
       aria-label={seed?.label ?? strings.rank.yours}
@@ -1233,6 +1323,8 @@ export function RankingBoard({
         )}
 
         {!inHead && edit?.owner?.status}
+
+        {firstCards}
 
         <div className={strip ? "board board--strip" : "board"} ref={boardBox}>
           {list.tiers.map((tier, index) => (
@@ -1296,13 +1388,15 @@ export function RankingBoard({
 
       {/* Theirs has no bar, so its tiers stand where Mine's do. */}
       <div className="ranking__side">
-        {seeded
+        {/* No card yet on a phone: no count and no Undo until there is one. */}
+        {seeded || (noCards && !wide)
           ? null
           : inHead && frame.headSlot !== null
             ? createPortal(bar, frame.headSlot)
             : bar}
 
-        {seeded && (
+        {/* On a phone the tray of Theirs shows while it has cards, or a card is carried to it. */}
+        {seeded && (wide || left.length > 0 || lifted !== null) && (
           // Theirs' pool: what it left unranked, and where a card is taken out
           // of a tier. A card taken out, or one from here placed, starts Mine
           // as any other first move does (Danylo, 16.11.2026: with everything
@@ -1336,7 +1430,7 @@ export function RankingBoard({
           </div>
         )}
 
-        {!seeded && (
+        {!seeded && !(noCards && !wide) && (
           <div
             key={dock}
             ref={poolBox}
@@ -1366,7 +1460,8 @@ export function RankingBoard({
                 onKeyDown={resizeByKey}
               />
             )}
-            {allPlaced && !wide && !emptyPool && panel === null ? (
+            {/* On a phone a tray with every card placed says so, never "Cards left · 0" (mobile BRIEF 25.11). */}
+            {allPlaced && !wide && panel === null ? (
               <div className="pool__done">
                 <p className="pool__done-title">
                   <Icon name="check_circle" className="pool__done-icon" />
@@ -1395,7 +1490,6 @@ export function RankingBoard({
                   </Button>
                 )}
                 {addButton}
-                {toolsPanel}
               </div>
             ) : (
               <>
@@ -1446,7 +1540,7 @@ export function RankingBoard({
                     )}
                     {wide && canDock && <DockToggle dock={dock} onChoose={choose} />}
                   </div>
-                  {toolsPanel}
+                  {wide && toolsPanel}
                   {emptyPool &&
                     (single && list.items.length > 0 ? (
                       <div className="one-done">
@@ -1556,6 +1650,7 @@ export function RankingBoard({
             )}
           </div>
         )}
+        {!wide && toolsPanel}
       </div>
 
       <DragGhost
