@@ -690,10 +690,7 @@ const ja: Translation = {
     renameTitle: "カードの名前を変更",
     nameLabel: "カード名",
     renameSave: "保存",
-    nameUploads: { other: "アップロードした画像（{n}枚）に名前を付ける" },
     unnamed: "カード",
-    nameHint: "空欄のままだと、カードには画像だけが表示されます。",
-    nameDone: "完了",
   },
   android: {
     title: "TierYourLife Android版",

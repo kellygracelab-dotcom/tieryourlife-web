@@ -1146,7 +1146,6 @@ function OpenBoard({
       incoming={incoming}
       onIncomingTaken={incomingTaken}
       house={house !== null}
-      onRename={renameCard}
       onPictureKept={pictureKept}
     />
   );

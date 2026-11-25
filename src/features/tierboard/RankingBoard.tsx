@@ -1299,12 +1299,7 @@ export function RankingBoard({
   // The board, its tiles told whether a house editor may credit their pictures.
   const drawn = (
     <section
-      className={[
-        "ranking",
-        docked && "ranking--under",
-        lifted !== null && "ranking--drag",
-        noCards && "ranking--no-cards",
-      ]
+      className={["ranking", docked && "ranking--under", lifted !== null && "ranking--drag"]
         .filter(Boolean)
         .join(" ")}
       aria-label={seed?.label ?? strings.rank.yours}

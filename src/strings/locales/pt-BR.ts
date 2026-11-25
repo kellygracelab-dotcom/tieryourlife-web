@@ -713,14 +713,7 @@ const ptBR: Translation = {
     renameTitle: "Renomear cartão",
     nameLabel: "Nome do cartão",
     renameSave: "Salvar",
-    nameUploads: {
-      one: "Dê um nome à imagem que você enviou",
-      many: "Dê nomes às {n} imagens que você enviou",
-      other: "Dê nomes às {n} imagens que você enviou",
-    },
     unnamed: "Cartão",
-    nameHint: "Se ficar vazio, o cartão mostra só a imagem.",
-    nameDone: "Concluído",
   },
   android: {
     title: "TierYourLife para Android",
