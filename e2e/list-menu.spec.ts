@@ -1,12 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
-import { mockBackend } from "./fixtures";
+import { mockBackend, nameNewList } from "./fixtures";
 
 /** A list of one's own, its name only, made the way a person makes it; then Your lists. */
 async function makeList(page: Page, name: string) {
   await page.goto("/b/new");
-  const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill(name);
-  await title.press("Enter");
+  await nameNewList(page, name);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(name);
   await page.goto("/b");
 }

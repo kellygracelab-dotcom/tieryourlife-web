@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { list, mockBackend } from "./fixtures";
+import { list, mockBackend, nameNewList } from "./fixtures";
 import { PIXEL, signIn } from "./signedIn";
 
 /** A press the way the project's device makes it: a finger taps, a mouse clicks. */
@@ -24,9 +24,7 @@ async function doubleTap(page: Page, target: Locator, touch: boolean) {
 async function makeBoard(page: Page, touch: boolean) {
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
-  const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill("Films I make people watch");
-  await title.press("Enter");
+  await nameNewList(page, "Films I make people watch");
   // An empty list has the box that brings cards in open on a wide window; on a phone its
   // first cards' card opens the sheet that does (mobile BRIEF 25.11).
   if (touch) await press(page.getByRole("button", { name: "Search or type a name" }), touch);
@@ -113,7 +111,18 @@ test("New list opens a new board, where the list is made", async ({ page, hasTou
   await press(page.getByRole("link", { name: "New list" }), hasTouch);
   await expect(page).toHaveURL(/\/b\/[^?]+\?new=/);
   const title = page.getByRole("textbox", { name: "Title" });
-  await expect(title).toBeFocused();
+  const add = page.getByRole("textbox", { name: "Add a card" });
+  if (hasTouch) {
+    // A phone asks for the name first, as the app does.
+    await expect(title).toBeFocused();
+  } else {
+    // A computer puts the cursor where the cards come in, and the name waits for
+    // a click on it: nothing to press Enter on before the first card (Danylo, 25.11).
+    await expect(add).toBeFocused();
+    await expect(title).toHaveCount(0);
+    await page.getByRole("heading", { level: 1 }).click();
+    await expect(title).toBeFocused();
+  }
   await title.fill("Cheeses");
   await title.press("Enter");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Cheeses");
@@ -147,8 +156,32 @@ test("New list opens a new board, where the list is made", async ({ page, hasTou
     await expect(page.getByRole("heading", { name: "Cards left · 0" })).toBeInViewport();
     await expect(page.getByText("Add cards by name, or search the catalogue.")).toBeVisible();
   }
+  if (hasTouch) await expect(add).toBeFocused();
+  await expect(add).toBeInViewport();
+});
+
+// Danylo's computer (25.11): Add tier went under the tray at the window's foot. The
+// page keeps room under the board for the tray, so at its end nothing is under it.
+test("an empty list on a computer leaves Add tier clear of the tray at the page's end", async ({
+  page,
+}, info) => {
+  test.skip(info.project.use.hasTouch === true, "a computer's window");
+  await mockBackend(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/b");
+  await page.getByRole("link", { name: "New list" }).first().click();
+  await expect(page).toHaveURL(/\/b\/[^?]+\?new=/);
   await expect(page.getByRole("textbox", { name: "Add a card" })).toBeFocused();
-  await expect(page.getByRole("textbox", { name: "Add a card" })).toBeInViewport();
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const addTier = page.getByRole("button", { name: "Add tier" });
+  await expect(addTier).toBeInViewport();
+  await expect
+    .poll(async () => {
+      const tier = (await addTier.boundingBox())!;
+      const tray = (await page.locator(".pool").boundingBox())!;
+      return tray.y - (tier.y + tier.height);
+    })
+    .toBeGreaterThanOrEqual(12);
 });
 
 // A computer's window as wide as Danylo's (25.11): the tray with the field that adds
@@ -180,17 +213,22 @@ test("the old /new and a suggestion of the empty page make a list in its section
   await mockBackend(page);
   await page.goto("/new?title=Ramen");
   await expect(page).toHaveURL(/\/b\/[^?]+\?new=\d+&title=Ramen$/);
-  await expect(page.getByRole("textbox", { name: "Title" })).toHaveValue("Ramen");
+  // A phone asks for the name first; a computer shows it (Danylo, 25.11).
+  if (hasTouch) await expect(page.getByRole("textbox", { name: "Title" })).toHaveValue("Ramen");
+  else await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ramen");
 
   await page.goto("/b");
   await expect(page.getByText("No lists yet")).toBeVisible();
   await press(page.getByRole("link", { name: "Restaurants" }), hasTouch);
   await expect(page).toHaveURL(/\/b\/[^?]+\?new=\d+&title=Restaurants&category=food$/);
-  const title = page.getByRole("textbox", { name: "Title" });
-  await expect(title).toBeFocused();
-  await expect(title).toHaveValue("Restaurants");
-  await title.fill("Ramen in Kyiv");
-  await title.press("Enter");
+  if (hasTouch) {
+    const title = page.getByRole("textbox", { name: "Title" });
+    await expect(title).toBeFocused();
+    await expect(title).toHaveValue("Restaurants");
+  } else {
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Restaurants");
+  }
+  await nameNewList(page, "Ramen in Kyiv");
   // Its section: under the name, or on a phone's one-row head (artboard 18) only in the markup.
   await expect(page.locator(".list-head__meta")).toHaveText("Food");
 });
@@ -315,9 +353,7 @@ test("moves a card along its row: the others make room at once, and nothing is p
   await mockBackend(page);
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
-  const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill("Films");
-  await title.press("Enter");
+  await nameNewList(page, "Films");
   // The empty pool's box is open on a wide window, the cursor in it.
   for (const name of ["Ex Machina", "The Witch", "Climax"]) {
     const add = page.getByRole("textbox", { name: "Add a card" });
@@ -368,9 +404,7 @@ test("the key that places the last card is not typed into the box that brings ca
   await mockBackend(page);
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
-  const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill("One card");
-  await title.press("Enter");
+  await nameNewList(page, "One card");
   const add = page.getByRole("textbox", { name: "Add a card" });
   await add.fill("Ex Machina");
   await add.press("Enter");
@@ -443,9 +477,7 @@ test("a wide window's catalogue answers in a panel as wide as the board, one row
   );
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
-  const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill("Dune and more");
-  await title.press("Enter");
+  await nameNewList(page, "Dune and more");
   await expect(page.locator(".ranking")).toHaveClass(/ranking--under/);
   await page.getByRole("textbox", { name: "Add a card" }).fill("dune");
   await expect(page.getByRole("button", { name: "dune 13" })).toBeAttached();
@@ -493,9 +525,7 @@ test("a laptop's column shows the catalogue's answers under the field in place o
   );
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
-  const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill("Dune and more");
-  await title.press("Enter");
+  await nameNewList(page, "Dune and more");
   const add = page.getByRole("textbox", { name: "Add a card" });
   await add.fill("Fern");
   await add.press("Enter");
@@ -545,9 +575,7 @@ test("a tier's band has no pencil: the band opens the tier at a press, and the k
 }) => {
   await mockBackend(page);
   await page.goto("/b/new");
-  const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill("Cheeses");
-  await title.press("Enter");
+  await nameNewList(page, "Cheeses");
   const band = page.locator(".board > .tier").first().locator(".tier__band");
   const edit = page.getByRole("button", { name: "Edit tier S" });
   // Nothing drawn on the band but its letter (Danylo, 18.11.2026), and a hand over it.

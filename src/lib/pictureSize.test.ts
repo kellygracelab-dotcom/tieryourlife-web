@@ -22,12 +22,19 @@ describe("sizedFor", () => {
     });
   });
 
-  it("shows a board's shared catalogue copy through the site, as any published picture", () => {
+  it("shows a published picture through the site at the smallest copy twice the tile, the original past 400 (Designer, 25.11)", () => {
     const copy =
       "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/published%2Fcatalogue%2Fw-0123456789abcdef0123456789abcdef?alt=media";
-    expect(sizedFor(copy, 64)).toEqual({
-      src: "/img/original/published/catalogue/w-0123456789abcdef0123456789abcdef",
-    });
+    const path = "published/catalogue/w-0123456789abcdef0123456789abcdef";
+    expect(sizedFor(copy, 64)).toEqual({ src: `/img/200/${path}` });
+    expect(sizedFor(copy, 100)).toEqual({ src: `/img/200/${path}` });
+    expect(sizedFor(copy, 120)).toEqual({ src: `/img/400/${path}` });
+    // Play's duel card and anything as big keep the original.
+    expect(sizedFor(copy, 300)).toEqual({ src: `/img/original/${path}` });
+    // An avatar, a section's or a topic's picture: no card copies of those.
+    const face =
+      "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/avatars%2Fme%2Fface1?alt=media";
+    expect(sizedFor(face, 64)).toEqual({ src: "/img/original/avatars/me/face1" });
   });
 
   it("leaves any other picture as it is: an own upload, another site", () => {

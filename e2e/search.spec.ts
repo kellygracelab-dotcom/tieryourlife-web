@@ -43,10 +43,15 @@ test("search from the front page, with no order to choose while searching", asyn
   // A search is ordered by title on the backend, so it offers no order to choose.
   await expect(page.getByRole("button", { name: "Newest" })).toHaveCount(0);
 
-  // On a laptop the box is the bar's now, which searches on Enter; a phone's page box follows the typing.
-  await box.fill("nothing here");
-  await box.press("Enter");
+  // The box follows the typing, with no Enter: on a laptop the bar's, on a
+  // phone the page's (walkthrough item 6, Danylo, 25.11). Typed letter by
+  // letter, only the words it paused on are asked for.
+  await box.clear();
+  await box.pressSequentially("nothing here", { delay: 30 });
+  await expect(page).toHaveURL(/\/search\?q=nothing\+here$/);
   await expect(page.getByText("No lists match “nothing here”")).toBeVisible();
+  const words = asked.map((search) => new URLSearchParams(search).get("q"));
+  expect(words.filter((q) => q !== null && q !== "a24" && q !== "nothing here")).toEqual([]);
   await expect(page.getByRole("link", { name: "the front page" })).toHaveAttribute("href", "/");
 });
 

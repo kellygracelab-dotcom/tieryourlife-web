@@ -99,17 +99,17 @@ async function swipe(page: Page, browserName: string, share: number) {
   );
 }
 
-test("Discard my arrangement from the menu takes the list out of Continue; Undo brings it back with its game (#224)", async ({
+test("Discard your version from the menu takes the list out of Continue; Undo brings it back with its game (#224)", async ({
   page,
   hasTouch,
 }) => {
   const block = await begin(page);
   if (hasTouch) await page.getByRole("button", { name: "More for Every A24 film" }).tap();
   else await block.getByText("Every A24 film").click({ button: "right" });
-  await page.getByRole("menuitem", { name: /Discard my arrangement/ }).click();
+  await page.getByRole("menuitem", { name: /Discard your version/ }).click();
   await expect(block).toHaveCount(0);
   expect(await stored(page)).toEqual([false, false]);
-  await expect(page.locator(".snackbar")).toContainText("Arrangement discarded");
+  await expect(page.locator(".snackbar")).toContainText("Your version discarded");
   await page.locator(".snackbar").getByRole("button", { name: "Undo" }).click();
   await expect(block.getByRole("link", { name: "Resume game" })).toBeVisible();
   expect(await stored(page)).toEqual([true, true]);
@@ -130,7 +130,7 @@ test("a begun list swipes aside on a touch screen: back before a third, away pas
   await swipe(page, browserName, 0.05);
   await expect(block).toHaveCount(0);
   expect(await stored(page)).toEqual([false, false]);
-  await expect(page.locator(".snackbar")).toContainText("Arrangement discarded");
+  await expect(page.locator(".snackbar")).toContainText("Your version discarded");
   // A click: after a finger moved by CDP, Chromium makes no click of a later tap anywhere on the page.
   await page.locator(".snackbar").getByRole("button", { name: "Undo" }).click();
   await expect(block.getByRole("link", { name: "Resume game" })).toBeVisible();
@@ -181,7 +181,7 @@ test("a list begun on the phone continues here, and Discard and Undo reach the a
   await expect(block.getByText("Film & TV · 4 of 45 placed")).toBeVisible();
   await expect(block.getByRole("link", { name: "Resume game" })).toBeVisible();
   await block.getByRole("button", { name: "More for Game of Thrones characters" }).click();
-  await page.getByRole("menuitem", { name: /Discard my arrangement/ }).click();
+  await page.getByRole("menuitem", { name: /Discard your version/ }).click();
   await expect(block).toHaveCount(0);
   await expect.poll(() => account.started.get("got")?.removed).toBe("discard");
   const gone = account.started.get("got")!.updatedAt;

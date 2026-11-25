@@ -141,11 +141,16 @@ describe("RankingBoard showing somebody else's arrangement", () => {
         />
       </MemoryRouter>,
     );
-    // All placed: the pool is empty, and still there to drop on.
+    // All placed: no empty pool beside the board, which takes the width (Danylo, 25.11).
+    const region = screen.getByRole("region", { name: "Their ranking" });
+    expect(screen.queryByRole("heading", { name: "Cards left · 0" })).toBeNull();
+    expect(region).toHaveClass("ranking--under");
+    // A card lifted brings the pool, empty, to drop on.
+    pointer("pointerdown", screen.getByRole("button", { name: "Ex Machina" }), 10, 10);
+    pointer("pointermove", window, 25, 25);
     const pool = screen
       .getByRole("heading", { name: "Cards left · 0" })
       .closest<HTMLElement>(".pool")!;
-    pointer("pointerdown", screen.getByRole("button", { name: "Ex Machina" }), 10, 10);
     under = pool;
     pointer("pointermove", window, 40, 40);
     expect(pool).toHaveClass("pool--target");

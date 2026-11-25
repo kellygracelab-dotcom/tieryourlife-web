@@ -233,7 +233,9 @@
  * "Your version · see danylo’s" under the title, grey as the meta line: the
  * board is one's own, and the author's arrangement is a press away.
  */
-.list-head__version {
+/* "Move a card to start your version." takes the place the version's line will have. */
+.list-head__version,
+.list-head__start {
   margin-top: 2px;
   font: var(--text-small);
   color: var(--ink-dim);
@@ -289,34 +291,20 @@
   display: none;
 }
 
-/* A phone's Share beside Play and Save; wider, Copy link and the menu's Share do it. */
+/*
+ * Share is the one round button in the head at every width; the Copy link chip
+ * beside it did the same thing and is gone (Designer, 25.11). A phone's own
+ * head sizes it with Play and Save below; the author's phone head has no room.
+ */
 .list-head__share {
-  display: none;
-}
-
-.list-head__copy {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  width: 36px;
   min-height: 36px;
-  padding: 6px 14px;
-  border: none;
-  border-radius: var(--radius-pill);
-  background: var(--surface-soft);
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-  font: var(--text-label);
-  color: var(--ink);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.list-head__copy:hover {
-  background: var(--hover);
-}
-
-.list-head__copy .ms {
-  font-size: 18px;
-  color: var(--ink-dim);
+  padding: 0;
+  border-radius: 50%;
 }
 
 /* A ranking's address in its header: a chip that copies itself at a press. */
@@ -369,7 +357,7 @@
 /* Beside a side column the head holds the list's identity in one 72 px row. */
 @media (min-width: 840px) {
   .list-page {
-    --board-cap: 1760px;
+    --board-cap: var(--width-page);
   }
 
   /*
@@ -379,23 +367,25 @@
    */
   /*
    * The author's own list is a bare board with its pool under it, no column
-   * beside: head and rows one column, the board's own width, so both share
-   * their edges at every width (the Designer, 23.11).
+   * beside: head and rows one column, so both share their edges at every
+   * width (the Designer, 23.11). The column is the page's (--board-cap, the
+   * same as every page's): at 1120 a 2560 screen showed the board in a
+   * narrow middle with wide empty margins (Danylo's walk, 25.11).
    */
   .list-page:has(> .board) {
-    --board-w: var(--board-max);
+    --board-w: var(--board-cap);
   }
 
   .list-page > .board {
     width: 100%;
-    max-width: var(--board-max);
+    max-width: var(--board-cap);
     margin-inline: auto;
   }
 
   /* A look at somebody else's arrangement: its strip keeps to the read-only board's edges. */
   .list-page:has(> .board) > .list-strip {
     width: 100%;
-    max-width: var(--board-max);
+    max-width: var(--board-cap);
     margin-inline: auto;
   }
 
@@ -517,7 +507,7 @@
 
 /*
  * Below 840 the head gives its room to the board: the address is in the menu
- * as Copy link. A narrow window on a laptop is as short of room as a phone.
+ * as Copy link and Share. A narrow window on a laptop is as short of room as a phone.
  */
 @media (max-width: 839px) {
   .list-head {
@@ -537,8 +527,8 @@
     font: 400 11px/15px var(--font);
   }
 
-  .list-head__copy,
-  .list-head__save {
+  .list-head__save,
+  .list-head:not(.list-head--visitor) .list-head__share {
     display: none;
   }
 
@@ -763,13 +753,6 @@
 
 .list-head--visitor > .list-head__tools > .play-button .play-button__dot {
   background: var(--on-link);
-}
-
-/* The head's Copy link chip and the menu's line were the same thing twice. */
-@media (min-width: 840px) {
-  .list-head:has(.list-head__copy) .list-menu__copy {
-    display: none;
-  }
 }
 
 /* "Public" in the board's status line, its globe the size of the words. */

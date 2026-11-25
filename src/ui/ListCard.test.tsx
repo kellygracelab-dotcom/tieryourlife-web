@@ -50,11 +50,19 @@ describe("ListCard", () => {
   });
 
   it("stands without an author when the list is editorial", () => {
-    renderCard({ authorUid: "tyl-editorial", authorName: "Danylo Petrov" });
+    const { container } = renderCard({ authorUid: "tyl-editorial", authorName: "Danylo Petrov" });
     expect(screen.getByRole("link", { name: /Every A24 film, ranked/ })).toBeInTheDocument();
     expect(screen.queryByText(/Danylo Petrov/)).toBeNull();
     expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(screen.getByText("34 cards")).toBeInTheDocument();
+    // Its title keeps no free second line and the count stands at the start (Designer, 25.11).
+    expect(container.querySelector(".list-card")).toHaveClass("list-card--authorless");
+  });
+
+  it("leaves a card with an author as it was, its footer row beside the name", () => {
+    const { container } = renderCard();
+    expect(container.querySelector(".list-card__author")).not.toBeNull();
+    expect(container.querySelector(".list-card")).not.toHaveClass("list-card--authorless");
   });
 
   // His own lists are his, under his name (Danylo, 23.11); the house's are the house's.

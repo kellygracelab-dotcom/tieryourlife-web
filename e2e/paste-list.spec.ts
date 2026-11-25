@@ -70,10 +70,17 @@ async function pasteBox(page: Page, touch: boolean) {
     route.fulfill({ contentType: "image/png", body: PIXEL }),
   );
   await page.goto("/new?title=Football%20clubs&category=sport");
-  const title = page.getByRole("textbox", { name: "Title" });
-  // The first page of a cold server is slow to come.
-  await expect(title).toHaveValue("Football clubs", { timeout: 20_000 });
-  await title.press("Enter");
+  // The first page of a cold server is slow to come. A phone asks for the name
+  // first; a computer shows it and waits for the cards (Danylo, 25.11).
+  if (page.viewportSize()!.width < 840) {
+    const title = page.getByRole("textbox", { name: "Title" });
+    await expect(title).toHaveValue("Football clubs", { timeout: 20_000 });
+    await title.press("Enter");
+  } else {
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Football clubs", {
+      timeout: 20_000,
+    });
+  }
   // On a phone the empty list's own Paste a list opens the sheet with the paste box.
   await press(page.getByRole("button", { name: "Paste a list" }), touch);
 }

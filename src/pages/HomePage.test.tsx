@@ -116,6 +116,30 @@ describe("HomePage", () => {
     expect(screen.queryByRole("complementary", { name: "TierYourLife for Android" })).toBeNull();
   });
 
+  // Danylo's walk, 25.11: "No account needed" under Popular is a guest's line.
+  it("tells a guest no account is needed, and not somebody signed in", async () => {
+    mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
+    const guest = open();
+    expect(
+      await screen.findByText("Open one and start dragging. No account needed."),
+    ).toBeInTheDocument();
+    guest.unmount();
+    render(
+      <SessionContext.Provider
+        value={{
+          account: { kind: "signedIn", uid: "u1", displayName: "Danylo", photoUrl: null },
+          signIn: async () => ({ kind: "cancelled" }),
+          signOut: async () => undefined,
+          refresh: () => undefined,
+        }}
+      >
+        <RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/"] })} />
+      </SessionContext.Provider>,
+    );
+    expect(await screen.findByText("Open one and start dragging.")).toBeInTheDocument();
+    expect(screen.queryByText(/No account needed/)).toBeNull();
+  });
+
   it("opens a section from its tile", async () => {
     mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
     open();

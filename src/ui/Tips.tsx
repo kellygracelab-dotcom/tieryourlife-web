@@ -18,19 +18,10 @@ export const TIP_DELAY_MS = 1000;
 /** Kept this far from its element and from the window's edges. */
 const GAP = 10;
 const MARGIN = 8;
-/** A phone's strip stands this far over the bottom panel, as a notice does. */
+/** The strip stands this far over the bottom panel, as a notice does. */
 const STRIP_GAP = 8;
 /** The element a tip points at wears this while the tip is on screen. */
 export const TIP_RING = "tip-ring";
-/**
- * A phone (360–430 px, Danylo's yes of 25.11.2026): there a bubble by its
- * element covered the list's title, the search field or the first card, so
- * the tip is a strip over the bottom panel instead and the ring alone points.
- */
-const PHONE = "(max-width: 599px)";
-
-const onPhone = (): boolean =>
-  typeof window.matchMedia === "function" && window.matchMedia(PHONE).matches;
 
 /** Where a page offers a tip: `data-tip` names it, and a tip with a number reads `data-tip-n`. */
 const placeOf = (id: TipId): HTMLElement | null =>
@@ -53,13 +44,17 @@ function offered(): { id: TipId; at: HTMLElement } | null {
 }
 
 /**
- * The newcomer's tips, one at a time, each by the element it explains
- * (artboards 47–50): nothing darkens, nothing takes the focus, and the page
- * under it goes on working. Got it closes it, No more tips closes them all;
- * Escape and a press anywhere else close it too. A tip goes by itself when
- * its element does (a card placed takes the first one away). On a phone it
- * is a thin strip over the bottom panel instead, its element ringed in place.
- * Mounted once.
+ * The newcomer's tips, one at a time (artboards 47–50): nothing darkens,
+ * nothing takes the focus, and the page under it goes on working. Got it
+ * closes it, No more tips closes them all; Escape and a press anywhere else
+ * close it too. A tip goes by itself when its element does (a card placed
+ * takes the first one away). It is a thin strip over the bottom panel, its
+ * element ringed in place: first on a phone (Danylo's yes of 25.11.2026),
+ * where a bubble by its element covered the title, the search field or the
+ * first card, then on a computer too (walkthrough of 25.11, item 4), where
+ * the bubbles covered the pool's count and the field cards are typed into.
+ * While one is up the board's own hint lines step aside (ranking.css), so
+ * there is one hint on screen at a time. Mounted once.
  */
 export function Tips() {
   const [shown, setShown] = useState<{ id: TipId; at: HTMLElement } | null>(null);
@@ -118,7 +113,7 @@ export function Tips() {
 
   const close = useCallback(() => setShown(null), []);
   if (shown === null) return null;
-  return createPortal(<Bubble id={shown.id} at={shown.at} onClose={close} />, document.body);
+  return createPortal(<Strip id={shown.id} at={shown.at} onClose={close} />, document.body);
 }
 
 function textOf(id: TipId, at: HTMLElement) {
@@ -137,7 +132,7 @@ function textOf(id: TipId, at: HTMLElement) {
   return strings.tips.add;
 }
 
-/** The field somebody is typing into, if any: a phone's strip never goes over it. */
+/** The field somebody is typing into, if any: the strip never goes over it. */
 function typedInto(): HTMLElement | null {
   const field = document.activeElement;
   if (!(field instanceof HTMLElement)) return null;
@@ -180,7 +175,7 @@ function panelTop(foot: number, tip: HTMLElement): number {
 }
 
 /**
- * How far above the window's foot a phone's strip stands: over the bottom
+ * How far above the window's foot the strip stands: over the bottom
  * panel, an open keyboard and any notice there, and off the element it
  * explains and the field being typed into (above it where there is room,
  * else under it).
@@ -208,69 +203,34 @@ function stripLift(tip: HTMLElement, at: HTMLElement): number {
   return Math.max(0, foot - bottom);
 }
 
-type Place =
-  | { strip: false; left: number; top: number; arrow: number; below: boolean }
-  | { strip: true; lift: number };
+function Strip({ id, at, onClose }: { id: TipId; at: HTMLElement; onClose: () => void }) {
+  const strip = useRef<HTMLDivElement>(null);
+  const [lift, setLift] = useState<number | null>(null);
 
-function Bubble({ id, at, onClose }: { id: TipId; at: HTMLElement; onClose: () => void }) {
-  const bubble = useRef<HTMLDivElement>(null);
-  // Known before the first frame, so a strip is measured as a strip.
-  const [phone, setPhone] = useState(onPhone);
-  const [place, setPlace] = useState<Place | null>(null);
-
-  // Beside its element wherever the page scrolls or the window turns; on a
-  // phone, over the bottom panel as it grows or shrinks, or a keyboard opens.
+  // Over the bottom panel as it grows or shrinks, the page scrolls, the
+  // window turns, a keyboard opens, the field focused changes, its own words
+  // wrap anew, or the tray and notices change under a still page.
   useLayoutEffect(() => {
-    const element = bubble.current;
+    const element = strip.current;
     if (element === null) return;
     let frame = 0;
     const measure = () => {
       frame = 0;
-      const strip = onPhone();
-      setPhone(strip);
-      if (strip !== phone) return; // Measured again once drawn as the other.
-      if (strip) {
-        setPlace({ strip: true, lift: stripLift(element, at) });
-        return;
-      }
-      const target = at.getBoundingClientRect();
-      const { width, height } = element.getBoundingClientRect();
-      const middle = (target.left + target.right) / 2;
-      const widest = document.documentElement.clientWidth - MARGIN - width;
-      const left = Math.max(MARGIN, Math.min(middle - width / 2, widest));
-      const above = target.top - GAP - height;
-      const below = above < MARGIN;
-      setPlace({
-        strip: false,
-        left,
-        top: below ? target.bottom + GAP : above,
-        arrow: Math.max(16, Math.min(middle - left, width - 16)),
-        below,
-      });
+      setLift(stripLift(element, at));
     };
     const soon = () => {
       if (frame === 0) frame = requestAnimationFrame(measure);
     };
     measure();
+    const view = window.visualViewport;
     window.addEventListener("scroll", soon, true);
     window.addEventListener("resize", soon);
-    const sizes = typeof ResizeObserver === "function" ? new ResizeObserver(soon) : null;
-    sizes?.observe(at);
-    if (!phone) {
-      return () => {
-        cancelAnimationFrame(frame);
-        window.removeEventListener("scroll", soon, true);
-        window.removeEventListener("resize", soon);
-        sizes?.disconnect();
-      };
-    }
-    // A phone's strip also follows the keyboard, the field focused, its own
-    // words wrapping anew, and the tray and notices changing under a still page.
-    const view = window.visualViewport;
     view?.addEventListener("resize", soon);
     view?.addEventListener("scroll", soon);
     document.addEventListener("focusin", soon);
     document.addEventListener("focusout", soon);
+    const sizes = typeof ResizeObserver === "function" ? new ResizeObserver(soon) : null;
+    sizes?.observe(at);
     sizes?.observe(element);
     const changes = new MutationObserver(soon);
     changes.observe(document.body, { subtree: true, childList: true, attributes: true });
@@ -285,7 +245,7 @@ function Bubble({ id, at, onClose }: { id: TipId; at: HTMLElement; onClose: () =
       sizes?.disconnect();
       changes.disconnect();
     };
-  }, [at, phone]);
+  }, [at]);
 
   // The ring on its element, and the ways out that are not its buttons.
   useEffect(() => {
@@ -294,7 +254,7 @@ function Bubble({ id, at, onClose }: { id: TipId; at: HTMLElement; onClose: () =
       if (event.key === "Escape") onClose();
     };
     const onPress = (event: PointerEvent) => {
-      if (!(event.target instanceof Node) || !bubble.current?.contains(event.target)) onClose();
+      if (!(event.target instanceof Node) || !strip.current?.contains(event.target)) onClose();
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onPress, true);
@@ -307,20 +267,10 @@ function Bubble({ id, at, onClose }: { id: TipId; at: HTMLElement; onClose: () =
 
   return (
     <div
-      ref={bubble}
-      className={
-        phone
-          ? "tip tip--strip"
-          : `tip${place?.strip === false && place.below ? " tip--below" : ""}`
-      }
+      ref={strip}
+      className="tip"
       data-tip-for={id}
-      style={
-        place === null || place.strip !== phone
-          ? { visibility: "hidden" }
-          : place.strip
-            ? { ["--tip-lift" as string]: `${place.lift}px` }
-            : { left: place.left, top: place.top, ["--tip-arrow" as string]: `${place.arrow}px` }
-      }
+      style={lift === null ? { visibility: "hidden" } : { ["--tip-lift" as string]: `${lift}px` }}
     >
       {/* Read out when it comes, without taking the focus from where it is. */}
       <p className="tip__text" role="status">

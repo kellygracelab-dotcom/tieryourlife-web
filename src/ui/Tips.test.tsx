@@ -74,14 +74,19 @@ describe("the newcomer's tips", () => {
     vi.unstubAllGlobals();
   });
 
-  it("is a strip at the window's foot on a phone, its buttons kept and its element ringed", async () => {
-    const matchMedia = vi.fn((query: string) => ({ matches: query === "(max-width: 599px)" }));
+  it("is a strip at the window's foot on a computer as on a phone, its buttons kept and its element ringed", async () => {
+    // A computer's window: a mouse, and wider than a phone (walkthrough of 25.11, item 4).
+    const matchMedia = vi.fn((query: string) => ({ matches: query.includes("hover: hover") }));
     vi.stubGlobal("matchMedia", matchMedia);
     page([{ tip: "add" }]);
     await wait();
     const tip = screen.getByRole("status").closest(".tip");
-    expect(tip).toHaveClass("tip--strip");
+    expect(tip).toHaveAttribute("data-tip-for", "add");
+    // Set over the foot, not beside its element: no screen position of its own.
+    expect(tip).toHaveStyle({ "--tip-lift": "8px" });
     expect(tip).not.toHaveStyle({ visibility: "hidden" });
+    expect((tip as HTMLElement).style.left).toBe("");
+    expect((tip as HTMLElement).style.top).toBe("");
     expect(screen.getByRole("button", { name: "add" })).toHaveClass(TIP_RING);
     expect(screen.getByRole("button", { name: "Got it" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "No more tips" })).toBeInTheDocument();

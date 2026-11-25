@@ -232,7 +232,10 @@ describe("RankingPage", () => {
     expect(screen.queryByRole("link", { name: "Rank this list" })).toBeNull();
 
     // One's own ranking gets the phone app's words, the same as on the list's page.
-    expect(screen.getByRole("button", { name: "Mine" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Your version" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Their ranking" }));
     expect(screen.getByRole("region", { name: "Their ranking" })).toHaveTextContent("Climax");
   });

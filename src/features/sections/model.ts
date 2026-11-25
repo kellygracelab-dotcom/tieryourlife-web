@@ -356,6 +356,17 @@ export function homeSlots(ordered: readonly Section[], width: WidthClass): HomeS
   return { tiles: [...ordered], row: null, allTile: false };
 }
 
+/**
+ * How many tiles a row so that `count` fill the fewest rows a grid of at most
+ * `most` across needs, the rows as even as they go: eleven at five across are
+ * 4 + 4 + 3, not 5 + 5 + 1 with "Other" alone (Danylo's walk, 25.11).
+ */
+export function evenColumns(count: number, most: number): number {
+  if (count <= 0) return most;
+  const rows = Math.ceil(count / most);
+  return Math.ceil(count / rows);
+}
+
 export const sectionPath = (id: string): string => `/s/${encodeURIComponent(id)}`;
 
 export const topicPath = (section: string, topic: string): string =>

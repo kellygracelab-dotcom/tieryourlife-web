@@ -26,11 +26,13 @@ interface GamePickerProps {
   placed?: number;
   /** Those were placed by the list's author, on a visitor's game (QA 19.11). */
   placedByAuthor?: boolean;
+  /** A house list: the site's own, with no author to name (walk 25.11). */
+  house?: boolean;
   kind: GameKind;
   onKind: (kind: GameKind) => void;
   /** The game saved for this board, met with the board as it is now; null when none is. */
   saved: Resume | null;
-  /** Somebody else's list: the result goes into Mine. */
+  /** Somebody else's list: the result goes into one's own version. */
   theirs: boolean;
   now: number;
   onChooseCards: () => void;
@@ -54,6 +56,7 @@ export function GamePicker({
   count,
   placed = 0,
   placedByAuthor = false,
+  house = false,
   kind,
   onKind,
   saved,
@@ -114,7 +117,11 @@ export function GamePicker({
           // Cards placed by hand are moved by the game, said before Start (artboards 15, 24).
           <p className="play-placed" id={`${id}-placed`}>
             {plural(
-              placedByAuthor ? strings.play.placedWarningAuthor : strings.play.placedWarning,
+              !placedByAuthor
+                ? strings.play.placedWarning
+                : house
+                  ? strings.play.placedWarningHouse
+                  : strings.play.placedWarningAuthor,
               placed,
             )}
           </p>
@@ -175,7 +182,11 @@ export function GamePicker({
           </div>
         )}
       </div>
-      {theirs && <p className="play-footnote">{strings.play.intoMine}</p>}
+      {theirs && (
+        <p className="play-footnote">
+          {house ? strings.play.intoYoursHouse : strings.play.intoYours}
+        </p>
+      )}
     </PlaySheet>
   );
 }

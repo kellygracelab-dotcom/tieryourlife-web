@@ -4,6 +4,7 @@ import { captureAccountAction } from "../../lib/accountAction";
 import { IN_APP_BROWSER } from "../../lib/inAppBrowser";
 import { useBoardSync } from "./boardSync";
 import { useSession } from "../../app/session";
+import { signInFailedText } from "../../app/signInFailure";
 import { localStorageStore } from "../../lib/storage";
 import { strings } from "../../strings";
 import { InAppNote } from "../../ui/InAppNote";
@@ -102,7 +103,7 @@ function Offer({
         const outcome = await signIn();
         // In another app's browser the note above already says why it cannot work.
         if (outcome.kind === "failed" && outcome.code !== IN_APP_BROWSER) {
-          setError(strings.nav.signInFailed);
+          setError(signInFailedText(outcome.code));
         }
         return;
       }

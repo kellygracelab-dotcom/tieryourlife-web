@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { CATEGORIES } from "../src/api/types";
 import { list, mockBackend } from "./fixtures";
 
 const summary = {
@@ -60,7 +61,7 @@ test("takes a guest's report with no sign-in, and hides the list at once", async
 test("a guest's settings: the theme on this device, and the privacy policy", async ({ page }) => {
   await mockBackend(page);
   await page.goto("/settings");
-  await expect(page.getByText("Sign in to change your settings.")).toBeVisible();
+  await expect(page.getByText("Sign in to keep your lists on every device.")).toBeVisible();
   // On a phone the theme is a row whose sheet has the choice; a press there closes it.
   const phone = page.viewportSize()!.width < 600;
   if (phone) await page.getByRole("button", { name: "Theme" }).click();
@@ -198,14 +199,15 @@ test("a section's topics are low tiles, two rows at most, then the lists under t
   const grid = page.getByRole("navigation", { name: "Topics" });
   await expect(grid.getByRole("link", { includeHidden: true })).toHaveCount(topics.length);
   // Tiles at least 170 px wide besides the gaps, and never fewer than two in a row:
-  // two on a phone, five across the desktop's page, as the app counts.
+  // two on a phone, six across a 1280 window's page (its 1216 column since the
+  // one page width, Danylo's walk 25.11; five in the old 1016), as the app counts.
   const { columns, width } = await grid.evaluate((element) => ({
     columns: getComputedStyle(element).gridTemplateColumns.split(" ").length,
     width: element.clientWidth,
   }));
   expect(columns).toBe(Math.max(2, Math.floor((width + 12) / 182)));
   const phone = testInfo.project.name === "phone" || testInfo.project.name === "iphone";
-  expect(columns).toBe(phone ? 2 : Math.floor(width / 170));
+  expect(columns).toBe(phone ? 2 : 6);
   // Lower than a list's card, so a topic reads as a way in (section layout, 14.11).
   const tile = await grid.getByRole("link").first().boundingBox();
   if (tile === null) throw new Error("no tile");
@@ -265,9 +267,10 @@ test("opens on a list one can open, a phone's first screen too, and keeps the ap
   expect(cardBox!.height).toBeLessThanOrEqual(140);
 });
 
-// Artboard 20: a 2560 window's home grows with it, to about 2200: the
-// sections in one row, the feed eight lists across at a card's usual size.
-test("a wide window's home uses its width: sections in one row, eight lists across", async ({
+// Artboard 20, then Danylo's 2560 walk (25.11): the home stands in the one
+// column every page has, 1760 (--width-page), the bar's logo and buttons on
+// its edges; the sections in one row, the feed six lists across.
+test("a wide window's home keeps to the page column: sections in one row, six lists across", async ({
   page,
   hasTouch,
 }) => {
@@ -284,9 +287,12 @@ test("a wide window's home uses its width: sections in one row, eight lists acro
   const cards = page.locator(".home .feed > li");
   await expect(cards).toHaveCount(16);
 
-  const width = (await page.locator(".home").boundingBox())!.width;
-  expect(width).toBeGreaterThan(2100);
-  expect(width).toBeLessThanOrEqual(2200);
+  const home = (await page.locator(".home").boundingBox())!;
+  expect(Math.round(home.width)).toBe(1760);
+  const brand = (await page.locator(".top .brand").boundingBox())!;
+  const actions = (await page.locator(".top__actions").boundingBox())!;
+  expect(Math.abs(brand.x - home.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(actions.x + actions.width - (home.x + home.width))).toBeLessThanOrEqual(1);
 
   const tiles = page.locator(".home .sections-grid > *");
   const tops = new Set(
@@ -300,7 +306,83 @@ test("a wide window's home uses its width: sections in one row, eight lists acro
   const rows = await cards.evaluateAll((all) =>
     all.map((one) => Math.round(one.getBoundingClientRect().top)),
   );
-  expect(rows.filter((top) => top === rows[0])).toHaveLength(8);
+  expect(rows.filter((top) => top === rows[0])).toHaveLength(6);
+});
+
+// Danylo's walk, 25.11: eleven sections fell 5 + 5 + 1 at 1250, "Other"
+// alone in a third row. The rows stay even at every width a laptop has.
+test("lays eleven sections out in even rows at a laptop's widths", async ({ page, hasTouch }) => {
+  test.skip(hasTouch, "the desktop layout");
+  await mockBackend(page);
+  const stats = (id: string, name?: string) => ({
+    id,
+    listCount: 3,
+    followerCount: 0,
+    newThisWeek: 0,
+    collage: [],
+    following: false,
+    status: "approved",
+    ...(name === undefined ? {} : { name }),
+  });
+  await page.route("**/lists/sections", (route) =>
+    route.fulfill({
+      json: {
+        sections: [
+          ...CATEGORIES.filter((id) => id !== "other").map((id) => stats(id)),
+          stats("street-food", "Street food"),
+          stats("board-games", "Board games"),
+          stats("other"),
+        ],
+      },
+    }),
+  );
+  for (const [width, rows] of [
+    [1000, [4, 4, 3]],
+    [1250, [6, 5]],
+    [1440, [6, 5]],
+    [1920, [11]],
+  ] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    const tiles = page.locator(".home .sections-grid > a");
+    await expect(tiles).toHaveCount(11);
+    const tops = (
+      await tiles.evaluateAll((all) => all.map((one) => one.getBoundingClientRect().top))
+    ).map(Math.round);
+    const counts = [...new Set(tops)].map((top) => tops.filter((one) => one === top).length);
+    expect(counts, `${width}px`).toEqual(rows);
+  }
+});
+
+// Danylo's walk, 25.11: on a phone's card the author's name was cut,
+// "Danylo Pet…", beside "40 cards". The name takes the line, the count under it.
+test("gives the author's name its own line on a phone's card", async ({ page, hasTouch }) => {
+  test.skip(!hasTouch, "the phone's card");
+  await mockBackend(page);
+  await page.route("**/lists?**", (route) =>
+    route.fulfill({
+      json: {
+        lists: [{ ...summary, authorUid: "u1", authorName: "Danylo Petrov", itemCount: 240 }],
+        nextCursor: null,
+      },
+    }),
+  );
+  await page.goto("/");
+  const card = page
+    .locator(".home .feed .list-card")
+    .filter({ has: page.locator(".list-card__name", { hasText: "Danylo Petrov" }) })
+    .first();
+  await expect(card).toBeVisible();
+  const { cut, name, count } = await card.evaluate((one) => {
+    const named = one.querySelector<HTMLElement>(".list-card__name")!;
+    return {
+      cut: named.scrollWidth > named.clientWidth,
+      name: named.getBoundingClientRect(),
+      count: one.querySelector(".list-card__count")!.getBoundingClientRect(),
+    };
+  });
+  expect(cut).toBe(false);
+  expect(count.top).toBeGreaterThanOrEqual(name.bottom - 1);
 });
 
 // A browser window as narrow as a phone, with a mouse: the sections' row

@@ -21,9 +21,11 @@ test("reads older published photo URLs through Hosting when direct Storage reads
     direct.push(route.request().url());
     return route.fulfill({ status: 401 });
   });
-  await page.route("**/img/original/**", (route) =>
-    route.fulfill({ contentType: "image/png", body: PIXEL }),
-  );
+  const shown: string[] = [];
+  await page.route("**/img/**", (route) => {
+    shown.push(new URL(route.request().url()).pathname);
+    return route.fulfill({ contentType: "image/png", body: PIXEL });
+  });
   await page.route(
     (url) => url.pathname.endsWith("/lists"),
     (route) => route.fulfill({ json: { lists: [illustrated], nextCursor: null } }),
@@ -40,9 +42,11 @@ test("reads older published photo URLs through Hosting when direct Storage reads
   await expect(face).toHaveAttribute("src", "/img/original/" + avatar);
   await entry.click();
   const tile = page.getByRole("button", { name: "Ex Machina", exact: true }).locator("img");
-  await expect(tile).toHaveAttribute("src", "/img/original/" + photo);
+  // A tile asks for the card's small copy, never the 600 × 900 original (Designer, 25.11).
+  await expect(tile).toHaveAttribute("src", "/img/200/" + photo);
   await expect
     .poll(() => tile.evaluate((img: HTMLImageElement) => img.naturalWidth))
     .toBeGreaterThan(0);
   expect(direct).toEqual([]);
+  expect(shown).toContain("/img/200/" + photo);
 });

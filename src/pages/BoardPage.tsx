@@ -7,7 +7,7 @@ import { isSectionId, type PublishedList } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
 import { RankingBoard } from "../features/tierboard/RankingBoard";
 import { BoardFrameContext } from "../features/tierboard/boardFrame";
-import type { Dock } from "../features/tierboard/dock";
+import { WIDE_BOARD_FROM, type Dock } from "../features/tierboard/dock";
 import {
   addToPool,
   arrangeItems,
@@ -261,7 +261,11 @@ function TitleEditor({
   const shown = board.title.trim().length > 0 ? board.title : strings.boards.untitled;
   return (
     <span className="board-page__title-row">
-      <h1 className="list-head__title">{shown}</h1>
+      {/* A click on the name edits it too, where a new list's name invites it;
+          the pencil is the keyboard's way. */}
+      <h1 className="list-head__title" onClick={onEdit}>
+        {shown}
+      </h1>
       <button
         ref={pencil}
         type="button"
@@ -409,8 +413,12 @@ function OpenBoard({
     if (toRemember) linkToHouse(uid, houseListId, houseStore);
   }, [toRemember, uid, houseListId, houseStore]);
   // The name is asked for once, on arrival at a board not yet kept: a reload
-  // keeps the query, not the question.
-  const [editingTitle, setEditingTitle] = useState(madeAt > 0 && stored === null);
+  // keeps the query, not the question. Only on a phone: on a computer the
+  // cursor goes to the field that adds cards, the name is changed with a
+  // click on it, and nobody had to press Enter to begin (Danylo, 25.11).
+  const [editingTitle, setEditingTitle] = useState(
+    () => madeAt > 0 && stored === null && window.innerWidth < WIDE_BOARD_FROM,
+  );
   // Once that name is in, an empty board's cursor goes on to the cards.
   const askedName = useRef(editingTitle);
   const empty = board === null || liveItems(board).length === 0;

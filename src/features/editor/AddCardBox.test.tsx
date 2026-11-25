@@ -231,7 +231,7 @@ describe("AddCardBox", () => {
     expect(count.mock.calls.slice(2)).toEqual([["picture.pick.anilist"], ["picture.pos.2-3"]]);
   });
 
-  it("puts the answers away on Escape or a press elsewhere, keeps the words, and the cross empties the field", async () => {
+  it("puts the answers away on a press elsewhere keeping the words; Escape and the cross empty the field", async () => {
     const find = vi.fn<FindPictures>(async () =>
       page([picture("anilist:20", { title: "Naruto" })]),
     );
@@ -246,14 +246,24 @@ describe("AddCardBox", () => {
     const answers = () => screen.queryByRole("group", { name: "Where to look" });
     expect(answers()).not.toBeNull();
 
-    // Escape from a tile: the answers go, the cursor goes back to the words.
+    // Escape from a tile: the answers and the words go, the cursor back to the
+    // field. The old query used to stay and come back on the next click (Danylo, 25.11).
     screen.getByRole("button", { name: /Naruto/ }).focus();
     await userEvent.keyboard("{Escape}");
     expect(answers()).toBeNull();
     expect(field).toHaveFocus();
+    expect(field).toHaveValue("");
+    // From the field itself too, and with the answers already put away.
+    await typeAndWait("naruto");
+    await userEvent.click(screen.getByText("elsewhere"));
+    expect(answers()).toBeNull();
     expect(field).toHaveValue("naruto");
+    field.focus();
+    await userEvent.keyboard("{Escape}");
+    expect(field).toHaveValue("");
+    expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
 
-    await userEvent.click(field);
+    await typeAndWait("naruto");
     expect(answers()).not.toBeNull();
     await userEvent.click(screen.getByText("elsewhere"));
     expect(answers()).toBeNull();

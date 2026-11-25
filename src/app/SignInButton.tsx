@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { IN_APP_BROWSER } from "../lib/inAppBrowser";
-import { strings } from "../strings";
 import { Button } from "../ui/Button";
 import { InAppNote } from "../ui/InAppNote";
 import { useSession } from "./session";
+import { signInFailedText } from "./signInFailure";
 import "./SignInButton.css";
 
 /**
@@ -15,15 +15,20 @@ import "./SignInButton.css";
 export function SignInButton({ label }: { label: string }) {
   const { signIn } = useSession();
   const [state, setState] = useState<"idle" | "busy" | "failed">("idle");
+  const [code, setCode] = useState("");
 
   const press = () => {
     setState("busy");
     void signIn().then(
       (outcome) => {
         if (outcome.kind === "redirecting") return;
+        setCode(outcome.kind === "failed" ? outcome.code : "");
         setState(outcome.kind === "failed" && outcome.code !== IN_APP_BROWSER ? "failed" : "idle");
       },
-      () => setState("failed"),
+      () => {
+        setCode("");
+        setState("failed");
+      },
     );
   };
 
@@ -36,7 +41,7 @@ export function SignInButton({ label }: { label: string }) {
         </Button>
         {state === "failed" && (
           <p className="sign-in__failed" role="alert">
-            {strings.nav.signInFailed}
+            {signInFailedText(code)}
           </p>
         )}
       </div>

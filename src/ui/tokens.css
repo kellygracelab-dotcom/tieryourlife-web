@@ -87,6 +87,14 @@
 
   --width-reading: 640px;
   --width-board: 1080px;
+  /*
+   * The widest any page's content stands, the bar's logo and buttons with it
+   * (Danylo's 2560 walk, 25.11): Community, a section, search and a list's
+   * board share one column and one pair of edges. 1760 is the cap a list's
+   * board already had, where its rows get too long to read, and the widest
+   * board with its column of cards beside it (1120 + 24 + eight cards).
+   */
+  --width-page: 1760px;
   --header-height: 56px;
 }
 

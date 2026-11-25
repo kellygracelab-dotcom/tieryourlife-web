@@ -2,7 +2,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: var(--width-board);
   margin: 0 auto;
 }
 
@@ -44,6 +43,32 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+/*
+ * On a phone the sections' twelve chips wrapped into three rows over the
+ * results: one row there, swiped sideways, edge to edge of the screen
+ * (walkthrough item 9, Danylo, 25.11).
+ */
+@media (max-width: 599px) {
+  .search__chips {
+    flex-wrap: nowrap;
+    margin: -4px calc(-1 * var(--space-4));
+    /* Room for a chip's focus ring, which the scrolling row would cut off. */
+    padding: 4px var(--space-4);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: var(--space-4);
+    scrollbar-width: none;
+  }
+
+  .search__chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .search__chips > * {
+    flex: none;
+  }
 }
 
 /* The app's two lines: what was asked, then what to try. */

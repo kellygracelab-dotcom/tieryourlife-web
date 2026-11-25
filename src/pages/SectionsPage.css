@@ -3,7 +3,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-width: var(--width-board);
   margin: 0 auto;
 }
 
@@ -81,5 +80,13 @@
   .all-sections__grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     grid-auto-rows: 112px;
+  }
+}
+
+/* The page's column is 1760 on a wide screen (--width-page): six a row rather
+   than five 340 px bands, a fixed count so eleven never leave one alone (25.11). */
+@media (min-width: 1400px) {
+  .all-sections__grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }

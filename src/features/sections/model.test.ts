@@ -4,6 +4,7 @@ import { CATEGORIES } from "../../api/types";
 import {
   approvedOnly,
   builtInSection,
+  evenColumns,
   homeSlots,
   isSectionIcon,
   orderSections,
@@ -194,6 +195,17 @@ describe("sections", () => {
       expect(homeSlots(many(21), width).tiles).toHaveLength(20);
       expect(homeSlots(many(21), width).allTile).toBe(true);
     }
+  });
+
+  // Danylo's walk, 25.11: eleven tiles fell 5 + 5 + 1 at 1250, "Other" alone in a third row.
+  it("spreads the front page's tiles over even rows for each most a row can take", () => {
+    expect(evenColumns(11, 5)).toBe(4);
+    expect(evenColumns(11, 6)).toBe(6);
+    expect(evenColumns(11, 12)).toBe(11);
+    expect(evenColumns(10, 5)).toBe(5);
+    expect(evenColumns(21, 6)).toBe(6);
+    expect(evenColumns(21, 12)).toBe(11);
+    expect(evenColumns(0, 6)).toBe(6);
   });
 
   it("draws a stored section or topic picture through the site's address at the width drawn", () => {

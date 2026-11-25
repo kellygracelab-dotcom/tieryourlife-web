@@ -20,6 +20,8 @@ const ja: Translation = {
     boards: "あなたのリスト",
     search: "リストを検索",
     signInFailed: "ログインできませんでした。もう一度お試しください。",
+    signInBlocked:
+      "ブラウザーが Google のログイン画面をブロックしました。このサイトのポップアップを許可してもう一度お試しいただくか、このページを Chrome か Safari で開いてください。",
     storageRefused:
       "このブラウザは変更を保存していません。ストレージがいっぱいか、このサイトに対してブロックされています。空きを作るか、サイトにデータの保存を許可してください。そうしないと、今作ったものは失われます。",
     theme: "テーマ",
@@ -95,9 +97,9 @@ const ja: Translation = {
     faceUnchecked: "この画像は確認できません。静止画の写真を試してください。",
     faceNotMade: "この画像はプロフィールに使えません。別のものを選んでください。",
     title: "設定",
-    guestTitle: "設定を変えるにはログインしてください。",
+    guestTitle: "ログインすると、リストをすべての端末で使えます。",
     guestBody:
-      "表示名とアイコンはアカウントに紐づきます。リストのランク付けにアカウントは要りません。",
+      "名前と画像、そしてリストをすべての端末で。テーマ・色・言語はアカウントなしでも使えます。",
     themeGuestNote: "ログインしていてもいなくても、この端末に保存されます。",
     nameTitle: "表示名",
     nameBody:
@@ -198,6 +200,7 @@ const ja: Translation = {
     categories: "セクション",
     popular: "人気",
     popularNote: "開いてドラッグするだけ。アカウントは要りません。",
+    popularNoteSignedIn: "開いてドラッグするだけ。",
     source: "表示するリスト",
     everyone: "すべて",
     following: "フォロー中",
@@ -451,8 +454,7 @@ const ja: Translation = {
     failedTitle: "このリストを開けませんでした",
     failedBody: "途中で問題が起きました。もう一度お試しください。",
     views: "表示する並べ方",
-    viewMine: "自分",
-    yourArrangement: "あなたの並べ方",
+    viewYours: "自分のバージョン",
     more: "このリストについて",
     report: "このリストを通報",
     hide: "このリストを非表示",
@@ -499,14 +501,13 @@ const ja: Translation = {
     authorsRankingUnnamed: "作者のランキング",
     backToYours: "自分のバージョンに戻る",
     startFromScratch: "最初からやり直す",
-    scratchDone: "すべてのカードを山札に戻しました",
+    scratchDone: "すべてのカードを残りのカードに戻しました",
     backToAuthors: "{name}のランキングに戻る",
     backToAuthorsUnnamed: "作者のランキングに戻る",
     rankingsLink: "{rankings} — ほかの人の並べ方を見る",
   },
   rankings: {
     publicationPreview: "公開内容の確認",
-    previewRanking: "作成した順位が元のリストのランキングに表示されます。",
     notYours:
       "これは他の人のリストなので、あなたのリストとして公開することはできません。公開できるのはあなたのランキングだけで、このリストのランキングに表示されます。",
     progressTitle: "あなたの並べ方を他の人に見せますか？",
@@ -581,7 +582,7 @@ const ja: Translation = {
     hintPlace: "ティアをクリックして {name} を置くか、番号を押します。",
     hintMove: "← と → で {name} を列の中で動かせます",
     hintPickTouch: "カードをタップしてからティアをタップ",
-    hintPlaceTouch: "ティアをタップして {name} を置きます。",
+    hintPlaceTouch: "ティアをタップ",
     search: "カードを探す",
     searchNone: "その名前のカードはありません。",
     dock: "カードの位置",
@@ -595,14 +596,14 @@ const ja: Translation = {
     allPlacedHint: "気が変わったらカードをドラッグ",
     placeIn: "{name} を {tier} に置く",
     cardIn: "「{name}」を{tier}に",
-    cardInPool: "「{name}」を山札に戻しました",
+    cardInPool: "「{name}」を残りのカードに戻しました",
     oneByOne: "1枚ずつ",
     oneByOneSkip: "スキップ",
-    oneByOneToPool: "山札へ",
+    oneByOneToPool: "残りのカードへ",
     oneByOneDone: "すべてのカードを配置しました",
     oneByOneLeave: "すべてのカードを表示",
     oneByOneKeys: "{keys} でティア、スペースでスキップ",
-    oneByOneKeysPlaced: "{keys} で別のティア、Backspace で山札へ",
+    oneByOneKeysPlaced: "{keys} で別のティア、Backspace で残りのカードへ",
     undo: "元に戻す",
     cancel: "キャンセル",
     saveChanges: "保存",
@@ -618,7 +619,7 @@ const ja: Translation = {
     failedOther:
       "ランキングを保存できませんでした。内容は失われていません。もう一度お試しください。",
     failedTooLarge:
-      "このリストは大きすぎるため、共有用のランキングを保存できません。並び順はこの端末に残ります。",
+      "このリストは大きすぎるため、共有用のランキングを保存できません。自分のバージョンはこの端末に残ります。",
     failedChanged:
       "ランキング中に作者がこのリストを変更しました。読み込み直すと、今のリストでランキングできます。",
     loadAgain: "読み込み直す",
@@ -699,8 +700,7 @@ const ja: Translation = {
     soon: "Google Play で近日公開",
     hide: "非表示",
     footer: "Androidアプリ",
-    footerSoon: "Androidアプリ · 近日公開",
-    footerSoonPhone: "Androidアプリ — Google Play で近日公開",
+    footerSoon: "Androidアプリ — Google Play で近日公開",
     menu: "Androidアプリを入手",
     aboutBody:
       "サイトでできることすべてに加えて、オフラインのリスト、履歴、AI画像、Flipのカバー画面。リストはGoogleアカウントで同期されます。",
@@ -1247,10 +1247,10 @@ const ja: Translation = {
   },
   play: {
     randomSample: "ランダムに選ぶ",
-    resetCards: "すべてのカードを山札に戻す",
-    resetQuestion: "すべてのカードを山札に戻しますか？",
-    resetBody: "ティアへの配置がリセットされます。",
-    resetConfirm: "山札に戻す",
+    resetCards: "すべてのカードを残りのカードに戻す",
+    resetQuestion: "すべてのカードを残りのカードに戻しますか？",
+    resetBody: "すべてのティアが空になります。",
+    resetConfirm: "戻す",
     play: "プレイ",
     needsCards: "プレイするにはカードが3枚以上必要です。",
     savedGame: "保存したゲームがあります。",
@@ -1286,14 +1286,17 @@ const ja: Translation = {
     joining: { other: "新しいカード {n} 枚は次のラウンドから参加します" },
     changed: "リストが変わったため、このゲームは続けられません",
     startAgain: "最初から",
-    intoMine: "結果は「自分」に入ります。作者のランキングは変わりません。",
+    intoYours: "結果は自分のバージョンに入ります。作者のランキングは変わりません。",
+    intoYoursHouse: "結果は自分のバージョンに入ります。",
     cancel: "キャンセル",
     start: "開始",
     savedDiscarded: "保存したゲームを破棄しました",
     undo: "元に戻す",
-    thePool: { other: "山札 · {n} 枚" },
+    thePool: {
+      other: "残りのカード · {n}",
+    },
     rankedRow: { other: "配置済み · {n} 枚" },
-    poolArea: "山札",
+    poolArea: "残りのカード",
     rankedArea: "配置済み",
     everything: { other: "すべて · {n} 枚" },
     selected: "{n}/{max} 枚を選択",
@@ -1334,7 +1337,11 @@ const ja: Translation = {
     // A visitor's game over the author's placing (QA 19.11).
     placedWarningAuthor: {
       other:
-        "作者が{n}枚のカードを配置しています。ゲームで「自分」の中で並べ替わりますが、「元に戻す」で戻せます。",
+        "作者が{n}枚のカードを配置しています。ゲームで自分のバージョンの中で並べ替わりますが、「元に戻す」で戻せます。",
+    },
+    placedWarningHouse: {
+      other:
+        "{n}枚のカードがすでに配置されています。ゲームで自分のバージョンの中で並べ替わりますが、「元に戻す」で戻せます。",
     },
   },
   boards: {
@@ -1385,7 +1392,9 @@ const ja: Translation = {
     cards: { other: "{n}枚のカード" },
     done: "完了",
     tierRemoved: "ティア {name} を削除しました",
-    tierRemovedCards: { other: "ティア {name} を削除しました · {n}枚のカードが山札に戻りました" },
+    tierRemovedCards: {
+      other: "ティア {name} を削除しました · {n}枚のカードが残りのカードに戻りました",
+    },
     editTier: "ティアを編集",
     editTierOf: "ティア {name} を編集",
     removeTier: "ティアを削除",
@@ -1403,7 +1412,7 @@ const ja: Translation = {
     rankedRow: "{n}位「{name}」（{tier}）",
     moveTo: "ティアに移動",
     currentTier: "現在ここにあります",
-    backToPool: "山札に戻す",
+    backToPool: "残りのカードに戻す",
     removeFromList: "リストから削除",
     photoBy: "写真: {credit}",
     publication: "公開",
@@ -1415,7 +1424,6 @@ const ja: Translation = {
     rankedShort: "ランキングに表示中",
     seePublished: "見る",
     inRankingsStatus: "ランキングに表示中",
-    rankedBody: "作成した順位は元のリストのランキングに表示されています。",
     publicBody: "リンクを知っている人なら誰でも並べられます。コミュニティに表示されます。",
     needsItems: "リストを公開する前に、カードを1枚以上追加してください。",
     update: "更新",
@@ -1486,7 +1494,6 @@ const ja: Translation = {
     takeDownBody:
       "コミュニティから外れ、リンクは使えなくなります。リストは「あなたのリスト」に残ります。",
     categoryWaiting: "モデレーターの確認待ち",
-    menuHint: "カードをダブルクリックまたは右クリックすると、移動や削除ができます。",
     choose: "選択",
     pickToDelete: "削除するリストを選んでください",
     noneShown: "「{filter}」のリストはありません",
@@ -1507,8 +1514,8 @@ const ja: Translation = {
     publish: "公開…",
     delete: "削除",
     deleteMany: { other: "{n}件のリストを削除" },
-    discard: "自分の並びを破棄",
-    discarded: "並びを破棄しました",
+    discard: "自分のバージョンを破棄",
+    discarded: "自分のバージョンを破棄しました",
     savedLabel: "保存済み",
     publicLabel: "公開",
   },
@@ -1546,15 +1553,14 @@ const ja: Translation = {
     how: "あなたの名前でコミュニティに表示されます。リンクを知っている人なら誰でも並べられます。このリストは引き続き編集できます。",
     cancel: "キャンセル",
     continue: "次へ",
-    rankSub: "ほかの人のリストのあなたの並べ方",
+    rankSub: "ほかの人のリストの自分のバージョン",
     rankHow:
-      "あなたの並べ方は、あなたの名前でこのリストのランキングに入ります。フィードに2つ目のリストは表示されません。このリストは引き続き編集できます。",
+      "自分のバージョンは、あなたの名前でこのリストのランキングに入ります。フィードに2つ目のリストは表示されません。このリストは引き続き編集できます。",
     change: "変更",
     changeSection: "セクションを変更",
     changeTopic: "トピックを変更",
     version: "バージョン",
     upToDate: "最新",
-    seeIt: "コミュニティで見る",
     takingDown: "取り下げ中…",
     open: "開く",
     viewLabel: "表示: {mode}",
@@ -1644,7 +1650,7 @@ const ja: Translation = {
     refusedTooMany:
       "「{title}」はバックアップされていません。アカウントに保存できるリストは200個までです。いくつか完全に削除すると空きができます。",
     refusedTooManyTiers:
-      "「{title}」はアカウントに保存できる数より多くのティアがあるため、バックアップされていません。保存できるのは19段と山札までです。ティアを削除すると、またバックアップされます。",
+      "「{title}」はアカウントに保存できる数より多くのティアがあるため、バックアップされていません。保存できるのは19段と残りのカードまでです。ティアを削除すると、またバックアップされます。",
     refusedTooManyCards:
       "「{title}」はアカウントに保存できる数より多くのカードがあるため、バックアップされていません。1つのリストに保存できるのは2000枚までです。カードをいくつか減らすと、またバックアップされます。",
     refusedTooManyTrashed:

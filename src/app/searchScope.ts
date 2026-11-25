@@ -21,6 +21,24 @@ export const SearchScopeContext = createContext<(scope: SearchScope | null) => v
 export const scopeKey = (scope: SearchScope | null): string =>
   scope === null ? "" : `${scope.category}|${scope.topic ?? ""}`;
 
+/**
+ * Typing pauses this long before the search follows it: the bar's field and
+ * the search page's own box alike (walkthrough item 6, Danylo, 25.11).
+ */
+export const SEARCH_DEBOUNCE_MS = 300;
+
+/**
+ * The search page's address with other words, the rest of what it asks
+ * (its place, its order) kept as it is; no words browse it.
+ */
+export function searchWordsIn(q: string, search: string): string {
+  const params = new URLSearchParams(search);
+  if (q === "") params.delete("q");
+  else params.set("q", q);
+  const rest = params.toString();
+  return rest === "" ? "/search" : `/search?${rest}`;
+}
+
 /** The search page's address for these words in this place; no words browse it. */
 export function searchPathOf(q: string, scope: SearchScope | null): string {
   const params = new URLSearchParams({

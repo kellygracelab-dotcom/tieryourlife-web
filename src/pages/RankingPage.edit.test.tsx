@@ -72,8 +72,8 @@ describe("editing a ranking", () => {
     rearrange.mockResolvedValue({ code: ranking.code });
     open("/r/abcdefgh?edit");
     await userEvent.click(await screen.findByLabelText("More about this list"));
-    await userEvent.click(screen.getByRole("button", { name: "Return all cards to the deck" }));
-    await userEvent.click(screen.getByRole("button", { name: "Return to the deck" }));
+    await userEvent.click(screen.getByRole("button", { name: "Put all cards back in Cards left" }));
+    await userEvent.click(screen.getByRole("button", { name: "Put them back" }));
     expect(rearrange).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(rearrange).toHaveBeenCalledWith(ranking.code, [[], []], undefined, [2, 1, 0]);
@@ -84,8 +84,8 @@ describe("editing a ranking", () => {
     load.mockResolvedValue(ranking);
     open("/r/abcdefgh?edit");
     await userEvent.click(await screen.findByLabelText("More about this list"));
-    await userEvent.click(screen.getByRole("button", { name: "Return all cards to the deck" }));
-    await userEvent.click(screen.getByRole("button", { name: "Return to the deck" }));
+    await userEvent.click(screen.getByRole("button", { name: "Put all cards back in Cards left" }));
+    await userEvent.click(screen.getByRole("button", { name: "Put them back" }));
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     expect(within(tier("S")).getByRole("button", { name: "The Witch" })).toBeVisible();

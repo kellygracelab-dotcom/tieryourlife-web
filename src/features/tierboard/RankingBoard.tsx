@@ -133,8 +133,6 @@ export interface Seed {
   hint: string;
   /** The same, in the line's place, while a card is carried. */
   dropHint: string;
-  /** Said while nothing is picked or carried: that a move here starts one's own. */
-  start?: string;
   onStart: (rows: Rows) => void;
 }
 
@@ -143,7 +141,7 @@ interface RankingBoardProps {
   hitTest?: HitTest;
   store?: KeyValueStore;
   /**
-   * Where the device's own choices go, the dock and the menu's hint: the
+   * Where the device's own choices go, the dock and one card at a time: the
    * store by default, the browser's for a page whose store is scratch.
    */
   device?: KeyValueStore;
@@ -183,10 +181,6 @@ const TILE_WIDTH = 64;
 /** A pool longer than this gets a search box in the side column. */
 export const POOL_SEARCH_FROM = 24;
 
-/** How often a card's menu has been opened on this device; the hint goes after MENU_HINT_UNTIL. */
-export const MENU_COUNT_KEY = "tyl.cardMenu.opened";
-export const MENU_HINT_UNTIL = 3;
-
 /** A tier with no row yet: one empty row for all of them, so it reads as unchanged. */
 const NO_ROW: readonly number[] = [];
 
@@ -221,8 +215,6 @@ interface TileProps {
   onRemove?: (item: number) => void;
   /** And give it another name, from its menu. */
   onRename?: (item: number, title: string) => void;
-  /** The card's menu opened: the board counts it, for its hint. */
-  onMenu: () => void;
 }
 
 /**
@@ -260,7 +252,6 @@ const Tile = memo(function Tile({
   current,
   onRemove,
   onRename,
-  onMenu,
   tip,
 }: TileProps) {
   const [moving, setMoving] = useState<CardMenuAt | null>(null);
@@ -303,7 +294,6 @@ const Tile = memo(function Tile({
     // move from the menu does not pass the pick on to the next card.
     dispatch({ type: "select", item: null });
     setMoving(how);
-    onMenu();
   };
   // From the keyboard the menu opens at the card's lower start corner.
   const atCard = (button: HTMLElement): CardMenuAt => {
@@ -883,8 +873,12 @@ export function RankingBoard({
     if (!askForCards) return;
     const frame = requestAnimationFrame(() => {
       const now = document.activeElement;
-      if (now !== null && now !== document.body) return;
-      poolBox.current?.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
+      const box = poolBox.current;
+      // The page's main landmark, which the site focuses when New list opens a
+      // board, is nobody typing: it held the cursor the field was meant to get.
+      const idle = now === null || now === document.body || (box !== null && now.contains(box));
+      if (!idle) return;
+      box?.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
     });
     return () => cancelAnimationFrame(frame);
   }, [askForCards]);
@@ -930,15 +924,6 @@ export function RankingBoard({
   // The side column's search, for a pool too long to scan: it narrows what
   // the tray shows, and `/` puts the cursor in it.
   const [query, setQuery] = useState("");
-
-  // The owner's pool says how to reach a card's menu until it has been
-  // opened a few times; the count is kept on the device.
-  const [menusOpened, setMenusOpened] = useState(() => Number(device.read(MENU_COUNT_KEY)) || 0);
-  const onMenu = useCallback(() => {
-    const next = (Number(device.read(MENU_COUNT_KEY)) || 0) + 1;
-    device.write(MENU_COUNT_KEY, String(next));
-    setMenusOpened(next);
-  }, [device]);
 
   // The pool one card at a time, or every card at once: the device's choice, not synced.
   const [oneByOne, setOneByOne] = useState(() => device.read(ONE_BY_ONE_KEY) === "1");
@@ -993,6 +978,12 @@ export function RankingBoard({
   // The pool and its tiles are the same from one frame of a drag to the next:
   // kept, they are not drawn again while a card travels over the rows.
   const left = useMemo(() => pool(state), [state]);
+  // Theirs with every card placed: no empty "Cards left · 0" column beside the
+  // board, which took a third of a computer's window (Danylo, 25.11). The board
+  // takes the width as it does with the pool under it, and the pool comes only
+  // while a card is carried, fixed at the window's foot, so the rows do not
+  // move under the card and a card taken out still has somewhere to go.
+  const under = docked || (seeded && wide && left.length === 0);
   const needle = query.trim();
   const shown = useMemo(
     () =>
@@ -1159,7 +1150,6 @@ export function RankingBoard({
           dispatch={dispatch}
           pointerDownFor={pointerDownFor}
           dragNow={dragNow}
-          onMenu={onMenu}
           current={null}
           onRemove={onRemove}
           onRename={onRename}
@@ -1180,7 +1170,6 @@ export function RankingBoard({
       dispatch,
       pointerDownFor,
       dragNow,
-      onMenu,
       onRemove,
       onRename,
     ],
@@ -1239,7 +1228,7 @@ export function RankingBoard({
   }, [wide]);
   const poolClasses = [
     "pool",
-    (docked || !wide) && rows === 1 && "pool--single",
+    (under || !wide) && rows === 1 && "pool--single",
     !wide && rows > 1 && "pool--expanded",
     dropTarget?.kind === "pool" && "pool--target",
     picked && "pool--picked",
@@ -1299,7 +1288,7 @@ export function RankingBoard({
   // The board, its tiles told whether a house editor may credit their pictures.
   const drawn = (
     <section
-      className={["ranking", docked && "ranking--under", lifted !== null && "ranking--drag"]
+      className={["ranking", under && "ranking--under", lifted !== null && "ranking--drag"]
         .filter(Boolean)
         .join(" ")}
       aria-label={seed?.label ?? strings.rank.yours}
@@ -1344,7 +1333,6 @@ export function RankingBoard({
               locked={locked}
               onPlace={placeSelected}
               dragNow={drag.current}
-              onMenu={onMenu}
               onRemove={onRemove}
               onRename={onRename}
               band={
@@ -1373,12 +1361,13 @@ export function RankingBoard({
           )}
           <div className="board__end" ref={boardEnd} aria-hidden="true" />
         </div>
-        {seed !== undefined &&
-          (selected !== null || lifted !== null || seed.start !== undefined) && (
-            <p className="ranking__seed-hint" role="status">
-              {lifted !== null ? seed.dropHint : selected !== null ? seed.hint : seed.start}
-            </p>
-          )}
+        {/* That a move starts one's own is said under the title, by the page: here,
+            under the last tier, it was found only at the page's foot (Danylo, 25.11). */}
+        {seed !== undefined && (selected !== null || lifted !== null) && (
+          <p className="ranking__seed-hint" role="status">
+            {lifted !== null ? seed.dropHint : seed.hint}
+          </p>
+        )}
       </div>
 
       {/* Theirs has no bar, so its tiers stand where Mine's do. */}
@@ -1390,8 +1379,8 @@ export function RankingBoard({
             ? createPortal(bar, frame.headSlot)
             : bar}
 
-        {/* On a phone the tray of Theirs shows while it has cards, or a card is carried to it. */}
-        {seeded && (wide || left.length > 0 || lifted !== null) && (
+        {/* The pool of Theirs shows while it has cards, or a card is carried to it. */}
+        {seeded && (left.length > 0 || lifted !== null) && (
           // Theirs' pool: what it left unranked, and where a card is taken out
           // of a tier. A card taken out, or one from here placed, starts Mine
           // as any other first move does (Danylo, 16.11.2026: with everything
@@ -1401,7 +1390,7 @@ export function RankingBoard({
               "pool",
               "pool--seed",
               // One row of cards, as Mine's pool starts out.
-              (docked || !wide) && "pool--single",
+              (under || !wide) && "pool--single",
               dropTarget?.kind === "pool" && "pool--target",
               lifted !== null &&
                 left.includes(lifted) &&
@@ -1573,11 +1562,7 @@ export function RankingBoard({
                           { keys: keyboardTiers > 1 ? `1–${keyboardTiers}` : "1" },
                         )}
                       </p>
-                      <p className="pool__hint pool__hint--touch">
-                        {fill(strings.rank.hintPlaceTouch, {
-                          name: list.items[selected]?.title ?? "",
-                        })}
-                      </p>
+                      <p className="pool__hint pool__hint--touch">{strings.rank.hintPlaceTouch}</p>
                     </>
                   ) : single ? (
                     allPlaced &&
@@ -1591,6 +1576,11 @@ export function RankingBoard({
                       <p className="pool__hint pool__hint--keys">{strings.rank.allPlacedHint}</p>
                     )
                   ) : (
+                    // One standing line, the device's own: the keys with a mouse,
+                    // taps with a finger (ranking.css). It was one of two, with the
+                    // card's menu at the pool's foot, and the newcomer's tip made
+                    // three at once; the keys line stayed, the menu has its
+                    // right-click (walkthrough of 25.11, item 4, Danylo).
                     <>
                       <p className="pool__hint pool__hint--keys">
                         {selectedTitle === null
@@ -1599,10 +1589,13 @@ export function RankingBoard({
                             ? fill(strings.rank.hintPlace, { name: selectedTitle })
                             : fill(strings.rank.hintMove, { name: selectedTitle })}
                       </p>
+                      {/* No card's name in the touch line: on a phone the tray is one
+                          line wide and a name cut it to "Tap a tier to place Toy St…";
+                          the picked card is already marked in the tray (Danylo, 25.11). */}
                       <p className="pool__hint pool__hint--touch">
                         {selectedTitle === null
                           ? strings.rank.hintPickTouch
-                          : fill(strings.rank.hintPlaceTouch, { name: selectedTitle })}
+                          : strings.rank.hintPlaceTouch}
                       </p>
                     </>
                   )}
@@ -1615,16 +1608,6 @@ export function RankingBoard({
                       </ul>
                       {shown.length === 0 && (
                         <p className="pool__none">{strings.rank.searchNone}</p>
-                      )}
-                      {edit?.owner !== undefined && menusOpened < MENU_HINT_UNTIL && (
-                        // Hidden, not gone, while a card is picked: the cards above
-                        // must not move between the two clicks of a double click.
-                        <p
-                          className="pool__hint pool__hint--menu"
-                          style={selected === null ? undefined : { visibility: "hidden" }}
-                        >
-                          {strings.boards.menuHint}
-                        </p>
                       )}
                       {pages > 1 && (
                         <div className="pool__dots" aria-hidden="true">
@@ -1690,7 +1673,6 @@ interface TierRowProps {
   /** Places the picked card here; the board plans the tile's flight first. */
   onPlace: (tier: number) => void;
   dragNow: () => DragState;
-  onMenu: () => void;
   /** The owner's: a card off the list, from the card's menu. */
   onRemove?: (item: number) => void;
   /** The owner's: another name for a card, from its menu. */
@@ -1726,7 +1708,6 @@ const TierRow = memo(function TierRow({
   locked,
   onPlace,
   dragNow,
-  onMenu,
   onRemove,
   onRename,
   band,
@@ -1824,7 +1805,6 @@ const TierRow = memo(function TierRow({
             dispatch={dispatch}
             pointerDownFor={pointerDownFor}
             dragNow={dragNow}
-            onMenu={onMenu}
             current={tier}
             onRemove={onRemove}
             onRename={onRename}

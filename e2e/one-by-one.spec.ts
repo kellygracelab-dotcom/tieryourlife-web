@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { mockBackend } from "./fixtures";
+import { mockBackend, nameNewList } from "./fixtures";
 
 /*
  * The pool one card at a time, as the phone app has it (agreed with Android,
@@ -22,9 +22,7 @@ async function newBoard(page: Page, touch: boolean) {
   await mockBackend(page);
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
-  const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill("One by one");
-  await title.press("Enter");
+  await nameNewList(page, "One by one");
   if (touch) await page.getByRole("button", { name: "Search or type a name" }).tap();
   for (const name of NAMES) {
     const add = page.getByRole("textbox", { name: "Add a card" });
@@ -89,7 +87,7 @@ test("one card at a time: a tier places it, Skip comes back round, a card from t
 
   // To the pool: it waits there, up again.
   await press(tier(page, "A").getByRole("button", { name: c, exact: true }));
-  await press(page.getByRole("button", { name: "To the deck" }));
+  await press(page.getByRole("button", { name: "To Cards left" }));
   await expect.poll(() => names(tier(page, "A").locator("[data-item]"))).toEqual([]);
   await expect(up(page)).toHaveText(c!);
 

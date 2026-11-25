@@ -142,6 +142,19 @@
   white-space: nowrap;
 }
 
+/*
+ * Without an author line the title does not keep a second line free for the
+ * footer's sake, and the count stands at the start, not alone at the far end:
+ * no empty band between the title and "40 cards" (Designer, 25.11).
+ */
+.list-card--authorless .list-card__title {
+  min-height: 0;
+}
+
+.list-card--authorless .list-card__count {
+  margin-inline: 0 auto;
+}
+
 /* The card's own menu at the end of its footer, no taller than the row it ends. */
 .list-card__menu {
   width: 28px;
@@ -163,13 +176,28 @@
 }
 
 /*
- * A 320 px phone in a long language has no room for a name beside
- * "24 карточки": the count goes under it rather than the name to "d…".
+ * A phone's card, two to a row, has no room for a name beside "40 cards":
+ * "Danylo Pet…" (Danylo's walk, 25.11). The name takes the line and the
+ * count goes under it, at the line's start; a card with no author keeps the
+ * count alone where it was.
  */
-@media (max-width: 359px) {
+@media (max-width: 599px) {
   .list-card__body {
     flex-wrap: wrap;
     row-gap: 2px;
+  }
+
+  .list-card__author {
+    flex: 1 1 100%;
+  }
+
+  .list-card__author + .list-card__count {
+    margin-inline-start: 0;
+  }
+
+  /* ⋮ stays at the row's end, now the count's row. */
+  .list-card__author ~ .menu {
+    margin-inline-start: auto;
   }
 }
 

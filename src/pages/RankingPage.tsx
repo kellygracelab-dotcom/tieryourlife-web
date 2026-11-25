@@ -230,8 +230,8 @@ function Body({
       ? strings.rank.yours
       : strings.ranking.visitors;
   // The chips use the phone app's words when the ranking is this person's own;
-  // somebody else's ranking has three parties, and "Mine" would name the wrong one.
-  const visitorChip = mine ? strings.list.viewMine : strings.ranking.visitors;
+  // somebody else's ranking has three parties, and "Your version" would name the wrong one.
+  const visitorChip = mine ? strings.list.viewYours : strings.ranking.visitors;
   // The list page's "Theirs" would be ambiguous beside a visitor's ranking.
   const authorChip = strings.list.theirRanking;
   const byline = mine ? strings.ranking.byYou : strings.ranking.byVisitor;

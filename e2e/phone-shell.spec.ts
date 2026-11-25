@@ -68,6 +68,61 @@ test("New list is the round button at the lower corner, and makes a list", async
   await expect(page.locator(".fab")).toHaveCount(0);
 });
 
+// New list lives in one place on a phone: the round button, on the pages
+// that browse lists too, and no plus in their bar (walkthrough item 10, Danylo, 25.11).
+test("New list is the round button alone on a section's and the search's pages", async ({
+  page,
+}) => {
+  await mockBackend(page);
+  await page.route("**/lists?**", (route) =>
+    route.fulfill({ json: { lists: [], nextCursor: null } }),
+  );
+  for (const at of ["/s", "/search?q=anime"]) {
+    await page.goto(at);
+    await expect(page.locator(".fab")).toBeInViewport();
+    await expect(page.getByRole("banner").getByRole("link", { name: "New list" })).toHaveCount(0);
+  }
+});
+
+// The sections' chips one row swiped sideways, not three rows over the
+// results (walkthrough item 9, Danylo, 25.11).
+test("the search's section chips are one row that scrolls sideways", async ({ page }) => {
+  await mockBackend(page);
+  await page.route("**/lists?**", (route) =>
+    route.fulfill({ json: { lists: [], nextCursor: null } }),
+  );
+  const ids = ["anime", "film_tv", "games", "music", "books", "food", "sport", "people", "other"];
+  await page.route("**/lists/sections", (route) =>
+    route.fulfill({
+      json: {
+        sections: ids.map((id) => ({
+          id,
+          listCount: 1,
+          followerCount: 0,
+          newThisWeek: 0,
+          collage: [],
+          following: false,
+        })),
+      },
+    }),
+  );
+  await page.goto("/search?q=anime");
+  const row = page.getByRole("group", { name: "Section", exact: true });
+  // All and the nine.
+  await expect(row.getByRole("button")).toHaveCount(10);
+  const tops = await row
+    .getByRole("button")
+    .evaluateAll((all) => [
+      ...new Set(all.map((one) => Math.round(one.getBoundingClientRect().top))),
+    ]);
+  expect(tops).toHaveLength(1);
+  expect(await row.evaluate((one) => one.scrollWidth > one.clientWidth)).toBe(true);
+  // The row scrolls, the page does not.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+});
+
 test("the bar goes up as the page scrolls down, and comes back as it scrolls up", async ({
   page,
 }) => {
@@ -100,10 +155,10 @@ test("Settings has a row each for the theme, the colour and the language, each o
 }) => {
   await mockBackend(page);
   await page.goto("/settings");
-  await expect(page.getByText("Sign in to change your settings.")).toBeVisible();
+  await expect(page.getByText("Sign in to keep your lists on every device.")).toBeVisible();
   // Sign in is the first card, one row high beside the person.
   const first = page.locator(".settings__card").first();
-  await expect(first).toContainText("Sign in to change your settings.");
+  await expect(first).toContainText("Sign in to keep your lists on every device.");
   expect((await first.boundingBox())!.height).toBeLessThan(200);
   // No list of eleven languages on the page itself.
   await expect(page.getByRole("radiogroup")).toHaveCount(0);

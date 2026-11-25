@@ -1,7 +1,13 @@
 /*
- * A newcomer's tip by the element it explains (Tips.tsx, artboards 47–50):
- * the inverse of the page, dark on light and light on dark, an arrow to the
- * element and a thin ring on it. Nothing darkens.
+ * A newcomer's tip (Tips.tsx, artboards 47–50): the inverse of the page,
+ * dark on light and light on dark, a thin strip across the window standing
+ * over the bottom panel ("Cards left", a keyboard, a notice) or over the foot
+ * of the window where there is none, and a thin ring on the element it
+ * explains. A strip on a phone first (Danylo's yes of 25.11.2026), then on a
+ * computer too (walkthrough of 25.11, item 4): a bubble by its element covered
+ * the pool's count and the field cards are typed into. On a wide window it
+ * keeps to a readable width in the middle. The words and the buttons share a
+ * row while the words fit in a few lines. Nothing darkens.
  */
 .tip {
   --tip-bg: #2f2f36;
@@ -9,16 +15,22 @@
   --tip-quiet: #c7c5d0;
   --tip-action: #dee0ff;
   --tip-ring: #4a5baa;
-  /* Screen coordinates, set beside its element (Tips.tsx), not a side of the text. */
   position: fixed;
   z-index: 94;
+  inset-inline: 8px;
+  bottom: max(var(--tip-lift, 8px), calc(8px + env(safe-area-inset-bottom)));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 4px;
   box-sizing: border-box;
-  width: min(300px, calc(100vw - 16px));
-  padding: 12px 14px 4px;
-  border-radius: 14px;
+  max-width: 640px;
+  margin-inline: auto;
+  padding: 0 2px 0 14px;
+  border-radius: 12px;
   background: var(--tip-bg);
   color: var(--tip-ink);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.24);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,39 +57,19 @@
   --tip-ring: #bac3ff;
 }
 
-/*
- * The arrow: under the tip, or over it when the tip stands below its element.
- * Its place is a screen position, measured from the left in every language.
- */
-.tip::before {
-  content: "";
-  position: absolute;
-  left: calc(var(--tip-arrow, 24px) - 7px);
-  bottom: -6px;
-  width: 14px;
-  height: 14px;
-  background: var(--tip-bg);
-  transform: rotate(45deg);
-}
-
-.tip--below::before {
-  top: -6px;
-  bottom: auto;
-}
-
 .tip__text {
-  position: relative;
+  flex: 1 1 12em;
   margin: 0;
+  padding: 8px 0;
   font: var(--text-body);
-  font-size: 14px;
-  line-height: 19px;
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .tip__actions {
-  position: relative;
   display: flex;
-  justify-content: flex-end;
-  gap: 4px;
+  flex: none;
+  margin-inline-start: auto;
 }
 
 /* 48 px to press, drawn as words. */
@@ -103,47 +95,9 @@
   border-radius: 8px;
 }
 
-/*
- * On a phone (Tips.tsx, Danylo's yes of 25.11.2026) the bubble covered what it
- * talked about, so the tip is a thin strip across the window instead, standing
- * over the bottom panel ("Cards left", a keyboard, a notice) or over the foot
- * of the window where there is none. The words and the buttons share a row
- * while the words fit in a few lines; the ring on the element does the pointing.
- */
-.tip--strip {
-  inset-inline: 8px;
-  top: auto;
-  bottom: max(var(--tip-lift, 8px), calc(8px + env(safe-area-inset-bottom)));
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  column-gap: 4px;
-  width: auto;
-  padding: 0 2px 0 14px;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.24);
-}
-
-.tip--strip::before {
-  display: none;
-}
-
-.tip--strip .tip__text {
-  flex: 1 1 12em;
-  padding: 8px 0;
-  font-size: 13px;
-  line-height: 18px;
-}
-
-.tip--strip .tip__actions {
-  flex: none;
-  margin-inline-start: auto;
-  gap: 0;
-}
-
 /* It rises into place; still where motion is not wanted. */
 @media (prefers-reduced-motion: no-preference) {
-  .tip--strip {
+  .tip {
     animation: tip-rise 160ms ease-out;
   }
 }

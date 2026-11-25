@@ -141,8 +141,8 @@ const open = (
   return { session, router, ...view };
 };
 
-const faces = () => screen.getByRole("list", { name: "Your face" });
-const placing = () => screen.getByRole("dialog", { name: "Place your face" });
+const faces = () => screen.getByRole("list", { name: "Your picture" });
+const placing = () => screen.getByRole("dialog", { name: "Place your picture" });
 const pressUseThis = () =>
   userEvent.click(within(placing()).getByRole("button", { name: "Use this" }));
 
@@ -301,7 +301,14 @@ describe("SettingsPage", () => {
 
   it("asks a guest to sign in, and still offers the theme and the privacy policy", () => {
     open({ kind: "guest", uid: "g1" });
-    expect(screen.getByText("Sign in to change your settings.")).toBeInTheDocument();
+    expect(screen.getByText("Sign in to keep your lists on every device.")).toBeInTheDocument();
+    // It says what the account gives, and that theme, colour and language need none (Designer, 25.11).
+    expect(
+      screen.getByText(
+        /lists on all your devices\. Theme, colour and language work without an account/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/change your settings/)).toBeNull();
     expect(screen.getByRole("radiogroup", { name: "Theme" })).toBeInTheDocument();
     // The theme is this device's, signed in or not: nothing says an account keeps it.
     expect(screen.getByText("Kept on this device, signed in or not.")).toBeInTheDocument();
@@ -335,7 +342,7 @@ describe("SettingsPage", () => {
     const pending = document.querySelector(".settings__card[aria-busy]");
     expect(pending).not.toBeNull();
     expect(pending?.querySelectorAll(".skeleton")).toHaveLength(4);
-    expect(screen.queryByText("Sign in to change your settings.")).toBeNull();
+    expect(screen.queryByText("Sign in to keep your lists on every device.")).toBeNull();
     expect(screen.getByRole("radiogroup", { name: "Theme" })).toBeInTheDocument();
   });
 
@@ -556,7 +563,7 @@ describe("SettingsPage", () => {
     makeFace.mockRejectedValue(new ApiFailure({ kind: "pictureRefused", because: null }));
     await choose();
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "That picture cannot be your face. Pick another.",
+      "That picture can’t be used. Pick another.",
     );
     expect(showFace).toHaveBeenLastCalledWith(undefined);
 
@@ -607,7 +614,7 @@ describe("SettingsPage", () => {
     placeLoaded();
     await pressUseThis();
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "That picture cannot be your face. Pick another.",
+      "That picture can’t be used. Pick another.",
     );
     expect(upload).not.toHaveBeenCalled();
     expect(face).not.toHaveBeenCalled();
@@ -759,7 +766,7 @@ describe("SettingsPage", () => {
     loadPhoto.mockResolvedValue({ pictureId: "p2", url: "https://faces/p2.jpg", setAt: 2 });
     removePhoto.mockRejectedValue(new Error("offline"));
     open({ ...member, uid: "u2", photoUrl: null });
-    const second = screen.getAllByRole("list", { name: "Your face" }).at(-1)!;
+    const second = screen.getAllByRole("list", { name: "Your picture" }).at(-1)!;
     await within(second).findByRole("button", { name: "Your photo" });
     const removes = screen.getAllByRole("button", { name: "Remove your photo" });
     await userEvent.click(removes.at(-1)!);
@@ -926,7 +933,9 @@ describe("SettingsPage on a phone", () => {
 
   it("asks a guest to sign in in one card at the top, beside the person", () => {
     open({ kind: "guest", uid: "g1" });
-    const card = screen.getByText("Sign in to change your settings.").closest("section")!;
+    const card = screen
+      .getByText("Sign in to keep your lists on every device.")
+      .closest("section")!;
     expect(card).toHaveClass("settings__card--row");
     expect(within(card).getByRole("button", { name: "Continue with Google" })).toBeEnabled();
     expect(document.querySelector(".settings__card")).toBe(card);

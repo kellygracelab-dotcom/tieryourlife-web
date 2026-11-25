@@ -102,10 +102,22 @@ describe("the game picker", () => {
     show({ kind: "smart", from: null, placed: 3, theirs: true, placedByAuthor: true });
     expect(
       screen.getByText(
-        "The author placed 3 cards. The game rearranges them in Mine; Undo brings them back.",
+        "The author placed 3 cards. The game rearranges them in your version; Undo brings them back.",
       ),
     ).toHaveClass("play-placed");
     expect(screen.queryByText(/You’ve placed/)).not.toBeInTheDocument();
+  });
+
+  // Walk 25.11: a house list is the site's own, so nothing names an author.
+  it("names no author on a house list's game", () => {
+    show({ kind: "smart", from: null, placed: 3, theirs: true, placedByAuthor: true, house: true });
+    expect(
+      screen.getByText(
+        "3 cards are already placed. The game rearranges them in your version; Undo brings them back.",
+      ),
+    ).toHaveClass("play-placed");
+    expect(screen.getByText("The result goes into your version.")).toHaveClass("play-footnote");
+    expect(screen.queryByText(/author/i)).not.toBeInTheDocument();
   });
 
   it("says nothing of placed cards when none are", () => {
@@ -203,7 +215,7 @@ describe("the game picker", () => {
   it("says where the result goes on somebody else's list", () => {
     show({ theirs: true });
     expect(
-      screen.getByText("The result goes into Mine. The author’s ranking doesn’t change."),
+      screen.getByText("The result goes into your version. The author’s ranking doesn’t change."),
     ).toBeInTheDocument();
   });
 

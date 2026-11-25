@@ -80,8 +80,10 @@ export interface Played {
 export interface PlayOptions {
   /** The board's name, for the picker's "34 cards from …". */
   title: string;
-  /** Somebody else's list: the picker says the result goes into Mine. */
+  /** Somebody else's list: the picker says the result goes into one's own version. */
   theirs?: boolean;
+  /** A house list: the picker names no author (walk 25.11). */
+  house?: boolean;
   /** The cards in tiers stand where the author put them, not the person playing (QA 19.11). */
   placedByAuthor?: boolean;
   /**
@@ -154,6 +156,7 @@ export function usePlay(
   const {
     title,
     theirs = false,
+    house = false,
     placedByAuthor = false,
     onApply,
     notify,
@@ -388,6 +391,7 @@ export function usePlay(
             count={chosenIds(board, current).length}
             placed={placedChosen(board, current)}
             placedByAuthor={placedByAuthor}
+            house={house}
             kind={kind}
             onKind={setKind}
             saved={savedGame === null ? null : shown.reconcile(savedGame, board)}

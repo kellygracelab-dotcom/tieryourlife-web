@@ -2,27 +2,33 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
-  max-width: 1160px;
   margin: 0 auto;
   padding-top: var(--space-8);
 }
 
 /*
- * A wide window (artboard 20): the column grows with it, the sections stand
- * in one row once they fit, and the feed has as many lists across as fit at
- * the size a card has now (eight on 2560).
+ * The sections in even rows from 840 (Danylo's walk, 25.11): five across put
+ * eleven 5 + 5 + 1, "Other" alone in a third row at 1250. The grid knows how
+ * many it holds and writes how many a row keeps the rows even for each most
+ * a row can take (SectionGrid, evenColumns): up to five on a small laptop
+ * (4 + 4 + 3), six from 1100 (6 + 5), and from 1800, where the page's 1760
+ * column holds a dozen, one row (artboard 20).
  */
-@media (min-width: 1400px) {
-  .home {
-    max-width: none;
-  }
-
+@media (min-width: 840px) {
   .home .sections-grid {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(var(--cols-5, 5), minmax(0, 1fr));
   }
+}
 
-  .home .feed {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+@media (min-width: 1100px) {
+  .home .sections-grid {
+    grid-template-columns: repeat(var(--cols-6, 6), minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1800px) {
+  .home .sections-grid {
+    grid-template-columns: repeat(var(--cols-12, 12), minmax(0, 1fr));
   }
 }
 

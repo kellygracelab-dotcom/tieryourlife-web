@@ -26,7 +26,6 @@ import type { PublishingDeps } from "../features/boards/BoardSettings";
 import type { Share } from "../features/ranking/share";
 import type { FindPictures } from "../features/editor/usePictures";
 import { TIER_PRESETS } from "../features/editor/model";
-import { MENU_COUNT_KEY } from "../features/tierboard/RankingBoard";
 import { TIER_HOLD_MS } from "../features/tierboard/useTierMove";
 import { SessionContext, type Session } from "../app/session";
 import type { SectionStats } from "../api/sections";
@@ -162,6 +161,15 @@ const open = (
 };
 
 const tier = (label: string) => screen.getByRole("list", { name: label });
+/**
+ * Names the board the way a computer does: a new board's name waits on a wide
+ * window (jsdom's is), edited with the pencil; the field selects it whole. The
+ * page opened last, where a test opens several.
+ */
+const rename = async (title: string) => {
+  await userEvent.click(screen.getAllByRole("button", { name: "Edit list name" }).at(-1)!);
+  await userEvent.keyboard(`${title}{Enter}`);
+};
 /** The thin settings window the ⋮ menu's Cover opens. */
 const coverDialog = () => screen.getByRole("dialog", { name: "Cover" });
 /** The Publish window, by its heading: Publish “Films” until the list is out. */
@@ -301,7 +309,7 @@ describe("BoardPage", () => {
   it("starts a new board with the name a search brought along", async () => {
     const repository = boardsRepository(memoryStore());
     open(repository, "/b/fresh?new=100&title=Cheeses");
-    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Cheeses");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Cheeses");
   });
 
   it("asks a guest to sign in at the first picture, and sends none when they do not", async () => {
@@ -454,15 +462,6 @@ describe("BoardPage", () => {
     expect(screen.getByRole("button", { name: "Climax (2018)" })).toBeInTheDocument();
   });
 
-  it("remembers on this device that a card's menu was opened, past the page", async () => {
-    const repository = boardsRepository(memoryStore());
-    repository.save(filmBoard());
-    open(repository, "/b/films");
-    await userEvent.dblClick(screen.getByRole("button", { name: "Climax" }));
-    expect(screen.getByRole("menu", { name: "Climax" })).toBeInTheDocument();
-    expect(localStorage.getItem(MENU_COUNT_KEY)).toBe("1");
-  });
-
   it("starts the line under the title with the pool while nothing is ranked", () => {
     const repository = boardsRepository(memoryStore());
     const next = uids();
@@ -537,17 +536,22 @@ describe("BoardPage", () => {
   it("makes a new board with the phone's five tiers, and keeps it only once it is touched", async () => {
     const repository = boardsRepository(memoryStore());
     const router = open(repository, "/b/fresh?new=777");
-    // The name is up for editing from the start.
-    expect(screen.getByRole("textbox", { name: "Title" })).toHaveFocus();
-    expect(screen.getByRole("list", { name: "S" })).toBeInTheDocument();
-    await userEvent.keyboard("{Enter}");
+    // On a computer the name waits, and the cursor is in the field that adds
+    // cards (Danylo, 25.11): nothing to press Enter on before the first card.
+    expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Untitled list");
+    expect(screen.getByRole("list", { name: "S" })).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Add a card" })).toHaveFocus(),
+    );
     await userEvent.click(screen.getAllByRole("link", { name: "Your lists" })[0]!);
     expect(router.state.location.pathname).toBe("/b");
     expect(repository.get("fresh")).toBeNull();
 
     open(repository, "/b/named?new=778");
-    // The name is selected whole, so typing replaces it.
+    // A click on the name edits it, selected whole, so typing replaces it.
+    await userEvent.click(screen.getAllByRole("heading", { level: 1 }).at(-1)!);
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveFocus();
     await userEvent.keyboard("Ramen{Enter}");
     const kept = repository.get("named");
     expect(kept?.title).toBe("Ramen");
@@ -608,7 +612,7 @@ describe("BoardPage: tiers and settings", () => {
     await userEvent.click(screen.getByRole("button", { name: "Remove tier" }));
     expect(rankedTiers(repository.get("films")!).map((t) => t.label)).toEqual(["A", "B", "C", "D"]);
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Tier Top removed · 1 card back in the deck",
+      "Tier Top removed · 1 card back in Cards left",
     );
     // The tier's pencil went with it: the keyboard is handed the way back.
     expect(within(screen.getByRole("status")).getByRole("button", { name: "Undo" })).toHaveFocus();
@@ -699,7 +703,7 @@ describe("BoardPage: tiers and settings", () => {
     await userEvent.dblClick(within(tier("S")).getByRole("button", { name: "Ex Machina" }));
     const menu = within(screen.getByRole("menu", { name: "Ex Machina" }));
     expect(screen.queryByRole("dialog", { name: "Edit tier" })).toBeNull();
-    await userEvent.click(menu.getByRole("menuitem", { name: "Back to the deck" }));
+    await userEvent.click(menu.getByRole("menuitem", { name: "Back to Cards left" }));
     expect(within(tier("S")).queryByRole("button", { name: "Ex Machina" })).toBeNull();
     const kept = repository.get("films")!;
     expect(itemsIn(kept, poolTier(kept)!.uid).map((item) => item.title)).toContain("Ex Machina");
@@ -1007,7 +1011,7 @@ describe("BoardPage: tiers and settings", () => {
       // Enter on a row opens it too; back to the pool, which opens on it.
       await userEvent.keyboard("{Enter}");
       const again = within(screen.getByRole("dialog", { name: "Ex Machina" }));
-      await userEvent.click(again.getByRole("button", { name: "Back to the deck" }));
+      await userEvent.click(again.getByRole("button", { name: "Back to Cards left" }));
       expect(titlesIn(repository, "pool")).toEqual(["The Witch", "Climax", "Ex Machina"]);
       expect(screen.getByText("Nothing placed yet")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "3 cards left" })).toHaveAttribute(
@@ -1033,7 +1037,7 @@ describe("BoardPage: tiers and settings", () => {
       await userEvent.click(pool.getByRole("button", { name: "The Witch" }));
       let sheet = within(screen.getByRole("dialog", { name: "The Witch" }));
       // Already in the pool: no way back to it.
-      expect(sheet.queryByRole("button", { name: "Back to the deck" })).toBeNull();
+      expect(sheet.queryByRole("button", { name: "Back to Cards left" })).toBeNull();
       await userEvent.click(sheet.getByRole("button", { name: "A" }));
       expect(titlesIn(repository, 1)).toEqual(["The Witch"]);
       expect(screen.getByRole("button", { name: "2. The Witch in A" })).toHaveFocus();
@@ -1221,33 +1225,32 @@ describe("BoardPage: a new board", () => {
   it("files a new board under the section it was asked for", async () => {
     const repository = boardsRepository(memoryStore());
     open(repository, "/b/fresh?new=100&category=games&title=Co-op");
-    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Co-op");
-    await userEvent.keyboard("Co-op nights{Enter}");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Co-op");
+    await rename("Co-op nights");
     expect(repository.get("fresh")).toMatchObject({ title: "Co-op nights", category: "games" });
 
     // Any section's id, also one the site has no words for: a section's page leads here too.
     open(repository, "/b/stalls?new=100&category=street-food");
-    await userEvent.keyboard("Stalls{Enter}");
+    await rename("Stalls");
     expect(repository.get("stalls")?.category).toBe("street-food");
 
     open(repository, "/b/odd?new=100&category=Not%20a%20section!");
-    await userEvent.keyboard("Odd{Enter}");
+    await rename("Odd");
     expect(repository.get("odd")?.category).toBeNull();
   });
 
   it("says the empty pool is empty, with the catalogue's box open and the cursor in it", async () => {
     const repository = boardsRepository(memoryStore());
     open(repository, "/b/fresh?new=100");
-    // The name first; the box waits for it.
-    expect(screen.getByRole("textbox", { name: "Title" })).toHaveFocus();
-    await userEvent.keyboard("{Enter}");
+    // On a computer the box takes the cursor at once; the name waits for a click (Danylo, 25.11).
+    expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull();
     expect(screen.getByRole("heading", { name: "Cards left · 0" })).toBeInTheDocument();
     expect(screen.getByText("Add cards by name, or search the catalogue.")).toBeInTheDocument();
     expect(screen.queryByText(/All \d+ placed/)).toBeNull();
     // jsdom's window is wide: there the box stands in the pool, with nothing behind a chip.
     expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
     const field = screen.getByRole("textbox", { name: "Add a card" });
-    expect(field).toHaveFocus();
+    await vi.waitFor(() => expect(field).toHaveFocus());
     await userEvent.type(field, "Heat{Enter}");
     expect(screen.getByRole("heading", { name: "1 card left" })).toBeInTheDocument();
     expect(screen.queryByText("Add cards by name, or search the catalogue.")).toBeNull();
@@ -1271,6 +1274,8 @@ describe("BoardPage: a new board", () => {
     window.innerWidth = 390;
     const repository = boardsRepository(memoryStore());
     open(repository, "/b/fresh?new=100");
+    // A phone still asks for the name first, as the app does.
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveFocus();
     await userEvent.keyboard("{Enter}");
     // No card yet: no tray, no count, no Play (mobile BRIEF 25.11, 1).
     expect(screen.getByRole("heading", { name: "Add your first cards" })).toBeInTheDocument();
@@ -1343,7 +1348,7 @@ describe("BoardPage: share and publish", () => {
     // Share's card opens the window on the list as it is now.
     await openSettings();
     const out = within(publishWindow("Films"));
-    expect(out.getByRole("link", { name: "See it in Community" })).toHaveAttribute("href", "/l/L1");
+    expect(out.getByRole("link", { name: "Open in Community" })).toHaveAttribute("href", "/l/L1");
     await userEvent.click(out.getByRole("button", { name: "Done" }));
 
     await userEvent.click(screen.getByLabelText("More about this list"));
@@ -1381,7 +1386,7 @@ describe("BoardPage: share and publish", () => {
     await userEvent.click(headerPublish()!);
     const out = within(publishWindow("Films"));
     expect(out.getByText("It waits for a moderator before others can see it.")).toBeVisible();
-    expect(out.queryByRole("link", { name: "See it in Community" })).toBeNull();
+    expect(out.queryByRole("link", { name: "Open in Community" })).toBeNull();
     await userEvent.click(out.getByRole("button", { name: "Done" }));
 
     await userEvent.click(screen.getByLabelText("More about this list"));
@@ -1702,7 +1707,7 @@ describe("BoardPage: Publish beside Play", () => {
     expect(headerPublish()).toHaveAccessibleName("Update");
   });
 
-  it("is Published once out and up to date, and opens the window with See it in Community", async () => {
+  it("is Published once out and up to date, and opens the window with Open in Community", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({
       ...filmBoard(),
@@ -1723,8 +1728,15 @@ describe("BoardPage: Publish beside Play", () => {
     // Nothing to send: Done, not Update.
     expect(out.queryByRole("button", { name: "Update" })).toBeNull();
     expect(out.getByRole("button", { name: "Done" })).toBeInTheDocument();
-    expect(out.getByRole("button", { name: "Take it down" })).toBeInTheDocument();
-    const seeIt = out.getByRole("link", { name: "See it in Community" });
+    // A plain button, what it does said under it (Danylo's walk, 25.11).
+    const down = out.getByRole("button", { name: "Take it down" });
+    expect(down).toHaveClass("btn--outlined");
+    expect(down).toHaveAccessibleDescription(
+      "It leaves Community and its link stops working. You keep it in Your lists.",
+    );
+    // The Share menu's name for the same way there (Danylo's walk, 25.11).
+    expect(out.queryByRole("link", { name: "See it in Community" })).toBeNull();
+    const seeIt = out.getByRole("link", { name: "Open in Community" });
     expect(seeIt).toHaveAttribute("href", "/l/L1");
     await userEvent.click(seeIt);
     expect(router.state.location.pathname).toBe("/l/L1");
@@ -1745,7 +1757,7 @@ describe("BoardPage: one's own list from its ⋮ menu", () => {
     const menu = within(moreMenu());
     // Danylo, 16.11.2026: the header has Publish; Trash read as a riddle here.
     expect(menu.getAllByRole("button").map((item) => item.textContent)).toEqual([
-      "Return all cards to the deck",
+      "Put all cards back in Cards left",
       "Cover",
       "Share as image",
       "Delete list",
@@ -1895,14 +1907,14 @@ describe("BoardPage: a house list", () => {
       loadReports: staff,
     });
     const bar = await screen.findByRole("region", { name: "House list" });
-    expect(bar).toHaveTextContent("Goes out as the site: no name, no face, no account.");
+    expect(bar).toHaveTextContent("Goes out as the site: no name, no picture, no account.");
     expect(bar).toHaveTextContent(
       "Pick a section. Add at least one card before you publish this list.",
     );
     expect(within(bar).getByRole("button", { name: "Publish to House lists" })).toBeDisabled();
     // Remembered as the house's once it is kept, not before.
     expect(houseLinkOf("fresh", houseStore)).toBeNull();
-    await userEvent.keyboard("Ramen{Enter}");
+    await rename("Ramen");
     // Kept for the house on this device, never among one's own boards that the account syncs.
     expect(houseRepository.get("fresh")?.title).toBe("Ramen");
     expect(repository.all()).toEqual([]);
@@ -1943,10 +1955,9 @@ describe("BoardPage: a house list", () => {
       account: member,
       loadReports: notStaff,
     });
-    const title = await screen.findByRole("textbox", { name: "Title" });
+    await screen.findByRole("heading", { level: 1 });
     expect(screen.queryByRole("region", { name: "House list" })).toBeNull();
-    expect(title).toHaveFocus();
-    await userEvent.keyboard("Ramen{Enter}");
+    await rename("Ramen");
     expect(repository.get("fresh")?.title).toBe("Ramen");
     expect(houseRepository.all()).toEqual([]);
   });
@@ -2656,7 +2667,7 @@ describe("BoardPage: usage statistics", () => {
     const repository = boardsRepository(memoryStore());
     open(repository, "/b/fresh?new=777");
     expect(step).not.toHaveBeenCalled();
-    await userEvent.keyboard("Ramen{Enter}");
+    await rename("Ramen");
     expect(repository.get("fresh")).not.toBeNull();
     expect(step.mock.calls).toEqual([["first_board"]]);
     expect(count.mock.calls).toEqual([["board.tier"]]);

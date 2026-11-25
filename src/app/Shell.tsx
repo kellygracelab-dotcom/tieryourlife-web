@@ -35,17 +35,26 @@ import { sayOnTheSite, siteNotice, subscribeToSiteNotice } from "../ui/siteNotic
 import { SiteSnackbar } from "../ui/Snackbar";
 import { documentTitleOf, PageTitleContext, TITLE_AFTER_PX, type PageName } from "./pageTitle";
 import { useScrollCatchUp } from "./scrollCatchUp";
-import { scopeKey, SearchScopeContext, searchPathOf, type SearchScope } from "./searchScope";
+import {
+  scopeKey,
+  SEARCH_DEBOUNCE_MS,
+  SearchScopeContext,
+  searchPathOf,
+  searchWordsIn,
+  type SearchScope,
+} from "./searchScope";
 import { useRedirectFailed, useSession } from "./session";
+import { signInFailedText } from "./signInFailure";
 import { initialOf } from "../lib/initial";
 import "./Shell.css";
 
 /**
  * The app in the footer: a link once anyone can get it, plain words until
- * then, nothing on an iPhone. On a phone the words have a line of their own
- * under the links, so they can say where the app is coming.
+ * then, nothing on an iPhone. The words have a line of their own under the
+ * links at every width, so they can say where the app is coming (Designer,
+ * 25.11: the computer's foot is the phone's).
  */
-function AppFooterLink({ phone }: { phone: boolean }) {
+function AppFooterLink() {
   if (onApple()) return null;
   return appIsLive() ? (
     <a className="foot__app" href={playUrl("footer")} target="_blank" rel="noopener">
@@ -53,9 +62,7 @@ function AppFooterLink({ phone }: { phone: boolean }) {
       {strings.android.footer}
     </a>
   ) : (
-    <span className="foot__app">
-      {phone ? strings.android.footerSoonPhone : strings.android.footerSoon}
-    </span>
+    <span className="foot__app">{strings.android.footerSoon}</span>
   );
 }
 
@@ -166,15 +173,26 @@ function SiteTabs({ className, pathname }: { className: string; pathname: string
  * change, so a search made from it keeps the focus in it. On a section's or
  * a topic's page it looks there first, as the app does: a chip says where,
  * and its cross (or Backspace in the empty field) lets it look everywhere.
+ *
+ * The results follow the typing (walkthrough item 6, Danylo, 25.11): once it
+ * pauses, the words go to the search page, a step Back returns from when they
+ * leave another page, and in place of the last words once on the search page,
+ * so Back does not walk through every pause. Enter goes at once. Words that
+ * would not change what the page asks are not sent: no second request.
  */
 function BarSearch({ asked, scope }: { asked: string; scope: SearchScope | null }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [query, setQuery] = useState(asked);
   const [shown, setShown] = useState(asked);
+  // The words the field last sent after a pause. They come back as the
+  // address's, trimmed, while the person may have typed on (a space, a letter
+  // more): those are kept, not put back to what was sent.
+  const [sent, setSent] = useState<string | null>(null);
   if (shown !== asked) {
     setShown(asked);
-    setQuery(asked);
+    setSent(null);
+    if (asked !== sent && asked !== query.trim()) setQuery(asked);
   }
   // A place given up stays given up while the page is about it; another
   // place, or the same one opened again, brings the chip back.
@@ -187,11 +205,44 @@ function BarSearch({ asked, scope }: { asked: string; scope: SearchScope | null 
   }
   const place = dropped ? null : scope;
   const field = useRef<HTMLInputElement>(null);
+  const onSearchPage = location.pathname === "/search";
+  // On the search page the words change and the rest it asks stays; from
+  // anywhere else they open it, in the place the chip says.
+  const pathOf = (q: string) =>
+    onSearchPage ? searchWordsIn(q, location.search) : searchPathOf(q, place);
+  // The pause reads the address and the place as they are when it ends.
+  const pathFor = useRef(pathOf);
+  useEffect(() => {
+    pathFor.current = pathOf;
+  });
+  const pause = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // The page the words were typed on. A link followed during the pause is
+  // where the person went: the words do not take them on from there.
+  const typedOn = useRef(location.pathname);
+  const type = (words: string) => {
+    typedOn.current = location.pathname;
+    setQuery(words);
+  };
+  const here = location.pathname;
+  useEffect(() => {
+    const q = query.trim();
+    if (typedOn.current !== here) return;
+    // The same words as the page has, or none away from the search page: nothing to ask.
+    if (q === asked.trim() || (!onSearchPage && q === "")) return;
+    const timer = setTimeout(() => {
+      setSent(q);
+      void navigate(pathFor.current(q), { replace: onSearchPage });
+    }, SEARCH_DEBOUNCE_MS);
+    pause.current = timer;
+    return () => clearTimeout(timer);
+  }, [query, asked, here, onSearchPage, navigate]);
   const onSearch = (event: FormEvent) => {
     event.preventDefault();
+    clearTimeout(pause.current);
     const q = query.trim();
     if (q === "") return;
-    const path = searchPathOf(q, place);
+    setQuery(q);
+    const path = pathOf(q);
     // The same words again are the same page: Back should not need two presses.
     const same = location.pathname + location.search === path;
     void navigate(path, { replace: same });
@@ -222,7 +273,7 @@ function BarSearch({ asked, scope }: { asked: string; scope: SearchScope | null 
           place === null ? strings.nav.search : fill(strings.nav.searchIn, { place: place.name })
         }
         autoComplete="off"
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={(event) => type(event.target.value)}
         onKeyDown={(event) => {
           if (event.key !== "Backspace" || query !== "" || place === null) return;
           event.preventDefault();
@@ -232,7 +283,7 @@ function BarSearch({ asked, scope }: { asked: string; scope: SearchScope | null 
       {query !== "" && (
         <ClearButton
           onClear={() => {
-            setQuery("");
+            type("");
             field.current?.focus();
           }}
         />
@@ -289,6 +340,15 @@ const OWN_LIST = /^\/b\/(?!new$)[^/]+$/;
  */
 const TAB_PAGES = /^\/(following|b)?$/;
 
+/**
+ * Where a phone offers a new list: the tabs' pages and the pages that browse
+ * lists, sections, topics, search and a profile. New list lives in one place
+ * there, the round button at the corner; the bar's plus is gone on a phone
+ * (walkthrough item 10, Danylo, 25.11). A list's page is left out: its tray
+ * docks at the bottom of a phone, where the button would sit over the cards.
+ */
+const NEW_LIST_PAGES = /^\/((following|b|s|search)?|s\/[^/]+(\/t\/[^/]+)?|u\/[^/]+)$/;
+
 /** Below this the bar always shows: the page's top is where it is. */
 const AWAY_AFTER_PX = 120;
 
@@ -335,10 +395,12 @@ export function Shell() {
   // was pressed on and gone from the next. Nothing pressed here yet: a sign-in
   // that came back from its redirect failed speaks instead, on the page it
   // came back to.
-  const [said, setSaid] = useState<{ note: "failed" | "inApp" | null; on: string } | null>(null);
+  // The note is the failure's code, said by its reason: a blocked Google
+  // window names the way out (Danylo, 25.11).
+  const [said, setSaid] = useState<{ note: string | null; on: string } | null>(null);
   const [landedOn] = useState(location.pathname);
   const redirectFailed = useRedirectFailed();
-  const told = said ?? (redirectFailed ? { note: "failed" as const, on: landedOn } : null);
+  const told = said ?? (redirectFailed ? { note: "redirect-failed", on: landedOn } : null);
   const note = told !== null && told.on === location.pathname ? told.note : null;
 
   // On a phone the list's heading scrolls away under the tray's work; once it
@@ -362,6 +424,7 @@ export function Shell() {
   // What a phone's bar and foot hold, not only how they are drawn: the round
   // New list button, and the foot's shorter and longer words.
   const phone = useMedia(PHONE);
+  const fab = phone && NEW_LIST_PAGES.test(location.pathname);
   useEffect(() => {
     document.title = documentTitleOf(page, strings.brand);
   }, [page]);
@@ -408,10 +471,9 @@ export function Shell() {
     setSaid({ note: null, on });
     signIn()
       .then(
-        (outcome) =>
-          outcome.kind !== "failed" ? null : outcome.code === IN_APP_BROWSER ? "inApp" : "failed",
+        (outcome) => (outcome.kind !== "failed" ? null : outcome.code),
         // Nothing that goes wrong may leave Sign in greyed out for good.
-        () => "failed" as const,
+        () => "unknown",
       )
       .then((next) => {
         setSaid({ note: next, on });
@@ -469,10 +531,13 @@ export function Shell() {
               <Icon name="search" />
             </Link>
           )}
-          <Link className="btn btn--tonal top__make" to="/b/new" aria-label={strings.nav.newList}>
-            <Icon name="add" className="btn__icon top__make-icon" />
-            <span className="top__make-text">{strings.nav.newList}</span>
-          </Link>
+          {/* Not on a phone: there New list is the round button alone (walkthrough item 10, Danylo, 25.11). */}
+          {!phone && (
+            <Link className="btn btn--tonal top__make" to="/b/new" aria-label={strings.nav.newList}>
+              <Icon name="add" className="btn__icon top__make-icon" />
+              <span className="top__make-text">{strings.nav.newList}</span>
+            </Link>
+          )}
           {account?.kind === "signedIn" ? (
             <AccountMenu name={account.displayName} photoUrl={account.photoUrl} />
           ) : account === null && seen !== null ? (
@@ -492,10 +557,10 @@ export function Shell() {
       {/* Under the bar, not in it: there a phone's buttons were squeezed off the screen. */}
       {note !== null && (
         <p
-          className={note === "failed" ? "top__banner top__banner--error" : "top__banner"}
+          className={note === IN_APP_BROWSER ? "top__banner" : "top__banner top__banner--error"}
           role="alert"
         >
-          {note === "inApp" ? strings.keep.inApp : strings.nav.signInFailed}
+          {signInFailedText(note)}
         </p>
       )}
       {storageTrouble && (
@@ -505,13 +570,7 @@ export function Shell() {
       )}
       <main
         id="main"
-        className={
-          ownList
-            ? "shell__main shell__main--own-list"
-            : location.pathname === "/b"
-              ? "shell__main shell__main--lists"
-              : "shell__main"
-        }
+        className={ownList ? "shell__main shell__main--own-list" : "shell__main"}
         ref={main}
       >
         <PageTitleContext.Provider value={setPage}>
@@ -520,15 +579,15 @@ export function Shell() {
           </SearchScopeContext.Provider>
         </PageTitleContext.Provider>
       </main>
-      {/* New list on a phone, where the tabs took the bar: the app's round button (25.11.2026). */}
-      {tabsPage && phone && (
+      {/* New list on a phone: the app's round button (25.11.2026), on every page that offers one. */}
+      {fab && (
         <Link className="fab" to="/b/new" aria-label={strings.nav.newList}>
           <Icon name="add" />
         </Link>
       )}
-      <footer className={tabsPage && phone ? "foot foot--fab" : "foot"}>
-        <a href="/privacy.html">{phone ? strings.footer.privacyShort : strings.footer.privacy}</a>
-        <AppFooterLink phone={phone} />
+      <footer className={fab ? "foot foot--fab" : "foot"}>
+        <a href="/privacy.html">{strings.footer.privacyShort}</a>
+        <AppFooterLink />
         <Link to="/about">{strings.footer.about}</Link>
         {/* The theme is a setting a guest has too, and a guest has no account menu to find it in. */}
         <Link to="/settings">{strings.nav.settings}</Link>

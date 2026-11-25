@@ -12,7 +12,7 @@ test("a guest picks Ukrainian in the settings, and the site reloads in it", asyn
   // The guest card arrives with the account state, some 400 ms after the
   // first paint, and pushes the languages 200 px down: a click aimed before
   // it lands on something else. WebKit under load found this.
-  await expect(page.getByText("Sign in to change your settings.")).toBeVisible();
+  await expect(page.getByText("Sign in to keep your lists on every device.")).toBeVisible();
 
   // On a phone the languages are in the sheet of the Language row.
   const phone = page.viewportSize()!.width < 600;
@@ -36,7 +36,7 @@ test("a guest picks Ukrainian in the settings, and the site reloads in it", asyn
   await expect(page.getByRole("button", { name: "Додати рівень" })).toBeVisible();
 
   await page.goto("/settings");
-  await expect(page.getByText("Увійдіть, щоб змінювати налаштування.")).toBeVisible();
+  await expect(page.getByText("Увійдіть, щоб ваші списки були на всіх пристроях.")).toBeVisible();
   if (phone) await page.getByRole("button", { name: "Мова" }).click();
   await page
     .getByRole("radiogroup", { name: "Мова" })

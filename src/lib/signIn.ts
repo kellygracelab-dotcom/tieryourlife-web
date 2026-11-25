@@ -45,6 +45,14 @@ const CODE = {
   unsupported: "auth/operation-not-supported-in-this-environment",
 } as const;
 
+/**
+ * The failure's code when the browser blocked Google's window and the whole
+ * page could not go to Google instead either. Said as such, with the way out
+ * (allow pop-ups, or open the page in a real browser), rather than "Try
+ * again", which only meets the same block again (Danylo, 25.11).
+ */
+export const POPUP_BLOCKED = "popup-blocked";
+
 const STASH_KEY = "tyl:signin:guest";
 
 // A private window may refuse sessionStorage; a lost token only means nothing
@@ -156,12 +164,35 @@ async function googleSignIn(deps: SignInDeps): Promise<SignInOutcome> {
     }
     if (code === CODE.popupClosed || code === CODE.popupCancelled) return { kind: "cancelled" };
     if (code === CODE.popupBlocked || code === CODE.unsupported) {
-      if (guestToken !== null) deps.stash.put(guestToken);
-      if (user === null) await signInWithRedirect(auth, google(), browserPopupRedirectResolver);
-      else await linkWithRedirect(user, google(), browserPopupRedirectResolver);
-      return { kind: "redirecting" };
+      return redirectInstead(auth, user, guestToken, deps);
     }
     return { kind: "failed", code };
+  }
+}
+
+/**
+ * The window did not open (a pop-up blocker, a browser that has no windows):
+ * the whole page goes to Google and comes back, finished by completeSignIn.
+ * A guest is linked the same way the window would have linked it, so its uid
+ * stays; its token waits in the stash for an account switch on the way back.
+ * Links opened from Telegram or Instagram land here (walkthrough item 17,
+ * Danylo, 25.11).
+ */
+async function redirectInstead(
+  auth: Auth,
+  user: User | null,
+  guestToken: string | null,
+  deps: SignInDeps,
+): Promise<SignInOutcome> {
+  if (guestToken !== null) deps.stash.put(guestToken);
+  try {
+    if (user === null) await signInWithRedirect(auth, google(), browserPopupRedirectResolver);
+    else await linkWithRedirect(user, google(), browserPopupRedirectResolver);
+    return { kind: "redirecting" };
+  } catch {
+    // Whatever stopped the redirect (no storage for its state, the network),
+    // the window was blocked first, and allowing it is the way that still works.
+    return { kind: "failed", code: POPUP_BLOCKED };
   }
 }
 

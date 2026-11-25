@@ -3,6 +3,19 @@ import type { Page, Request } from "@playwright/test";
 export const LIST_ID = "abc";
 export const CODE = "abcdefgh";
 
+/**
+ * Names a list just made. A phone asks for the name on arrival; a computer
+ * puts the cursor in the field that adds cards, and the name is edited with a
+ * click on its pencil (Danylo, 25.11).
+ */
+export async function nameNewList(page: Page, name: string) {
+  const field = page.getByRole("textbox", { name: "Title" });
+  if ((page.viewportSize()?.width ?? 0) >= 840)
+    await page.getByRole("button", { name: "Edit list name" }).click();
+  await field.fill(name);
+  await field.press("Enter");
+}
+
 /** Hold a fixture response until the page has drawn the state before it. */
 export function gate() {
   let resolve!: () => void;

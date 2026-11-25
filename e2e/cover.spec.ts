@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { mockBackend } from "./fixtures";
+import { mockBackend, nameNewList } from "./fixtures";
 import { shot } from "./signedIn";
 
 /*
@@ -45,9 +45,7 @@ async function boardWithPortrait(page: Page, touch: boolean) {
   );
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
-  const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill("Portraits");
-  await title.press("Enter");
+  await nameNewList(page, "Portraits");
   if (touch) await press(page.getByRole("button", { name: "Search or type a name" }), touch);
   await page.getByRole("textbox", { name: "Add a card" }).fill("Portrait");
   await press(page.getByRole("button", { name: "Portrait Film" }), touch);

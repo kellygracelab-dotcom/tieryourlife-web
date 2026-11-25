@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import { publicMediaPath } from "./publicMedia";
+import { CARD_WIDTHS, publicMediaPath } from "./publicMedia";
 
 /*
  * Section and topic pictures through the site's own address, so Hosting's CDN
@@ -79,13 +79,18 @@ export async function sendPicture(
   const [width, kind, id, picture] = segments;
   const wide = Number(width);
   const original = width === "original" && segments.length === 4;
-  const path = original
-    ? publicMediaPath(kind ?? "", id ?? "", picture ?? "")
-    : segments.length === 4 && PICTURE_WIDTHS.includes(wide)
-      ? picturePathOf(kind ?? "", id ?? "", picture ?? "")
-      : null;
-  const bytes = path === null ? null : await deps.read(path, original ? ORIGINAL_LIMIT : undefined);
-  const type = original && bytes !== null ? rasterType(bytes) : "image/webp";
+  // A card's picture, smaller: read as its original is, with the same limit and check.
+  const card = kind === "published" && segments.length === 4 && CARD_WIDTHS.includes(wide);
+  const path =
+    original || card
+      ? publicMediaPath(kind ?? "", id ?? "", picture ?? "")
+      : segments.length === 4 && PICTURE_WIDTHS.includes(wide)
+        ? picturePathOf(kind ?? "", id ?? "", picture ?? "")
+        : null;
+  const limited = original || card;
+  const bytes = path === null ? null : await deps.read(path, limited ? ORIGINAL_LIMIT : undefined);
+  const raster = limited && bytes !== null ? rasterType(bytes) : "image/webp";
+  const type = original ? raster : raster === null ? null : "image/webp";
   if (bytes === null || type === null) {
     response.setHeader("Cache-Control", MISSING);
     response.status(404).json({ error: "No such picture", code: "NOT_FOUND" });
@@ -96,7 +101,8 @@ export async function sendPicture(
   response.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
   response.setHeader(
     "Cache-Control",
-    !original
+    // A card's smaller copy is kept as its original is: a takedown reaches the CDN in a minute.
+    !original && !card
       ? KEEP
       : kind !== "published"
         ? OTHER_ORIGINAL

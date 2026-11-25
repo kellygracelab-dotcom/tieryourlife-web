@@ -42,7 +42,7 @@ const ownCopyIn = (list: PublishedList, url: string): boolean => {
 
 /**
  * The history entry's state for one's own list seen as the community sees
- * it, the board's "See it in Community": that page stays the list's page,
+ * it, the board's "Open in Community": that page stays the list's page,
  * and does not give way to the board as one's own list otherwise does.
  */
 export const AS_COMMUNITY = { asCommunity: true } as const;
