@@ -35,7 +35,7 @@ async function setCategory(page: Page) {
 async function listHref(page: Page, title: string): Promise<string> {
   await openSettings(page);
   const out = page.getByRole("dialog", { name: title });
-  const href = await out.getByRole("link", { name: "See it in Community" }).getAttribute("href");
+  const href = await out.getByRole("link", { name: "Open in Community" }).getAttribute("href");
   await out.getByRole("button", { name: "Done" }).click();
   expect(href).toMatch(/^\/l\/[A-Za-z0-9_-]+$/);
   return href ?? "";
