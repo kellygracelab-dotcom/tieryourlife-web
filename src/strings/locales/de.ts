@@ -99,7 +99,7 @@ const de: Translation = {
     title: "Einstellungen",
     guestTitle: "Melde dich an, um deine Listen auf jedem Gerät zu behalten.",
     guestBody:
-      "Dein Name und dein Bild sowie deine Listen auf allen Geräten. Design, Farbe und Sprache funktionieren auch ohne Konto.",
+      "Außerdem dein Name und dein Bild. Design, Farbe und Sprache funktionieren auch ohne Konto.",
     themeGuestNote: "Wird auf diesem Gerät gespeichert, ob du angemeldet bist oder nicht.",
     nameTitle: "Dein Name",
     nameBody:
@@ -1906,6 +1906,7 @@ const de: Translation = {
     place: "{start} Tippe auf eine Karte, dann auf ihre Stufe. Oder zieh sie dorthin.",
     placeKeys: "{start} Wähle eine Karte, dann eine Stufe – oder drück {keys}. Ziehen geht auch.",
     play: "Keine Lust, {n} von Hand einzuordnen? {play}: Wähle die bessere von zwei, und die Stufen füllen sich.",
+    playRanked: "Nach deinem Geschmack ordnen? {play}: Wähle die bessere von zwei.",
     add: "Gib einen Namen ein – das Bild kommt mit.",
     gotIt: "Verstanden",
     noMore: "Keine Tipps mehr",

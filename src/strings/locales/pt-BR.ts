@@ -102,8 +102,7 @@ const ptBR: Translation = {
     faceNotMade: "Essa imagem não pode ser sua foto. Escolha outra.",
     title: "Configurações",
     guestTitle: "Entre para manter suas listas em todos os dispositivos.",
-    guestBody:
-      "Seu nome e sua imagem, e suas listas em todos os seus dispositivos. Tema, cor e idioma funcionam sem conta.",
+    guestBody: "Também seu nome e sua imagem. Tema, cor e idioma funcionam sem conta.",
     themeGuestNote: "Fica salvo neste aparelho, tendo você entrado ou não.",
     nameTitle: "Seu nome",
     nameBody:
@@ -1956,6 +1955,7 @@ const ptBR: Translation = {
     placeKeys:
       "{start} escolha um cartão e depois um nível — ou pressione {keys}. Arrastar também funciona.",
     play: "Não quer colocar {n} à mão? {play}: escolha o melhor de dois e os níveis se preenchem.",
+    playRanked: "Quer ordenar do seu jeito? {play}: escolha o melhor de dois.",
     add: "Digite um nome — a imagem vem junto.",
     gotIt: "Entendi",
     noMore: "Sem mais dicas",

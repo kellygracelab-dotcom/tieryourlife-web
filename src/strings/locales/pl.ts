@@ -113,8 +113,7 @@ const pl: Translation = {
     faceNotMade: "To zdjęcie nie może być Twoim awatarem. Wybierz inne.",
     title: "Ustawienia",
     guestTitle: "Zaloguj się, aby mieć swoje listy na każdym urządzeniu.",
-    guestBody:
-      "Twoje imię i obraz oraz Twoje listy na wszystkich urządzeniach. Motyw, kolor i język działają bez konta.",
+    guestBody: "Także Twoje imię i obraz. Motyw, kolor i język działają bez konta.",
     themeGuestNote: "Zapisywane na tym urządzeniu, niezależnie od tego, czy się zalogujesz.",
     nameTitle: "Twoja nazwa",
     nameBody:
@@ -2083,6 +2082,7 @@ const pl: Translation = {
     placeKeys:
       "{start} wybierz kartę, potem poziom — albo naciśnij {keys}. Przeciąganie też działa.",
     play: "Nie chcesz układać {n} ręcznie? {play}: wybieraj lepszą z dwóch, a poziomy wypełnią się same.",
+    playRanked: "Ułożyć to po swojemu? {play}: wybieraj lepszą z dwóch.",
     add: "Wpisz nazwę — obrazek przyjdzie z nią.",
     gotIt: "Rozumiem",
     noMore: "Bez podpowiedzi",

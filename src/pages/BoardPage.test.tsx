@@ -1274,9 +1274,9 @@ describe("BoardPage: a new board", () => {
     window.innerWidth = 390;
     const repository = boardsRepository(memoryStore());
     open(repository, "/b/fresh?new=100");
-    // A phone still asks for the name first, as the app does.
-    expect(screen.getByRole("textbox", { name: "Title" })).toHaveFocus();
-    await userEvent.keyboard("{Enter}");
+    // The name is not asked first: a keyboard would cover Add your first cards (26.11).
+    expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull();
+    expect(document.activeElement?.tagName).not.toBe("INPUT");
     // No card yet: no tray, no count, no Play (mobile BRIEF 25.11, 1).
     expect(screen.getByRole("heading", { name: "Add your first cards" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Cards left · 0" })).toBeNull();

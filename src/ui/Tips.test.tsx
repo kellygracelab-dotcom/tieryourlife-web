@@ -25,11 +25,18 @@ afterEach(() => {
 });
 
 /** A page with the places named, and the tips over it. */
-function page(places: { tip: string; n?: number; keys?: string }[]) {
+function page(places: { tip: string; n?: number; keys?: string; ranked?: boolean }[]) {
   return render(
     <>
-      {places.map(({ tip, n, keys }) => (
-        <button key={tip} type="button" data-tip={tip} data-tip-n={n} data-tip-keys={keys}>
+      {places.map(({ tip, n, keys, ranked }) => (
+        <button
+          key={tip}
+          type="button"
+          data-tip={tip}
+          data-tip-n={n}
+          data-tip-keys={keys}
+          data-tip-ranked={ranked ? "true" : undefined}
+        >
           {tip}
         </button>
       ))}
@@ -92,6 +99,16 @@ describe("the newcomer's tips", () => {
     expect(screen.getByRole("button", { name: "No more tips" })).toBeInTheDocument();
     expect(document.activeElement).toBe(document.body);
     vi.unstubAllGlobals();
+  });
+
+  it("offers Play for a ranking of one's own where every card is already placed", async () => {
+    // Someone's ranked list has nothing left to place by hand (Designer, 360-430, 26.11).
+    page([{ tip: "play", n: 219, ranked: true }]);
+    await wait();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Rank these your way? Play: pick the better of two.",
+    );
+    expect(screen.getByRole("status")).not.toHaveTextContent(/by hand/);
   });
 
   it("shows one at a time, in their order, and the next only once the first is gone", async () => {

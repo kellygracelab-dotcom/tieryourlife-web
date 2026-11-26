@@ -34,6 +34,29 @@ test("a newcomer's first tip comes alone, as a strip over the tray on every devi
   await expect(ringed).toHaveCount(1);
   await expect(ringed).toHaveAttribute("data-tip", "place");
   await expect(page.locator(".scrim")).toHaveCount(0);
+  // Never see-through, on its way in either: it lies over the cards and tiers
+  // (Designer, 360, 26.11). Its background is solid and its rise does not fade.
+  const solid = await tip.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const rises = [...document.styleSheets]
+      .flatMap((sheet) => {
+        try {
+          return [...sheet.cssRules];
+        } catch {
+          return [];
+        }
+      })
+      .filter((rule): rule is CSSKeyframesRule => rule instanceof CSSKeyframesRule)
+      .filter((rule) => rule.name === "tip-rise");
+    return {
+      opacity: style.opacity,
+      background: style.backgroundColor,
+      fades: rises.some((rule) => /opacity/.test(rule.cssText)),
+    };
+  });
+  expect(solid.opacity).toBe("1");
+  expect(solid.background).toMatch(/^rgb\(/);
+  expect(solid.fades).toBe(false);
 
   // A thin strip just over the "Cards left" tray, on a phone (Danylo's yes of
   // 25.11.2026) and on a computer too (walkthrough of 25.11, item 4): never a

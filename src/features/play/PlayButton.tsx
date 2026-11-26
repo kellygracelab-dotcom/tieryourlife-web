@@ -12,6 +12,8 @@ export interface PlayButtonProps {
   saved: boolean;
   /** The board's cards, where the newcomer's Play tip may point here (ui/Tips); null where not. */
   tip?: number | null;
+  /** Every card of the board is placed: the tip offers Play for a ranking of one's own. */
+  tipRanked?: boolean;
 }
 
 /**
@@ -21,7 +23,13 @@ export interface PlayButtonProps {
  * (aria-disabled), so the reason reaches a tooltip and a screen reader alike;
  * the dot is said in words as well.
  */
-export function PlayButton({ onClick, disabled, saved, tip = null }: PlayButtonProps) {
+export function PlayButton({
+  onClick,
+  disabled,
+  saved,
+  tip = null,
+  tipRanked = false,
+}: PlayButtonProps) {
   const id = useId();
   const description = [disabled && strings.play.needsCards, saved && strings.play.savedGame]
     .filter(Boolean)
@@ -39,6 +47,7 @@ export function PlayButton({ onClick, disabled, saved, tip = null }: PlayButtonP
         title={disabled ? strings.play.needsCards : strings.play.play}
         data-tip={tip === null ? undefined : "play"}
         data-tip-n={tip ?? undefined}
+        data-tip-ranked={tip !== null && tipRanked ? "true" : undefined}
         onClick={
           disabled
             ? undefined

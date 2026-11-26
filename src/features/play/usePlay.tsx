@@ -453,6 +453,7 @@ export function usePlay(
         !disabled && board.pool.length < board.order.length && board.order.length >= TIP_CARDS
           ? board.order.length
           : null,
+      tipRanked: board.pool.length === 0,
     },
     view,
     playing: screen !== "none",

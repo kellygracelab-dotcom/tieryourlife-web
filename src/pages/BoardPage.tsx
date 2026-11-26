@@ -7,7 +7,7 @@ import { isSectionId, type PublishedList } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
 import { RankingBoard } from "../features/tierboard/RankingBoard";
 import { BoardFrameContext } from "../features/tierboard/boardFrame";
-import { WIDE_BOARD_FROM, type Dock } from "../features/tierboard/dock";
+import type { Dock } from "../features/tierboard/dock";
 import {
   addToPool,
   arrangeItems,
@@ -412,21 +412,11 @@ function OpenBoard({
   useEffect(() => {
     if (toRemember) linkToHouse(uid, houseListId, houseStore);
   }, [toRemember, uid, houseListId, houseStore]);
-  // The name is asked for once, on arrival at a board not yet kept: a reload
-  // keeps the query, not the question. Only on a phone: on a computer the
-  // cursor goes to the field that adds cards, the name is changed with a
-  // click on it, and nobody had to press Enter to begin (Danylo, 25.11).
-  const [editingTitle, setEditingTitle] = useState(
-    () => madeAt > 0 && stored === null && window.innerWidth < WIDE_BOARD_FROM,
-  );
-  // Once that name is in, an empty board's cursor goes on to the cards.
-  const askedName = useRef(editingTitle);
-  const empty = board === null || liveItems(board).length === 0;
-  useEffect(() => {
-    if (editingTitle || !askedName.current) return;
-    askedName.current = false;
-    if (empty) document.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
-  }, [editingTitle, empty]);
+  // A new list does not open with its name being edited, at any width: the
+  // name is changed with a press on it. On a computer the cursor goes to the
+  // field that adds cards (Danylo, 25.11); on a phone a name being edited
+  // raised the keyboard over Add your first cards (Designer, 360-430, 26.11).
+  const [editingTitle, setEditingTitle] = useState(false);
   const [panel, setPanel] = useState<Panel>("none");
   const openSettings = () => setPanel("settings");
   // The Publish window, opened to go on by itself (start) after a sign-in or

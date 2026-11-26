@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { LIST_ID, mockBackend } from "./fixtures";
+import { LIST_ID, mockBackend, nameNewList } from "./fixtures";
 import { startFromScratch } from "./listVersion";
 
 // Artboard 13: on a phone somebody else's list keeps its whole title on a row
@@ -35,9 +35,7 @@ test("a phone gives one's own list its buttons over the whole name, and one row 
   await mockBackend(page);
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
-  const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill("Frieren characters, every one");
-  await title.press("Enter");
+  await nameNewList(page, "Frieren characters, every one");
   const add = page.getByRole("textbox", { name: "Add a card" });
   if (!(await add.isVisible()))
     await page.getByRole("button", { name: "Search or type a name" }).click();

@@ -100,8 +100,7 @@ const tr: Translation = {
     faceNotMade: "Bu görsel profil resminiz olamaz. Başka birini seçin.",
     title: "Ayarlar",
     guestTitle: "Listelerinizi her cihazda tutmak için oturum açın.",
-    guestBody:
-      "Adınız ve resminiz, bir de listeleriniz tüm cihazlarınızda. Tema, renk ve dil hesap olmadan da çalışır.",
+    guestBody: "Ayrıca adınız ve resminiz. Tema, renk ve dil hesap olmadan da çalışır.",
     themeGuestNote: "Oturum açmış olsanız da olmasanız da bu cihazda saklanır.",
     nameTitle: "Adınız",
     nameBody: "Yayımladığınız her listede yazar olarak görünen ad. E-postanız asla gösterilmez.",
@@ -1846,6 +1845,7 @@ const tr: Translation = {
     placeKeys:
       "{start} bir kart, sonra bir seviye seçin — ya da {keys} tuşlarına basın. Sürüklemek de olur.",
     play: "{n} kartı tek tek yerleştirmek istemiyor musunuz? {play}: ikisinden iyisini seçin, seviyeler kendiliğinden dolsun.",
+    playRanked: "Kendi sıralamanızı mı yapmak istersiniz? {play}: ikisinden iyisini seçin.",
     add: "Bir ad yazın — resmi onunla gelir.",
     gotIt: "Anladım",
     noMore: "Başka ipucu yok",

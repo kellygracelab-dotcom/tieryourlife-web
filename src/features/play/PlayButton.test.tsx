@@ -59,6 +59,11 @@ describe("the Play button", () => {
     const button = screen.getByRole("button", { name: "Play" });
     expect(button).toHaveAttribute("data-tip", "play");
     expect(button).toHaveAttribute("data-tip-n", "25");
+    expect(button).not.toHaveAttribute("data-tip-ranked");
+    view.rerender(
+      <PlayButton onClick={onClick} disabled={false} saved={false} tip={25} tipRanked />,
+    );
+    expect(button).toHaveAttribute("data-tip-ranked", "true");
     fireEvent.click(button);
     expect(onClick).toHaveBeenCalled();
     expect(tipWanted("play")).toBe(false);

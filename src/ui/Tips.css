@@ -95,7 +95,11 @@
   border-radius: 8px;
 }
 
-/* It rises into place; still where motion is not wanted. */
+/*
+ * It rises into place; still where motion is not wanted. Never see-through,
+ * not even on its way in: a strip that faded in was caught half clear over
+ * the cards and tiers, hard to read (Designer, 360, 26.11).
+ */
 @media (prefers-reduced-motion: no-preference) {
   .tip {
     animation: tip-rise 160ms ease-out;
@@ -104,7 +108,6 @@
 
 @keyframes tip-rise {
   from {
-    opacity: 0;
     transform: translateY(8px);
   }
 }

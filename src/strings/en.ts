@@ -91,8 +91,7 @@ export const en = {
     faceNotMade: "That picture can’t be used. Pick another.",
     title: "Settings",
     guestTitle: "Sign in to keep your lists on every device.",
-    guestBody:
-      "Your name and picture, and your lists on all your devices. Theme, colour and language work without an account.",
+    guestBody: "Also your name and picture. Theme, colour and language work without an account.",
     themeGuestNote: "Kept on this device, signed in or not.",
     nameTitle: "Your name",
     nameBody: "The name shown as the author on every list you publish. Your email is never shown.",
@@ -1869,6 +1868,8 @@ export const en = {
     place: "{start} tap a card, then the tier it belongs in. Or drag it there.",
     placeKeys: "{start} pick a card, then a tier — or press {keys}. Dragging works too.",
     play: "Rather not place {n} by hand? {play}: pick the better of two and the tiers fill in.",
+    // On a board with every card placed, someone's ranked list: nothing to place by hand.
+    playRanked: "Rank these your way? {play}: pick the better of two.",
     add: "Type a name — the picture comes with it.",
     gotIt: "Got it",
     noMore: "No more tips",
