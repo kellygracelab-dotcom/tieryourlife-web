@@ -337,11 +337,41 @@ export function findCandidates(client: ApiClient, q: string): Promise<{ people: 
   });
 }
 
-/** How much waits for an admin: open reports and proposals. */
-export function loadAdminCounts(
-  client: ApiClient,
-): Promise<{ reports: number; proposals: number }> {
-  return client.request<{ reports: number; proposals: number }>("GET", "/lists/admin/counts");
+/**
+ * How much waits for an admin: open reports, proposals, and new lists waiting
+ * for approval (absent from a backend before 26.11.2026).
+ */
+export interface AdminCounts {
+  reports: number;
+  proposals: number;
+  awaitingApproval?: number;
+}
+
+/** How much waits for an admin: open reports, proposals and lists to approve. */
+export function loadAdminCounts(client: ApiClient): Promise<AdminCounts> {
+  return client.request<AdminCounts>("GET", "/lists/admin/counts");
+}
+
+/**
+ * A new list waiting for staff before it reaches the feed (CONTRACT, Approval
+ * before the feed, Danylo's decision of 26.11.2026). Its link already opens.
+ */
+export interface ApprovalList extends ListSummary {
+  /** When it went out (ms): the queue has the longest waiting first. */
+  publishedAt: number;
+  underReview: boolean;
+  /** Null on a list without its author's name, for anybody but the owner. */
+  publishedBy: { uid: string; name: string } | null;
+}
+
+/** The lists waiting for approval, the longest waiting first (up to 300). */
+export function loadApprovals(client: ApiClient): Promise<{ lists: ApprovalList[] }> {
+  return client.request<{ lists: ApprovalList[] }>("GET", "/lists/admin/approvals");
+}
+
+/** Lets a waiting list into the feed; a list that waits no more is fine too. */
+export function approveList(client: ApiClient, id: string): Promise<void> {
+  return client.request<void>("POST", `/lists/${encodeURIComponent(id)}/approve`);
 }
 
 /**

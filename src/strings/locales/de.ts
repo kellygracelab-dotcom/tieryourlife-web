@@ -730,6 +730,15 @@ const de: Translation = {
     menu: "Verwaltung",
     notAvailable: "Diese Seite ist nicht verfügbar.",
     reports: "Meldungen",
+    approvals: "Warten auf Freigabe",
+    approvalsCount: { one: "{n} Liste wartet", other: "{n} Listen warten" },
+    approvalsEmptyTitle: "Nichts wartet",
+    approvalsEmptyBody:
+      "Neue Listen warten hier, bevor sie in den Feed kommen. Ihre Links funktionieren schon.",
+    approvalsFailed: "Die wartenden Listen konnten nicht geladen werden.",
+    approvedList: "Freigegeben. Sie ist jetzt im Feed.",
+    removeList: "Entfernen",
+    publishedWhen: "Veröffentlicht {when}",
     proposals: "Vorschläge",
     sections: "Rubriken",
     topics: "Themen",
@@ -1492,6 +1501,9 @@ const de: Translation = {
     publishing: "Wird veröffentlicht…",
     publishedHeld: "Gespeichert. Sie wartet auf einen Moderator, bevor andere sie sehen können.",
     heldBody: "Sie wartet auf einen Moderator, bevor andere sie sehen können.",
+    awaitingApproval:
+      "Nach einer Prüfung erscheint sie im Feed. Mit dem Link kann sie jeder schon jetzt sehen.",
+    updatedAwaiting: "Aktualisiert. Nach einer Prüfung erscheint sie im Feed.",
     picturesDropped: {
       one: "{n} Bild von einer anderen Seite konnte nicht hinzugefügt werden. Veröffentliche noch einmal, um es erneut zu versuchen.",
       other:

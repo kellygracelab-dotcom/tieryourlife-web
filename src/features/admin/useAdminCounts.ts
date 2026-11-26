@@ -1,7 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
+import type { AdminCounts } from "../../api/admin";
 import { loadAdminCounts } from "../../lib/api";
 
-type Counts = { reports: number; proposals: number };
+type Counts = AdminCounts;
 
 // How many decisions were made on this page: each one has the count read again.
 let decisions = 0;
@@ -12,7 +13,7 @@ const subscribe = (listener: () => void) => {
 };
 const decided = () => decisions;
 
-/** A report or a proposal was decided here: the menu's count is asked for again. */
+/** A report, a proposal or a waiting list was decided here: the menu's count is asked for again. */
 export function noteAdminDecision(): void {
   decisions += 1;
   listeners.forEach((listener) => listener());
@@ -20,7 +21,7 @@ export function noteAdminDecision(): void {
 
 /**
  * How much waits for an admin, for the pill on the menu's Admin row: open
- * reports and proposals. A backend from before the count answers nothing, and
+ * reports, proposals, and new lists waiting for approval. A backend from before the count answers nothing, and
  * then the reports the menu already holds are the count.
  */
 export function useAdminCounts(
@@ -43,5 +44,5 @@ export function useAdminCounts(
     };
   }, [uid, load, round]);
   const mine = counted !== null && counted.uid === uid ? counted.value : null;
-  return mine === null ? reports : mine.reports + mine.proposals;
+  return mine === null ? reports : mine.reports + mine.proposals + (mine.awaitingApproval ?? 0);
 }

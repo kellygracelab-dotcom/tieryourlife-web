@@ -684,6 +684,16 @@ export const en = {
     menu: "Admin",
     notAvailable: "This page isn’t available.",
     reports: "Reports",
+    // New lists wait for staff before the feed (CONTRACT, Approval before the feed; Danylo, 26.11).
+    approvals: "Awaiting approval",
+    approvalsCount: { one: "{n} list waiting", other: "{n} lists waiting" },
+    approvalsEmptyTitle: "Nothing waiting",
+    approvalsEmptyBody:
+      "New lists from people wait here before they reach the feed. Their links already work.",
+    approvalsFailed: "Couldn’t load the lists waiting.",
+    approvedList: "Approved. It’s in the feed now.",
+    removeList: "Remove",
+    publishedWhen: "Published {when}",
     proposals: "Proposals",
     sections: "Sections",
     topics: "Topics",
@@ -1414,6 +1424,10 @@ export const en = {
     publishing: "Publishing…",
     publishedHeld: "Saved. It waits for a moderator before others can see it.",
     heldBody: "It waits for a moderator before others can see it.",
+    // A new list out by its link, waiting for staff before the feed (Danylo, 26.11.2026).
+    awaitingApproval:
+      "It will appear in the feed after a check. Anyone with the link can see it now.",
+    updatedAwaiting: "Updated. It will appear in the feed after a check.",
     picturesDropped: {
       one: "{n} picture from another site could not be added. Publish again to try it again.",
       other: "{n} pictures from other sites could not be added. Publish again to try them again.",

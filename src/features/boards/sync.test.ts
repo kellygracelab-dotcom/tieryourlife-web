@@ -1460,6 +1460,26 @@ describe("syncBoards", () => {
     expect(account.keeps).toHaveLength(sent);
   });
 
+  // Waiting for staff's approval before the feed (26.11.2026): each browser of
+  // the account learns it from lists/mine, and that staff let it in.
+  it("marks a board whose list waits for approval, and clears it once staff approve it", async () => {
+    const entry = { id: "p-wait", boardUid: "a", updatedAt: 800, awaitingApproval: true };
+    const { repository, account, run } = setUp([entry]);
+    account.holds({ ...films("a", "A"), publishedId: "p-wait" }, 1, "Chrome on Windows");
+    await run();
+    expect(repository.get("a")).toMatchObject({ publishedId: "p-wait", awaitingApproval: true });
+    expect(repository.get("a")?.heldForReview).toBeUndefined();
+    const sent = account.keeps.length;
+    expect(await run()).toMatchObject({ carried: 0, refused: 0 });
+    expect(account.keeps.some(({ request }) => "awaitingApproval" in request)).toBe(false);
+
+    account.api.published = () => Promise.resolve([{ ...entry, awaitingApproval: false }]);
+    await run();
+    expect(repository.get("a")).toMatchObject({ publishedId: "p-wait" });
+    expect(repository.get("a")?.awaitingApproval).toBeUndefined();
+    expect(account.keeps).toHaveLength(sent);
+  });
+
   // A board brought down from the account has its list but not when it went out:
   // the list's own time tells whether a change since is still to send (23.11).
   it("dates the publication of a board from the account by its list, so Update offers a later change", async () => {

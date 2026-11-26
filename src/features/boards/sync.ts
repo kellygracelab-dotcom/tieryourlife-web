@@ -14,6 +14,7 @@ import {
   coverFocusOf,
   favouriteChangedAtOf,
   liveItems,
+  setAwaiting,
   setHeld,
   setPublished,
   takeFavourite,
@@ -63,6 +64,8 @@ export interface PublishedEntry {
   itemCount?: number;
   /** Kept, but out of the feed until a moderator looks; left out or false when it is not. */
   underReview?: boolean;
+  /** Out by its link, in no feed until staff approve it; left out or false when it is not. */
+  awaitingApproval?: boolean;
 }
 
 export interface SyncDeps {
@@ -777,6 +780,9 @@ async function takeOver(
     ...(latest.heldForReview === true && latest.publishedId === board.publishedId
       ? { heldForReview: true }
       : {}),
+    ...(latest.awaitingApproval === true && latest.publishedId === board.publishedId
+      ? { awaitingApproval: true }
+      : {}),
     takenFrom: board.takenFrom ?? latest.takenFrom,
     ...((board.origin ?? latest.origin) ? { origin: board.origin ?? latest.origin } : {}),
     ...((board.rankingChoice ?? latest.rankingChoice)
@@ -952,6 +958,18 @@ async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
     if (held !== (asked.heldForReview === true)) continue;
     if (held !== (entry.underReview === true)) changed.push(setHeld(board, !held));
   }
+  // The same for a list waiting for approval: staff let it in, or it waits.
+  for (const asked of claimed) {
+    const entry = byId.get(asked.publishedId ?? "");
+    const at = changed.findIndex((one) => one.uid === asked.uid);
+    const board = at === -1 ? deps.repository.get(asked.uid) : changed[at]!;
+    if (board === null || entry === undefined || board.publishedId !== asked.publishedId) continue;
+    const waits = board.awaitingApproval === true;
+    if (waits !== (asked.awaitingApproval === true)) continue;
+    if (waits === (entry.awaitingApproval === true)) continue;
+    if (at === -1) changed.push(setAwaiting(board, !waits));
+    else changed[at] = setAwaiting(board, !waits);
+  }
   // A board that came from the account knows its list but not when it went
   // out (boardOf leaves that empty): the list's own time tells, as for a board
   // getting its list back. Without it the board read as sent for ever, and a
@@ -994,6 +1012,8 @@ async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
         entry.underReview === true,
       ),
     );
+    const now = changed[changed.length - 1]!;
+    changed[changed.length - 1] = setAwaiting(now, entry.awaitingApproval === true);
   }
   if (changed.length > 0) deps.repository.saveAll(changed);
 }

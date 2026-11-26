@@ -1233,6 +1233,31 @@ describe("ListPage for its author", () => {
     }
   });
 
+  // New and waiting for staff before the feed (Danylo, 26.11.2026): its author
+  // is told, and its link is handed out, since it already opens for everybody.
+  it("tells its author a new list reaches the feed after a check, and still gives its link", async () => {
+    mocks.loadList.mockResolvedValue({ ...list, awaitingApproval: true });
+    openAs(author);
+    await screen.findByRole("heading", { level: 1 });
+    expect(
+      within(document.querySelector<HTMLElement>(".list-head")!).getByText(
+        "It will appear in the feed after a check. Anyone with the link can see it now.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Copy link" }).length).toBeGreaterThan(0);
+  });
+
+  it("says nothing of a check to anybody else on a list waiting for one", async () => {
+    mocks.loadList.mockResolvedValue({ ...list, awaitingApproval: true });
+    openAs(member);
+    await screen.findByRole("heading", { level: 1 });
+    expect(
+      screen.queryByText(
+        "It will appear in the feed after a check. Anyone with the link can see it now.",
+      ),
+    ).toBeNull();
+  });
+
   it("says nothing of a moderator on its author's list that is out", async () => {
     mocks.loadList.mockResolvedValue({ ...list, underReview: false });
     openAs(author);

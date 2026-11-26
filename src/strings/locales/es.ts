@@ -739,6 +739,15 @@ const es: Translation = {
     menu: "Administración",
     notAvailable: "Esta página no está disponible.",
     reports: "Denuncias",
+    approvals: "Esperan aprobación",
+    approvalsCount: { one: "{n} lista esperando", other: "{n} listas esperando" },
+    approvalsEmptyTitle: "Nada en espera",
+    approvalsEmptyBody:
+      "Las listas nuevas esperan aquí antes de llegar al feed. Sus enlaces ya funcionan.",
+    approvalsFailed: "No se pudieron cargar las listas en espera.",
+    approvedList: "Aprobada. Ya está en el feed.",
+    removeList: "Quitar",
+    publishedWhen: "Publicada {when}",
     proposals: "Propuestas",
     sections: "Secciones",
     topics: "Temas",
@@ -1546,6 +1555,9 @@ const es: Translation = {
     publishing: "Publicando…",
     publishedHeld: "Guardada. Espera a un moderador antes de que otros puedan verla.",
     heldBody: "Espera a un moderador antes de que otros puedan verla.",
+    awaitingApproval:
+      "Aparecerá en el feed tras una revisión. Cualquiera con el enlace ya puede verla.",
+    updatedAwaiting: "Actualizada. Aparecerá en el feed tras una revisión.",
     picturesDropped: {
       one: "No se pudo añadir {n} imagen de otro sitio. Vuelve a publicar para intentarlo de nuevo.",
       many: "No se pudieron añadir {n} imágenes de otros sitios. Vuelve a publicar para intentarlo de nuevo.",

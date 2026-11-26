@@ -1,5 +1,6 @@
 import { Link, Navigate, useParams } from "react-router";
 import type { AdminRole } from "../api/admin";
+import { ApprovalsPane } from "../features/admin/ApprovalsPane";
 import { HousePane } from "../features/admin/HousePane";
 import { ListsPane } from "../features/admin/ListsPane";
 import { ModeratorsPane } from "../features/admin/ModeratorsPane";
@@ -20,6 +21,7 @@ import { usePageTitle } from "../app/pageTitle";
 export const ADMIN_PATH = "/admin";
 
 const PANE_LOOK: Record<Pane, { icon: IconName; label: string }> = {
+  approvals: { icon: "schedule", label: strings.admin.approvals },
   reports: { icon: "flag", label: strings.admin.reports },
   proposals: { icon: "inbox", label: strings.admin.proposals },
   sections: { icon: "grid_view", label: strings.admin.sections },
@@ -55,6 +57,8 @@ function PaneList({ panes, current }: { panes: readonly Pane[]; current: Pane | 
 
 function PaneBody({ pane, adminRole: role }: { pane: Pane; adminRole: AdminRole }) {
   switch (pane) {
+    case "approvals":
+      return <ApprovalsPane />;
     case "reports":
       return <ModerationPage />;
     case "proposals":
@@ -105,7 +109,7 @@ export function AdminPage() {
   const panes = panesFor(role.role);
   const wide = width === "expanded";
   const current: Pane | null =
-    isPane(asked) && panes.includes(asked) ? asked : wide ? "reports" : null;
+    isPane(asked) && panes.includes(asked) ? asked : wide ? "approvals" : null;
 
   // On a narrow screen the list is a page of its own, and a pane opens over it.
   if (!wide && current === null) {

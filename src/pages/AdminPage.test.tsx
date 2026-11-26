@@ -61,11 +61,12 @@ beforeEach(() => {
 });
 
 describe("AdminPage", () => {
-  it("opens all eight panes to the owner, with Reports first", async () => {
+  it("opens all nine panes to the owner, with the lists awaiting approval first", async () => {
     mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
     open();
     expect(await screen.findByRole("heading", { name: "Admin" })).toBeInTheDocument();
     expect(panes()).toEqual([
+      "/admin/approvals",
       "/admin/reports",
       "/admin/proposals",
       "/admin/sections",
@@ -75,7 +76,10 @@ describe("AdminPage", () => {
       "/admin/statistics",
       "/admin/moderators",
     ]);
-    expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Awaiting approval" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("has one h1, Admin, with every pane's title under it, wide or narrow", async () => {
@@ -134,6 +138,7 @@ describe("AdminPage", () => {
     open("/admin/moderators");
     await screen.findByRole("heading", { name: "Admin" });
     expect(panes()).toEqual([
+      "/admin/approvals",
       "/admin/reports",
       "/admin/proposals",
       "/admin/sections",
@@ -141,7 +146,10 @@ describe("AdminPage", () => {
       "/admin/lists",
       "/admin/house",
     ]);
-    expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Awaiting approval" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("opens Statistics to the owner, and an old Searches link there", async () => {
@@ -161,7 +169,10 @@ describe("AdminPage", () => {
     open("/admin/statistics");
     await screen.findByRole("heading", { name: "Admin" });
     expect(screen.queryByRole("heading", { name: "Statistics" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Awaiting approval" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("opens Lists to a moderator", async () => {
@@ -201,6 +212,7 @@ describe("AdminPage", () => {
     open();
     await screen.findByRole("heading", { name: "Admin" });
     expect(panes()).toEqual([
+      "/admin/approvals",
       "/admin/reports",
       "/admin/proposals",
       "/admin/sections",

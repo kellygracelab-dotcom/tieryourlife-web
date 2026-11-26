@@ -256,6 +256,11 @@ export interface MyList extends ListSummary {
   boardUid?: string | null;
   /** Kept, but held for a moderator: out of the feed, and its link answers nobody yet. */
   underReview?: boolean;
+  /**
+   * Out by its link but in no feed until staff approve it (CONTRACT, Approval
+   * before the feed, 26.11.2026); absent once it is, and on older backends.
+   */
+  awaitingApproval?: boolean;
 }
 
 /** The lists this account published from the app, newest first; the backend orders them. */
@@ -362,6 +367,11 @@ export interface Published {
    * look: its link answers 404 to everybody, the author too.
    */
   underReview?: boolean;
+  /**
+   * Out by its link but in no feed until staff approve it (CONTRACT, Approval
+   * before the feed, 26.11.2026); absent once it is, and on older backends.
+   */
+  awaitingApproval?: boolean;
   /** The list's revision after this write, or the existing list's; absent on a ranking. */
   revision?: number;
 }

@@ -327,6 +327,7 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
     topic: topicOf(source.topic),
     ...(source.topicOff === true ? { topicOff: true } : {}),
     ...(source.heldForReview === true ? { heldForReview: true } : {}),
+    ...(source.awaitingApproval === true ? { awaitingApproval: true } : {}),
     anonymous: source.anonymous === true,
     play,
     ...(otherPlay === null ? {} : { otherPlay }),

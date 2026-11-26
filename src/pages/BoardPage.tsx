@@ -725,11 +725,15 @@ function OpenBoard({
         ? strings.boards.unpublished
         : what === "held"
           ? strings.boards.publishedHeld
-          : what === "updated"
-            ? strings.boards.updatedShort
-            : what === "ranking"
-              ? strings.boards.rankedShort
-              : strings.boards.publishedShort;
+          : what === "awaiting"
+            ? `${strings.boards.publishedShort}. ${strings.boards.awaitingApproval}`
+            : what === "updatedAwaiting"
+              ? strings.boards.updatedAwaiting
+              : what === "updated"
+                ? strings.boards.updatedShort
+                : what === "ranking"
+                  ? strings.boards.rankedShort
+                  : strings.boards.publishedShort;
     // Pictures from other sites that could not be fetched or checked in time (QA S11).
     const lost = plural(strings.boards.picturesDropped, dropped);
     const text =

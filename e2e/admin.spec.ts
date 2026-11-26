@@ -155,3 +155,54 @@ test("staff see a topic's picture cut as its tile on the site cuts it", async ({
     expect(Math.abs(staff[side] - tile[side])).toBeLessThan(0.07);
   }
 });
+
+// New lists wait for staff before the feed (Danylo, 26.11.2026): their queue
+// is the first pane, the longest waiting first; Approve lets one in.
+test("staff approve a new list waiting before the feed from the first pane", async ({ page }) => {
+  await signIn(page);
+  const approved: string[] = [];
+  const day = 24 * 60 * 60 * 1000;
+  const waiting = (id: string, title: string, days: number) => ({
+    id,
+    title,
+    authorUid: "u2",
+    authorName: "Fern",
+    authorPhotoUrl: null,
+    category: "film_tv",
+    itemCount: 7,
+    coverImageUrl: null,
+    previewImages: [],
+    tierColors: ["#ff7f7f"],
+    updatedAt: Date.now() - days * day,
+    takeCount: 0,
+    publishedAt: Date.now() - days * day,
+    underReview: false,
+    publishedBy: { uid: "u2", name: "Fern" },
+  });
+  await page.route("**/lists/sections", (route) =>
+    route.fulfill({ json: { sections: SECTIONS, role: "moderator", version: 1 } }),
+  );
+  await page.route("**/lists/admin/approvals", (route) =>
+    route.fulfill({
+      json: {
+        lists: [waiting("L-old", "Ramen in Lviv", 3.5), waiting("L-new", "Frieren cast", 0)],
+      },
+    }),
+  );
+  await page.route("**/lists/*/approve", (route) => {
+    approved.push(new URL(route.request().url()).pathname);
+    return route.fulfill({ status: 204 });
+  });
+  await page.goto("/admin/approvals");
+  await expect(page.getByRole("heading", { level: 2, name: "Awaiting approval" })).toBeVisible();
+  const cards = page.getByRole("list", { name: "Awaiting approval" }).getByRole("listitem");
+  await expect(cards.getByRole("heading", { level: 3 })).toHaveText([
+    "Ramen in Lviv",
+    "Frieren cast",
+  ]);
+  await expect(cards.first()).toContainText("Published 3 days ago");
+  await cards.first().getByRole("button", { name: "Approve" }).click();
+  await expect(page.locator(".snackbar")).toContainText("Approved. It’s in the feed now.");
+  await expect(cards).toHaveCount(1);
+  expect(approved).toEqual(["/lists/L-old/approve"]);
+});

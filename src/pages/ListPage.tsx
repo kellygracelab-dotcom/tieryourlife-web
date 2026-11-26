@@ -1042,6 +1042,12 @@ function OpenList({
               <p className="byline">{strings.boards.heldBody}</p>
             </div>
           )}
+          {/* New and waiting for staff before the feed: its link works for everybody already. */}
+          {own && list.awaitingApproval === true && list.underReview !== true && (
+            <div className="list-head__lines">
+              <p className="byline">{strings.boards.awaitingApproval}</p>
+            </div>
+          )}
           {/* A list that stands without an author has no line naming one. */}
           {!editorial && (
             <div className="list-head__lines">

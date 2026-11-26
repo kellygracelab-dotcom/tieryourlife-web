@@ -45,6 +45,8 @@ export function useAdminRole(load: () => Promise<AdminSections> = loadAdminSecti
  * too: the backend publishes as the house for the owner and moderators.
  */
 export const PANES = [
+  // New lists waiting before the feed come first (Danylo, 26.11.2026).
+  "approvals",
   "reports",
   "proposals",
   "sections",
