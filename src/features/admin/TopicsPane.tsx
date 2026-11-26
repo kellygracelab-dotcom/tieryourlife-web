@@ -166,7 +166,7 @@ export function TopicsPane({
           {topics.map((topic) => (
             <li key={topic.id} className="admin-topics__row">
               <span
-                className="admin-topics__square"
+                className="admin-topics__tile"
                 style={{ ...sectionStyle(look), ...topicStyle(look) }}
                 aria-hidden="true"
               >

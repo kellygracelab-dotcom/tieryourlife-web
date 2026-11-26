@@ -302,7 +302,7 @@
 }
 
 .admin-order__thumb,
-.admin-topics__square {
+.admin-topics__tile {
   --tint: var(--tint-light);
   display: flex;
   align-items: center;
@@ -513,11 +513,12 @@
   --tint: var(--tint-dark);
 }
 
-.proposal__square {
+/* A proposed topic in its tile's shape too, cut as the site will cut it. */
+.proposal__topic {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
+  width: 144px;
   height: 48px;
   border-radius: 12px;
   overflow: hidden;
@@ -659,7 +660,7 @@
   color: var(--ink-dim);
 }
 
-/* Topics and people: rows with a square or a face. */
+/* Topics and people: rows with a topic's tile or a face. */
 .admin-topics,
 .admin-people {
   margin: 0;
@@ -678,9 +679,15 @@
   border-top: 1px solid var(--line);
 }
 
-.admin-topics__square {
-  width: 36px;
-  height: 36px;
+/*
+ * A topic as its tile on the site draws it: three times as wide as high, the
+ * picture cut there by its focus (TOPIC_PREVIEWS). A square showed the whole
+ * height of a wide picture whatever its focus said, so a tile cut to a dark
+ * corner looked fine here (Marketing, Star Wars, 26.11).
+ */
+.admin-topics__tile {
+  width: 96px;
+  height: 32px;
   border-radius: 8px;
   overflow: hidden;
   background: var(--topic-bg-light, var(--tint));
@@ -1093,21 +1100,21 @@
     --tint: var(--tint-dark);
   }
 
-  :root:not([data-theme="light"]) :is(.admin-order__thumb, .admin-topics__square) {
+  :root:not([data-theme="light"]) :is(.admin-order__thumb, .admin-topics__tile) {
     --tint: var(--tint-dark);
   }
 
-  :root:not([data-theme="light"]) :is(.proposal__square, .admin-topics__square) {
+  :root:not([data-theme="light"]) :is(.proposal__topic, .admin-topics__tile) {
     background: var(--topic-bg-dark);
     color: var(--topic-icon-dark);
   }
 }
 
-:root[data-theme="dark"] :is(.admin-order__thumb, .admin-topics__square, .admin-lists__swatch) {
+:root[data-theme="dark"] :is(.admin-order__thumb, .admin-topics__tile, .admin-lists__swatch) {
   --tint: var(--tint-dark);
 }
 
-:root[data-theme="dark"] :is(.proposal__square, .admin-topics__square) {
+:root[data-theme="dark"] :is(.proposal__topic, .admin-topics__tile) {
   background: var(--topic-bg-dark);
   color: var(--topic-icon-dark);
 }

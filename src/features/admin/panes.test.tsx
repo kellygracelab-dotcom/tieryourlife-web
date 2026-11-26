@@ -504,13 +504,13 @@ describe("ProposalsPane", () => {
     expect(deps.mergeSection).toHaveBeenCalledWith("street-food", "food");
   });
 
-  it("shows a proposed topic's own picture in its square", async () => {
+  it("shows a proposed topic's own picture in its tile", async () => {
     deps.topics = vi.fn(async () => ({
       topics: [{ ...pendingTopic, pictureUrl: "https://pictures.test/speedruns.webp" }],
     }));
     wrap(<ProposalsPane adminRole="owner" deps={deps} />);
     const card = (await screen.findByRole("heading", { name: "Speedruns" })).closest("li")!;
-    expect(card.querySelector(".proposal__square img")).toHaveAttribute(
+    expect(card.querySelector(".proposal__topic img")).toHaveAttribute(
       "src",
       "https://pictures.test/speedruns.webp",
     );
@@ -623,16 +623,16 @@ describe("TopicsPane", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("draws a topic's own picture in its square, and its section's icon without one", async () => {
+  it("draws a topic's own picture in its tile, and its section's icon without one", async () => {
     wrap(<TopicsPane adminRole="owner" deps={deps} />);
     const pictured = (await screen.findByText("Indies")).closest("li")!;
-    expect(pictured.querySelector(".admin-topics__square img")).toHaveAttribute(
+    expect(pictured.querySelector(".admin-topics__tile img")).toHaveAttribute(
       "src",
       "https://pictures.test/indies.webp",
     );
     const plain = screen.getByText("Pokémon").closest("li")!;
-    expect(plain.querySelector(".admin-topics__square img")).toBeNull();
-    expect(plain.querySelector(".admin-topics__square .ms")).not.toBeNull();
+    expect(plain.querySelector(".admin-topics__tile img")).toBeNull();
+    expect(plain.querySelector(".admin-topics__tile .ms")).not.toBeNull();
   });
 
   it("renames in its dialog, and lets the owner alone delete an empty topic", async () => {

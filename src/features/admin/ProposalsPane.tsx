@@ -741,7 +741,7 @@ function TopicProposal({
     <li className="proposal">
       <div className="proposal__looks" aria-hidden="true">
         <span
-          className="proposal__square"
+          className="proposal__topic"
           style={look === undefined ? undefined : { ...sectionStyle(look), ...topicStyle(look) }}
         >
           <TopicArt topic={topic} icon={look?.icon ?? "label"} />
