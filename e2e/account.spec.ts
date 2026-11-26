@@ -68,9 +68,10 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   await press(window.getByRole("radio", { name: "Film & TV" }), hasTouch);
   await expect(window.getByText("Pick a section first.")).toHaveCount(0);
 
-  // The first try is refused: said in words, Publish stays, nothing kept.
+  // The first try is refused: the window, closed at once, opens again on it in
+  // words; Publish stays, nothing kept (publish-update-speed BRIEF, 4 and 7).
   // (An alert carries its icon's name as text, so the words are looked for in it.)
-  account.failNext.set("POST /lists", 503);
+  account.failNext.set("POST /lists", 418);
   await press(publishButton, hasTouch);
   await expect(
     window
@@ -80,10 +81,13 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   await expect(publishButton).toBeEnabled();
   expect(account.published.size).toBe(0);
 
+  // A server that is down for a moment is tried again by itself.
+  account.failNext.set("POST /lists", 503);
   await press(publishButton, hasTouch);
-  // The window goes by itself; said under the board, with View; Share where Published stood.
+  // The window goes at once; the header says Publishing… meanwhile; then it is
+  // said under the board, with View; Share where Publish stood.
   await expect(window).toHaveCount(0);
-  await expect(page.locator(".snackbar")).toContainText("Published");
+  await expect(page.locator(".snackbar")).toContainText("Your list is live");
   await expect(page.locator(".snackbar").getByRole("button", { name: "View" })).toBeVisible();
   await expect(header).toHaveCount(0);
   await expect(page.locator(".list-head .share-button")).toBeVisible();
@@ -163,7 +167,7 @@ test("publishes from the board's header, and View opens what others see", async 
   );
   await press(window.getByRole("button", { name: "Publish", exact: true }), hasTouch);
   const said = page.locator(".snackbar");
-  await expect(said).toContainText("Published");
+  await expect(said).toContainText("Your list is live");
   await expect(window).toHaveCount(0);
   expect(account.publishes).toHaveLength(1);
   await press(said.getByRole("button", { name: "View" }), hasTouch);
@@ -181,7 +185,7 @@ test("keeps local edits after PUBLICATION_CHANGED and retries the same publicati
   const window = page.getByRole("dialog", { name: "Publish “Festival films”" });
   await press(window.getByRole("radio", { name: "Film & TV" }), hasTouch);
   await press(window.getByRole("button", { name: "Publish", exact: true }), hasTouch);
-  await expect(page.locator(".snackbar")).toContainText("Published");
+  await expect(page.locator(".snackbar")).toContainText("Your list is live");
 
   // A change on the board, sent while the list changed on the backend.
   await showRankedList(page, hasTouch);
@@ -201,17 +205,15 @@ test("keeps local edits after PUBLICATION_CHANGED and retries the same publicati
     },
     { times: 1 },
   );
-  // Update goes from the header at once; refused, the window opens on what was said.
+  // Update goes from the header in the background; refused, Update is there
+  // again with one line and Try again, no window (publish-update-speed BRIEF, 4).
   await press(header, hasTouch);
-  const out = page.getByRole("dialog", { name: "Festival films" });
-  await expect(
-    out.getByRole("alert").filter({
-      hasText:
-        "The published list changed during the update. Your edits are saved on this device. Try publishing again.",
-    }),
-  ).toBeVisible();
-  await expect(out.getByText("Changes not published yet")).toBeVisible();
-  await expect(out.getByRole("button", { name: "Update", exact: true })).toBeEnabled();
+  await expect(page.locator(".snackbar")).toContainText(
+    "Couldn’t update. Your changes are safe here.",
+  );
+  await expect(page.locator(".snackbar").getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(header.locator(".publish-button__word")).toHaveText("Update");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(refusedBody).toMatchObject({ title: "Festival films" });
   expect(refusedBody).not.toHaveProperty("anonymous");
 

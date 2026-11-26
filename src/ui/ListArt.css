@@ -23,6 +23,13 @@
   opacity: 1;
 }
 
+/* The collage shown before an Update, under the new one until it has come. */
+.art > .art__before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
 /* One soft shimmer over the whole tile while any picture is on its way, not
    one per cell. */
 .art--waiting::after {

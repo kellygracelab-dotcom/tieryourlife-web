@@ -16,4 +16,12 @@ describe("a list's label in Your lists (artboard 42)", () => {
     expect(labelOf({ ...fresh(), authorName: "someone" })).toBe("Saved");
     expect(labelOf({ ...fresh(), takenFrom: "L3" })).toBe("Saved");
   });
+
+  // A send in the background says so on its row (publish-update-speed BRIEF, 2 and 7).
+  it("says Public · updating while an Update is on its way, and Publishing… for a first Publish", () => {
+    const out = { ...fresh(), publishedId: "L1", authorName: "danylo" };
+    expect(labelOf(out, "updating")).toBe("Public · updating");
+    expect(labelOf(fresh(), "publishing")).toBe("Publishing…");
+    expect(labelOf(out, null)).toBe("Public");
+  });
 });

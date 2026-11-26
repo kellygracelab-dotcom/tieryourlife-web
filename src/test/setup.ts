@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
+import { resetRunsForTests } from "../features/boards/publicationRuns";
 import { resetStorageTroubleForTests } from "../lib/storage";
 
 afterEach(cleanup);
@@ -23,3 +24,6 @@ window.localStorage.setItem("tyl:owners", "1");
 // A test that switches to fake timers and fails before switching back would
 // leave every later test in its file on a frozen clock.
 afterEach(() => vi.useRealTimers());
+
+// A publish on its way is kept outside the page (publicationRuns), and a test is a visit.
+afterEach(() => resetRunsForTests());

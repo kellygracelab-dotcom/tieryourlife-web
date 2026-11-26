@@ -58,6 +58,7 @@ import {
   usePublicationState,
   type OnPublished,
 } from "../features/boards/usePublication";
+import { runOf } from "../features/boards/publicationRuns";
 import { noteRankingEdit } from "../features/boards/sourceRanking";
 import { RankedList } from "../features/boards/RankedList";
 import { filedUnder } from "../features/boards/sectionChoices";
@@ -347,6 +348,8 @@ export function BoardPage(props: BoardPageProps) {
 
 /** The board a guest pressed Publish on, till they are signed in: this tab's. */
 const PUBLISH_AFTER_SIGN_IN = "tyl:publishAfterSignIn";
+/** How long an Update goes before its hint says the person may go on (BRIEF, 2). */
+const LONG_SEND_MS = 60_000;
 
 function OpenBoard({
   repository: ownBoards = site,
@@ -457,6 +460,28 @@ function OpenBoard({
   const { notice, setNotice, done: forget, acted } = useBoardNotice();
   // Where a publish stands: the header's button and the sheet's press the same one.
   const publication = usePublicationState(`${uid}:${me ?? ""}`);
+  // The list on screen now: a send that ends after the person went to
+  // another list says nothing there (BRIEF, 3).
+  const shownUid = useRef(uid);
+  shownUid.current = uid;
+  // An Update over a minute: its hint says the person may go on, no error yet (BRIEF, 2).
+  const [longSend, setLongSend] = useState(false);
+  const sendingSince = publication.busy === "updating" ? publication.since : 0;
+  useEffect(() => {
+    setLongSend(false);
+    if (sendingSince === 0) return;
+    const left = sendingSince + LONG_SEND_MS - Date.now();
+    const timer = setTimeout(
+      () => {
+        setLongSend(true);
+        setNotice({ text: strings.boards.stillUpdating });
+      },
+      Math.max(0, left),
+    );
+    return () => clearTimeout(timer);
+    // The notice is the page's own, the same function each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendingSince]);
   // A paste or a drop for a new card, on its way to the add box.
   const [incoming, setIncoming] = useState<Incoming | null>(null);
   const incomingTaken = useCallback(() => setIncoming(null), []);
@@ -719,7 +744,11 @@ function OpenBoard({
 
   // Said under the board: out, sent again, in a list's Rankings, or down.
   // Out where others see it, with View to go and look (Danylo, 16.11.2026).
+  // A send ends in the background: said only to a person still on this list,
+  // nothing pops up on another page (BRIEF, 3).
+  const sentFrom = uid;
   const onPublished: OnPublished = (what, _id, dropped = 0) => {
+    if (shownUid.current !== sentFrom) return;
     const said =
       what === "unpublished"
         ? strings.boards.unpublished
@@ -730,7 +759,7 @@ function OpenBoard({
             : what === "updatedAwaiting"
               ? strings.boards.updatedAwaiting
               : what === "updated"
-                ? strings.boards.updatedShort
+                ? strings.boards.updatedInCommunity
                 : what === "ranking"
                   ? strings.boards.rankedShort
                   : strings.boards.publishedShort;
@@ -745,7 +774,10 @@ function OpenBoard({
         : {
             text,
             action: {
-              text: strings.boards.seePublished,
+              text:
+                what === "updated" || what === "updatedAwaiting"
+                  ? strings.boards.openInCommunity
+                  : strings.boards.seePublished,
               onClick: () => void navigate(where, { state: AS_COMMUNITY }),
             },
           },
@@ -762,21 +794,29 @@ function OpenBoard({
     now,
   });
   // The header's button (Danylo's canvas, 16.11.2026): Update sends the
-  // changes at once, and the window opens only to say why it could not; the
-  // others open the Publish window, as does a press while a send is on its way.
+  // changes at once in the background, the others open the Publish window. A
+  // press while a send is on its way does nothing: the button says it is busy
+  // (BRIEF, 1). Refused, Update is there again with one line and Try again;
+  // the window opens only where the refusal needs it (BRIEF, 4).
   const publishFromHeader = () => {
-    const sending = publication.busy !== "idle";
-    if (
-      publishKind !== "update" ||
-      sending ||
-      me === null ||
-      publishProblemsOf(latest()).length > 0
-    ) {
+    if (runOf(publication.key).busy !== "idle") return;
+    if (publishKind !== "update" || me === null || publishProblemsOf(latest()).length > 0) {
       openPublish();
       return;
     }
     void publish.send("updated").then((out) => {
-      if (!out) openPublish();
+      const { failure, rankInstead } = runOf(publication.key);
+      if (out || shownUid.current !== sentFrom || (failure === null && rankInstead === null)) {
+        return;
+      }
+      if (rankInstead !== null || failure?.error.kind === "notFound") {
+        openPublish();
+        return;
+      }
+      setNotice({
+        text: strings.boards.updateFailed,
+        action: { text: strings.boards.tryAgain, onClick: publishFromHeader },
+      });
     });
   };
 
@@ -1227,6 +1267,8 @@ function OpenBoard({
               kind={publishKind}
               main={view.pool.length === 0}
               busy={publishBusy}
+              waiting={publication.waiting}
+              long={longSend}
               onClick={publishFromHeader}
             />
           )}
@@ -1356,6 +1398,7 @@ function OpenBoard({
           publication={publication}
           topics={topics}
           onClose={closePanel}
+          onRefused={() => openPublish()}
           now={now}
           start={publishStart}
           signInToPublish={signInToPublish}

@@ -51,6 +51,14 @@ interface ListArtProps {
 }
 
 const MOSAIC_MAX = 6;
+
+/**
+ * The collage each list last showed on this visit, by its address without the
+ * version: a tile drawn again after an Update shows it until the new one has
+ * come, the server drawing that one when first asked.
+ */
+const lastCollage = new Map<string, string>();
+const collageBase = (url: string): string => url.split("?")[0] ?? url;
 const BARS_MAX = 5;
 
 // The feed shows the same thing the app does: the cover if there is one,
@@ -78,6 +86,12 @@ export function ListArt({
   // back to the title or the colours, as for a list without pictures.
   const [loaded, setLoaded] = useState<ReadonlySet<string>>(() => new Set());
   const [collageFailed, setCollageFailed] = useState<string | null>(null);
+  // The collage last shown: an Update gives the list a new one (its ?v=), drawn
+  // by the server when first asked, and until it has come the old one stays,
+  // never a grey tile (Designer, background Update, 26.11).
+  const [shownCollage, setShownCollage] = useState<string | null>(() =>
+    collage === null ? null : (lastCollage.get(collageBase(collage)) ?? null),
+  );
   const [broken, setBroken] = useState<ReadonlySet<string>>(() => new Set());
   const add = (set: typeof setLoaded, key: string) => () =>
     set((seen) => (seen.has(key) ? seen : new Set(seen).add(key)));
@@ -172,15 +186,33 @@ export function ListArt({
   // the same way; the pictures one by one only if it will not load.
   if (collage !== null && collage !== collageFailed) {
     const key = `collage-${collage}`;
+    const before =
+      shownCollage !== null && shownCollage !== collage && !loaded.has(key) ? shownCollage : null;
     return (
-      <div className={waiting([key]) ? "art art--collage art--waiting" : "art art--collage"}>
+      <div
+        className={
+          waiting([key]) && before === null ? "art art--collage art--waiting" : "art art--collage"
+        }
+      >
+        {before !== null && (
+          <FocusedPicture
+            key={`collage-${before}`}
+            className="art__picture art__shown art__before"
+            src={before}
+            focus={null}
+          />
+        )}
         <FocusedPicture
           key={key}
           className={cellClass(key, "art__picture")}
           src={collage}
           focus={null}
           {...asked}
-          onLoad={add(setLoaded, key)}
+          onLoad={() => {
+            add(setLoaded, key)();
+            setShownCollage(collage);
+            lastCollage.set(collageBase(collage), collage);
+          }}
           onError={() => setCollageFailed(collage)}
         />
       </div>

@@ -1,7 +1,6 @@
-import { useState } from "react";
 import type { AccountAction } from "../../api/client";
 import type { AddedCard } from "../../api/community";
-import { errorOf, type ApiError } from "../../api/errors";
+import { errorOf } from "../../api/errors";
 import type { Published, PublishRequest } from "../../api/lists";
 import { isOwnList, type PublishedList } from "../../api/types";
 import type { Session } from "../../app/session";
@@ -23,6 +22,19 @@ import {
   type BoardTopic,
 } from "./model";
 import { publishRequestOf } from "./publish";
+import {
+  beginRun,
+  cancelRun,
+  changeRun,
+  endRun,
+  onItsWay,
+  retrying,
+  useRun,
+  type PublishBusy,
+  type PublishFailure,
+} from "./publicationRuns";
+
+export type { PublishBusy, PublishFailure } from "./publicationRuns";
 import { sentTopic, settledTopic, type FindTopic } from "./topic";
 
 export type PublishBoard = (request: PublishRequest, action: AccountAction) => Promise<Published>;
@@ -57,23 +69,19 @@ export type OnPublished = (
   dropped?: number,
 ) => void;
 
-export type PublishBusy = "idle" | "publishing" | "updating" | "unpublishing";
-
-/** A refusal, by the press it answers: each is said beside its own button. */
-export interface PublishFailure {
-  error: ApiError;
-  on: "publish" | "update" | "takeDown";
-  /** Refused as one's ranking (K3): said in a ranking's words, naming a card of one's own. */
-  ranking?: readonly AddedCard[];
-}
-
 /**
  * Where a publish stands, kept by the board's page: the header's button and
  * the settings sheet press the same one, so a refusal met on the board is
  * there to read when the sheet opens on it.
  */
 export interface PublicationState {
+  /** The board and the account it is kept for (publicationRuns.runKey). */
+  key: string;
   busy: PublishBusy;
+  /** Tried three times without a connection: waiting for one (BRIEF, 4). */
+  waiting: boolean;
+  /** When the send on its way began (ms); 0 when none is. */
+  since: number;
   failure: PublishFailure | null;
   /** The backend said the copy goes out only as one's ranking of this list (409 RANK_INSTEAD). */
   rankInstead: string | null;
@@ -82,27 +90,23 @@ export interface PublicationState {
   setRankInstead: (listId: string | null) => void;
 }
 
-interface Kept {
-  key: string;
-  busy: PublishBusy;
-  failure: PublishFailure | null;
-  rankInstead: string | null;
-}
-
-/** A fresh state for each `key` (the board and the account): nothing of another's carries over. */
+/**
+ * Where the board's publishing stands for `key` (the board and the account),
+ * kept outside the page (publicationRuns): a send goes on after the page
+ * that pressed it is left, and the page met again shows it still going.
+ */
 export function usePublicationState(key: string): PublicationState {
-  const fresh = (): Kept => ({ key, busy: "idle", failure: null, rankInstead: null });
-  const [kept, setKept] = useState<Kept>(fresh);
-  const now = kept.key === key ? kept : fresh();
-  const change = (part: Partial<Omit<Kept, "key">>) =>
-    setKept((was) => ({ ...(was.key === key ? was : fresh()), ...part }));
+  const run = useRun(key);
   return {
-    busy: now.busy,
-    failure: now.failure,
-    rankInstead: now.rankInstead,
-    setBusy: (busy) => change({ busy }),
-    setFailure: (failure) => change({ failure }),
-    setRankInstead: (rankInstead) => change({ rankInstead }),
+    key,
+    busy: run.busy,
+    waiting: run.waiting,
+    since: run.since,
+    failure: run.failure,
+    rankInstead: run.rankInstead,
+    setBusy: (busy) => changeRun(key, { busy }),
+    setFailure: (failure) => changeRun(key, { failure }),
+    setRankInstead: (rankInstead) => changeRun(key, { rankInstead }),
   };
 }
 
@@ -148,7 +152,7 @@ export function publicationActions(
     findTopic = loadTopic,
   }: PublicationContext,
 ): PublicationActions {
-  const { setBusy, setFailure, setRankInstead } = state;
+  const { key, setBusy, setFailure, setRankInstead } = state;
   const me = account?.kind === "signedIn" ? account : null;
 
   // A topic of one's own that waits is asked about, as the phone asks when its
@@ -201,9 +205,13 @@ export function publicationActions(
     }
     const request = publishRequestOf(current);
     if (request === null || publishing === null) return false;
-    setRankInstead(null);
-    setBusy(what === "published" ? "publishing" : "updating");
-    setFailure(null);
+    // On its way in the background: the press is answered at once, the board
+    // stays open to edit, and the page may be left (BRIEF, 1). It sends the
+    // board as it is now; a change made meanwhile waits for the next Update.
+    const signal = beginRun(key, what === "published" ? "publishing" : "updating");
+    const waiting = (now: boolean) => {
+      if (!signal.aborted) changeRun(key, { waiting: now });
+    };
     try {
       // The board's uid goes with every send, as the phone's does: a first
       // publish lost to a reload gets its list back, and a replace keeps it.
@@ -211,17 +219,30 @@ export function publicationActions(
         ownSource === undefined
           ? { ...request, boardUid: current.uid }
           : boundToSource({ ...request, boardUid: current.uid }, ownSource);
-      let answer =
-        what === "updated" && current.publishedId !== null
-          ? await publishing.republish(current.publishedId, outgoing, action)
-          : await publishing.publish(outgoing, action);
-      if (!action.isCurrent()) return false;
+      const publishedId = current.publishedId;
+      let answer = await retrying(
+        () =>
+          onItsWay(
+            key,
+            what === "updated" && publishedId !== null
+              ? publishing.republish(publishedId, outgoing, action)
+              : publishing.publish(outgoing, action),
+          ),
+        signal,
+        waiting,
+      );
+      if (!action.isCurrent() || signal.aborted) return false;
       // Out already: an earlier publish made the list and its answer was lost
       // on the way. Nothing of this one was written, so the board goes again
       // over that list's link, or the edits since would never reach it.
       if (answer.existing === true && answer.ranking !== true) {
-        answer = await publishing.republish(answer.id, outgoing, action);
-        if (!action.isCurrent()) return false;
+        const id = answer.id;
+        answer = await retrying(
+          () => onItsWay(key, publishing.republish(id, outgoing, action)),
+          signal,
+          waiting,
+        );
+        if (!action.isCurrent() || signal.aborted) return false;
       }
       const after = latest();
       // The cards as they came from the list they were saved from: the
@@ -282,7 +303,8 @@ export function publicationActions(
       }
       return true;
     } catch (reason: unknown) {
-      if (!action.isCurrent()) return false;
+      // Taken down while on its way: what was asked for is done, nothing to say.
+      if (!action.isCurrent() || signal.aborted) return false;
       const error = errorOf(reason);
       // Taken down elsewhere (its page, /me, the phone): the board is no longer
       // public, and its row says so; Publish sends it out anew.
@@ -299,7 +321,7 @@ export function publicationActions(
       else setFailure({ error, on: what === "published" ? "publish" : "update" });
       return false;
     } finally {
-      setBusy("idle");
+      endRun(key, signal);
     }
   };
 
@@ -370,6 +392,11 @@ export function publicationActions(
   const takeDown: PublicationActions["takeDown"] = async () => {
     const current = latest();
     if (!isOut(current) || publishing === null) return false;
+    // An Update on its way stops (BRIEF, 6): no more tries, and its answer is
+    // not kept. A request already sent is let finish first, or the server
+    // could write the list back after taking it down.
+    setBusy("unpublishing");
+    await cancelRun(key);
     setBusy("unpublishing");
     setFailure(null);
     try {

@@ -275,7 +275,7 @@ describe("PublishWindow: the window", () => {
   });
 
   it("forgets a refusal on Cancel, so the window opens without it next time", async () => {
-    const publish = vi.fn(() => Promise.reject(new ApiFailure({ kind: "offline" })));
+    const publish = vi.fn(() => Promise.reject(new ApiFailure({ kind: "unknown", status: 400 })));
     show(filmBoard(), signedIn, { publish });
     await userEvent.click(go());
     expect(await screen.findByRole("alert")).toHaveTextContent(/./);
@@ -470,7 +470,7 @@ describe("PublishWindow: the window", () => {
     });
     expect(document.body).toHaveFocus();
     // Refused, it is Publish again, and the keyboard is back on it.
-    await act(async () => refuse(new ApiFailure({ kind: "offline" })));
+    await act(async () => refuse(new ApiFailure({ kind: "unknown", status: 400 })));
     expect(go()).toBe(button);
     expect(go()).toBeEnabled();
     expect(go()).toHaveFocus();
@@ -1150,7 +1150,7 @@ describe("PublishWindow: a list out", () => {
   it("says a refused Update, and lets a list taken down elsewhere go", async () => {
     const republish = vi
       .fn<PublishingDeps["republish"]>()
-      .mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }))
+      .mockRejectedValueOnce(new ApiFailure({ kind: "unknown", status: 400 }))
       .mockRejectedValueOnce(new ApiFailure({ kind: "notFound" }));
     show(outBehind(), signedIn, { republish });
     await userEvent.click(win().getByRole("button", { name: "Update" }));

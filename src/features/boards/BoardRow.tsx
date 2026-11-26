@@ -6,6 +6,7 @@ import { ListArt } from "../../ui/ListArt";
 import { shownOwner } from "./owners";
 import { ListLabel, MetaParts, MoreButton } from "./BoardTile";
 import { fromOf, labelOf, spokenTitleOf, titleOf } from "./boardText";
+import { useSending } from "./publicationRuns";
 import { RenameField } from "./RenameField";
 import {
   cardFocusByPicture,
@@ -80,7 +81,7 @@ export const BoardRow = memo(function BoardRow({
   const starred = board.favouritedAt !== null;
   // As on a tile: whose it is and how far along it is are read after the name.
   const id = useId();
-  const label = labelOf(board);
+  const label = labelOf(board, useSending(board.uid));
   const facts = label === null ? `${id}-meta` : `${id}-label ${id}-meta`;
   const words = (
     <>

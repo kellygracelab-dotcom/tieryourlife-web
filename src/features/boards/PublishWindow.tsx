@@ -52,6 +52,7 @@ import {
   type PublishFailure,
   type PublishingDeps,
 } from "./usePublication";
+import { runOf } from "./publicationRuns";
 import "./boards.css";
 import "./publishing.css";
 import { cardLabel } from "../../lib/cardText";
@@ -80,6 +81,12 @@ export interface PublishWindowProps {
   /** One topic by its id: whether a proposed one still waits. */
   findTopic?: FindTopic;
   onClose: () => void;
+  /**
+   * Publish and Update go on in the background once pressed (BRIEF, 1 and 7):
+   * the window closes at once, and the page opens it again on a refusal, to
+   * say what it was. Without it, the window waits for the answer.
+   */
+  onRefused?: () => void;
   now?: () => number;
   /** Opened to go on at once, as Publish was pressed: after a sign-in, or a section proposed. */
   start?: boolean;
@@ -197,6 +204,7 @@ export function PublishWindow({
   topics: load = loadAllTopics,
   findTopic = loadTopic,
   onClose,
+  onRefused,
   now = Date.now,
   start = false,
   signInToPublish,
@@ -246,6 +254,19 @@ export function PublishWindow({
   }, []);
   const closeOnce = (out: boolean) => {
     if (out && open.current) onClose();
+  };
+  // Sent on in the background: the window goes at once, and comes back only
+  // to say a refusal (BRIEF, 1 and 7). A page that cannot bring it back
+  // keeps it open until the answer, as before.
+  const sendOn = (what: "published" | "updated") => {
+    if (onRefused === undefined) {
+      void send(what).then(closeOnce);
+      return;
+    }
+    void send(what).then((out) => {
+      if (!out && runOf(state.key).failure !== null) onRefused();
+    });
+    onClose();
   };
 
   const isPublic = isOut(board);
@@ -395,7 +416,7 @@ export function PublishWindow({
     if (naming !== null) addTopic();
     const problem = problemOf(latest());
     setProblem(problem);
-    if (problem === null) void send("published").then(closeOnce);
+    if (problem === null) sendOn("published");
   };
 
   const rank = () => {
@@ -404,14 +425,15 @@ export function PublishWindow({
       signInFirst();
       return;
     }
-    void (rankInstead !== null ? rankCopy(rankInstead) : send("published")).then(closeOnce);
+    if (rankInstead === null) sendOn("published");
+    else void rankCopy(rankInstead).then(closeOnce);
   };
 
   const update = () => {
     if (busyNow) return;
     const problem = problemOf(latest());
     setProblem(problem);
-    if (problem === null) void send("updated").then(closeOnce);
+    if (problem === null) sendOn("updated");
   };
 
   // Opened to go on at once: once, as soon as the window is up. A render
@@ -588,7 +610,9 @@ export function PublishWindow({
                   : strings.boards.publishedStatus}
           </span>,
         )}
-        <fieldset className="publish-window__body" disabled={busyNow}>
+        {/* An Update on its way leaves Take it down to be pressed: it stops the
+            Update (publish-update-speed BRIEF, 6). What it would change waits. */}
+        <fieldset className="publish-window__body" disabled={busyNow && busy !== "updating"}>
           {cover}
           <dl className="publish-window__rows">
             {!ranking && (
@@ -601,6 +625,7 @@ export function PublishWindow({
                     className="publish-window__change"
                     aria-expanded={changing === "section"}
                     aria-label={strings.publishWindow.changeSection}
+                    disabled={busy === "updating"}
                     onClick={() => setChanging(changing === "section" ? "none" : "section")}
                   >
                     {strings.publishWindow.change}
@@ -626,7 +651,7 @@ export function PublishWindow({
                     className="publish-window__change"
                     aria-expanded={changing === "topic"}
                     aria-label={strings.publishWindow.changeTopic}
-                    disabled={category === null}
+                    disabled={category === null || busy === "updating"}
                     onClick={() => setChanging(changing === "topic" ? "none" : "topic")}
                   >
                     {strings.publishWindow.change}
