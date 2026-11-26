@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { signIn } from "./signedIn";
 
 const section = (id: string, name: string, rank: number) => ({
@@ -77,4 +77,81 @@ test.describe("the owner's section order", () => {
     await expect.poll(() => saves.length).toBe(1);
     expect(saves[0]).toMatchObject({ ids: ["music", "film_tv", "anime", "games", "other"] });
   });
+});
+
+/** A 16:10 picture whose bottom-left is where its topic was focused. */
+const WIDE =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="100"><rect width="160" height="100" fill="#e0b84a"/><rect y="80" width="40" height="20" fill="#111111"/></svg>';
+
+/** The part of its picture a placed picture shows, as fractions of the picture, from its style. */
+const shownPart = (picture: Locator) =>
+  picture.evaluate((element: HTMLElement) => {
+    const { left, top, width, height } = element.style;
+    const across = parseFloat(width) / 100;
+    const down = parseFloat(height) / 100;
+    return {
+      left: -parseFloat(left) / 100 / across,
+      top: -parseFloat(top) / 100 / down,
+      width: 1 / across,
+      height: 1 / down,
+    };
+  });
+
+// A topic's picture is cut by its focus for the shape it shows in. Staff saw
+// it in a square, which shows the whole height of a wide picture whatever the
+// focus says, while the site's low tile showed only the dark corner the focus
+// sat on (Marketing, the Star Wars topic, 26.11): staff now see the tile's cut.
+test("staff see a topic's picture cut as its tile on the site cuts it", async ({ page }) => {
+  await signIn(page);
+  const film = {
+    ...section("film_tv", "Film & TV", 1),
+    listCount: 3,
+    newThisWeek: 0,
+    following: false,
+  };
+  await page.route("**/lists/sections", (route) =>
+    route.fulfill({ json: { sections: [film], role: "owner", version: 1 } }),
+  );
+  const topic = {
+    id: "sw",
+    name: "Star Wars",
+    section: "film_tv",
+    status: "approved",
+    listCount: 3,
+    followerCount: 5,
+    following: false,
+    mergedInto: null,
+    pictureUrl: "https://pictures.test/star-wars.svg",
+    pictureFocus: { x: 0.1, y: 0.95, zoom: 1 },
+  };
+  await page.route("**/lists/topics?**", (route) =>
+    route.fulfill({ json: { topics: [topic], nextCursor: null } }),
+  );
+  await page.route("**/lists?**", (route) =>
+    route.fulfill({ json: { lists: [], nextCursor: null } }),
+  );
+  await page.route("https://pictures.test/**", (route) =>
+    route.fulfill({ contentType: "image/svg+xml", body: WIDE }),
+  );
+
+  await page.goto("/s/film_tv");
+  const onTile = page.locator(".topic-tile__picture img");
+  await expect(onTile).toHaveAttribute("style", /height/);
+  const tile = await shownPart(onTile);
+  // The tile shows the bottom strip of the picture, where the focus is.
+  expect(tile.top + tile.height).toBeCloseTo(1, 2);
+  expect(tile.height).toBeLessThan(0.7);
+
+  await page.goto("/admin/topics");
+  const row = page.locator(".admin-topics__row", { hasText: "Star Wars" });
+  const thumb = row.locator(".admin-topics__tile");
+  const box = await thumb.boundingBox();
+  if (box === null) throw new Error("no tile");
+  expect(box.width / box.height).toBeCloseTo(3, 1);
+  const inAdmin = row.locator(".admin-topics__tile img");
+  await expect(inAdmin).toHaveAttribute("style", /height/);
+  const staff = await shownPart(inAdmin);
+  for (const side of ["left", "top", "width", "height"] as const) {
+    expect(Math.abs(staff[side] - tile[side])).toBeLessThan(0.07);
+  }
 });

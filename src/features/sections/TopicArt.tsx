@@ -5,9 +5,10 @@ import { pictureFocusOf, servedPicture, topicPicture } from "./model";
 import "./topics.css";
 
 /**
- * What fills a topic's square: its own 16:10 picture, cut to the square
- * around its middle, or else the icon on its section's colours, which the
- * square around it already wears (docs/design-spec-walk-3.md, E1).
+ * What fills a topic's box: its own 16:10 picture, cut for the box's shape
+ * where its focus says, or else the icon on its section's colours, which the
+ * box around it already wears (docs/design-spec-walk-3.md, E1). Staff see it
+ * in a tile's shape, so they see what the site's tile shows.
  */
 export function TopicArt({
   topic,
