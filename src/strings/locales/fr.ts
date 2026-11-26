@@ -759,6 +759,15 @@ const fr: Translation = {
     menu: "Administration",
     notAvailable: "Cette page n’est pas disponible.",
     reports: "Signalements",
+    approvals: "En attente de validation",
+    approvalsCount: { one: "{n} liste en attente", other: "{n} listes en attente" },
+    approvalsEmptyTitle: "Rien en attente",
+    approvalsEmptyBody:
+      "Les nouvelles listes attendent ici avant d’arriver dans le fil. Leurs liens marchent déjà.",
+    approvalsFailed: "Impossible de charger les listes en attente.",
+    approvedList: "Validée. Elle est dans le fil.",
+    removeList: "Retirer",
+    publishedWhen: "Publiée {when}",
     proposals: "Propositions",
     sections: "Rubriques",
     topics: "Thèmes",
@@ -1565,6 +1574,9 @@ const fr: Translation = {
     publishing: "Publication…",
     publishedHeld: "Enregistrée. Elle attend un modérateur avant que d’autres puissent la voir.",
     heldBody: "Elle attend un modérateur avant que d’autres puissent la voir.",
+    awaitingApproval:
+      "Elle apparaîtra dans le fil après vérification. Toute personne ayant le lien peut déjà la voir.",
+    updatedAwaiting: "Mise à jour. Elle apparaîtra dans le fil après vérification.",
     picturesDropped: {
       one: "{n} image d’un autre site n’a pas pu être ajoutée. Publiez à nouveau pour réessayer.",
       many: "{n} images d’autres sites n’ont pas pu être ajoutées. Publiez à nouveau pour réessayer.",

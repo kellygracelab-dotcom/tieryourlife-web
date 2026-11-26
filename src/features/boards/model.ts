@@ -192,6 +192,12 @@ export interface Board {
    * everybody. Absent otherwise. Never kept in the account.
    */
   heldForReview?: boolean;
+  /**
+   * This device's: the list is out by its link but in no feed until staff
+   * approve it (CONTRACT, Approval before the feed, 26.11.2026), as the last
+   * publish answer or `lists/mine` said. Absent otherwise. Never kept in the account.
+   */
+  awaitingApproval?: boolean;
   /** A game of Play in progress, kept in the account as the app keeps it; null when none is. */
   play: SyncedPlay | null;
   /**
@@ -589,7 +595,7 @@ export const setPublished = (
   authorName: string | null,
   now: number,
 ): Board => ({
-  ...unguessed(unheld(board)),
+  ...unguessed(unheld(unawaited(board))),
   publishedId,
   rankingOf: null,
   authorName,
@@ -620,6 +626,17 @@ const unheld = (board: Board): Board => {
   return rest;
 };
 
+/** The board without the wait for approval: a fresh answer, or none, says whether it still waits. */
+const unawaited = (board: Board): Board => setAwaiting(board, false);
+
+/** Waiting for staff's approval before the feed or not, as the backend last said. */
+export const setAwaiting = (board: Board, waits: boolean): Board => {
+  if (waits) return board.awaitingApproval === true ? board : { ...board, awaitingApproval: true };
+  if (board.awaitingApproval === undefined) return board;
+  const { awaitingApproval: _waits, ...rest } = board;
+  return rest;
+};
+
 /** Held for a moderator or not, as the backend's answer to a publish or Update said. */
 export const setHeld = (board: Board, held: boolean): Board =>
   held ? { ...board, heldForReview: true } : unheld(board);
@@ -630,7 +647,7 @@ export const setHeld = (board: Board, held: boolean): Board =>
  * since the cards are still theirs.
  */
 export const setRanking = (board: Board, listId: string | null, now: number): Board => ({
-  ...unguessed(unheld(board)),
+  ...unguessed(unheld(unawaited(board))),
   publishedId: null,
   rankingOf: listId,
   ...(board.takenFrom !== null

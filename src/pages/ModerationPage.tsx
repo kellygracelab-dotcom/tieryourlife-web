@@ -5,6 +5,7 @@ import { BAN_LENGTHS, type BanLength, type QueuedList } from "../api/moderation"
 import { useSession } from "../app/session";
 import { REASON_TEXT } from "../features/community/reasons";
 import { noteAdminDecision } from "../features/admin/useAdminCounts";
+import { BAN_TEXT, BANNED_FOR, ForeverDialog } from "../features/moderation/bans";
 import { noteReports } from "../features/moderation/useModerator";
 import { useResource } from "../lib/useResource";
 import { leaveListUp, loadReports, takeDownList } from "../lib/api";
@@ -12,7 +13,6 @@ import { agoText, reasonCounts } from "../features/moderation/queue";
 import { localStorageStore } from "../lib/storage";
 import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
-import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "./ModerationPage.css";
@@ -31,22 +31,6 @@ interface ModerationPageProps {
 /** Notes shown before "Show N more notes". */
 export const NOTES_SHOWN = 3;
 const BLUR_KEY = "tyl:blur";
-
-const BAN_TEXT: Record<BanLength, string> = {
-  week: strings.mod.banWeek,
-  month: strings.mod.banMonth,
-  three_months: strings.mod.banThreeMonths,
-  six_months: strings.mod.banSixMonths,
-  forever: strings.mod.banForever,
-};
-
-const BANNED_FOR: Record<BanLength, string> = {
-  week: strings.mod.bannedWeek,
-  month: strings.mod.bannedMonth,
-  three_months: strings.mod.bannedThreeMonths,
-  six_months: strings.mod.bannedSixMonths,
-  forever: strings.mod.bannedForever,
-};
 
 type Deciding =
   | { status: "idle" }
@@ -285,28 +269,6 @@ function QueueCard({
         />
       )}
     </li>
-  );
-}
-
-function ForeverDialog({
-  name,
-  onCancel,
-  onConfirm,
-}: {
-  name: string;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <ConfirmDialog
-      narrow
-      title={fill(strings.mod.foreverTitle, { name })}
-      body={strings.mod.foreverBody}
-      confirmLabel={strings.mod.banForeverAction}
-      cancelLabel={strings.mod.cancel}
-      onConfirm={onConfirm}
-      onCancel={onCancel}
-    />
   );
 }
 

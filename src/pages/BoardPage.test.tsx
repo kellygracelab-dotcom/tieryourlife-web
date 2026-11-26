@@ -1509,6 +1509,55 @@ describe("BoardPage: Publish beside Play", () => {
     expect(router.state.location.pathname).toBe("/l/L1");
   });
 
+  // New lists wait for staff before the feed (Danylo, 26.11.2026): the author
+  // is told so as the list goes out, and the window says it while it waits.
+  it("tells the author a new list reaches the feed after a check, its link working at once", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "film_tv" });
+    const publishing: PublishingDeps = {
+      ...noPublishing,
+      publish: vi.fn(() => Promise.resolve({ id: "L1", topicId: null, awaitingApproval: true })),
+    };
+    open(repository, "/b/films", { publishing, account: member });
+    await userEvent.click(headerPublish()!);
+    await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
+    await waitFor(() =>
+      expect(said()).toHaveTextContent(
+        /^Published. It will appear in the feed after a check. Anyone with the link can see it now./,
+      ),
+    );
+    expect(repository.get("films")).toMatchObject({ publishedId: "L1", awaitingApproval: true });
+    expect(within(said()!).getByRole("button", { name: "View" })).toBeInTheDocument();
+    await openSettings();
+    expect(
+      within(publishWindow("Films")).getByText(
+        "It will appear in the feed after a check. Anyone with the link can see it now.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says an Update of a list still waiting for approval will reach the feed after a check", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({
+      ...filmBoard(),
+      category: "film_tv",
+      publishedId: "L1",
+      publishedEditedAt: 50,
+      authorName: "Danylo",
+      awaitingApproval: true,
+    });
+    const publishing: PublishingDeps = {
+      ...noPublishing,
+      republish: vi.fn(() => Promise.resolve({ id: "L1", awaitingApproval: true })),
+    };
+    open(repository, "/b/films", { publishing, account: member });
+    await userEvent.click(headerPublish()!);
+    await waitFor(() =>
+      expect(said()).toHaveTextContent(/^Updated. It will appear in the feed after a check./),
+    );
+    expect(repository.get("films")).toMatchObject({ awaitingApproval: true });
+  });
+
   it("says in the window that a section is wanted, with the cursor in its search, when the board cannot go out yet", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());

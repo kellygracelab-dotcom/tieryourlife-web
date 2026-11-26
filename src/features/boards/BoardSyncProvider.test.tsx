@@ -601,9 +601,15 @@ describe("publishedEntryOf", () => {
       boardUid: "a",
       updatedAt: 800,
       underReview: true,
+      awaitingApproval: false,
     });
     expect(publishedEntryOf({ ...list, underReview: false }).underReview).toBe(false);
     expect(publishedEntryOf(list).underReview).toBe(false);
     expect(publishedEntryOf({ ...list, boardUid: "" }).boardUid).toBeNull();
+  });
+
+  it("carries the account's word that a new list waits for approval before the feed", () => {
+    expect(publishedEntryOf({ ...list, awaitingApproval: true }).awaitingApproval).toBe(true);
+    expect(publishedEntryOf(list).awaitingApproval).toBe(false);
   });
 });

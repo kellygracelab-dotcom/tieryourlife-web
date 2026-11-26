@@ -251,6 +251,8 @@ export function PublishWindow({
   const isPublic = isOut(board);
   const behind = isBehind(board);
   const held = isPublic && board.heldForReview === true;
+  // New, out by its link and waiting for staff before the feed (Danylo, 26.11.2026).
+  const awaiting = isPublic && !held && board.awaitingApproval === true;
   // Somebody else's list's copy, not out: it goes into that list's Rankings.
   const copyOf = !isPublic && board.takenFrom !== null ? board.takenFrom : null;
   const rankingOf = rankInstead ?? copyOf;
@@ -576,12 +578,14 @@ export function PublishWindow({
         {head(
           title,
           <span className="publish-window__status">
-            <Icon name={held ? "schedule" : "check_circle"} />
+            <Icon name={held || awaiting ? "schedule" : "check_circle"} />
             {held
               ? strings.boards.heldBody
-              : ranking
-                ? strings.boards.inRankingsStatus
-                : strings.boards.publishedStatus}
+              : awaiting
+                ? strings.boards.awaitingApproval
+                : ranking
+                  ? strings.boards.inRankingsStatus
+                  : strings.boards.publishedStatus}
           </span>,
         )}
         <fieldset className="publish-window__body" disabled={busyNow}>

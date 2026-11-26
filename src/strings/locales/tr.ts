@@ -712,6 +712,15 @@ const tr: Translation = {
     menu: "Yönetim",
     notAvailable: "Bu sayfa kullanılamıyor.",
     reports: "Şikayetler",
+    approvals: "Onay bekleyenler",
+    approvalsCount: { other: "{n} liste bekliyor" },
+    approvalsEmptyTitle: "Bekleyen yok",
+    approvalsEmptyBody:
+      "Yeni listeler akışa girmeden önce burada bekler. Bağlantıları şimdiden çalışır.",
+    approvalsFailed: "Bekleyen listeler yüklenemedi.",
+    approvedList: "Onaylandı. Artık akışta.",
+    removeList: "Kaldır",
+    publishedWhen: "Yayımlandı: {when}",
     proposals: "Öneriler",
     sections: "Bölümler",
     topics: "Konular",
@@ -1441,6 +1450,9 @@ const tr: Translation = {
     publishing: "Yayımlanıyor…",
     publishedHeld: "Kaydedildi. Başkaları görmeden önce bir moderatörü bekliyor.",
     heldBody: "Başkaları görmeden önce bir moderatörü bekliyor.",
+    awaitingApproval:
+      "Kontrolden sonra akışta görünecek. Bağlantıya sahip herkes şimdiden görebilir.",
+    updatedAwaiting: "Güncellendi. Kontrolden sonra akışta görünecek.",
     picturesDropped: {
       one: "Başka bir siteden {n} görsel eklenemedi. Yeniden denemek için tekrar yayımlayın.",
       other: "Başka sitelerden {n} görsel eklenemedi. Yeniden denemek için tekrar yayımlayın.",

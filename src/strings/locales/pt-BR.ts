@@ -736,6 +736,15 @@ const ptBR: Translation = {
     menu: "Administração",
     notAvailable: "Esta página não está disponível.",
     reports: "Denúncias",
+    approvals: "Aguardando aprovação",
+    approvalsCount: { one: "{n} lista aguardando", other: "{n} listas aguardando" },
+    approvalsEmptyTitle: "Nada aguardando",
+    approvalsEmptyBody:
+      "Listas novas aguardam aqui antes de chegar ao feed. Os links delas já funcionam.",
+    approvalsFailed: "Não foi possível carregar as listas aguardando.",
+    approvedList: "Aprovada. Já está no feed.",
+    removeList: "Remover",
+    publishedWhen: "Publicada {when}",
     proposals: "Propostas",
     sections: "Seções",
     topics: "Temas",
@@ -1538,6 +1547,9 @@ const ptBR: Translation = {
     publishing: "Publicando…",
     publishedHeld: "Salva. Ela espera um moderador antes que outras pessoas possam vê-la.",
     heldBody: "Ela espera um moderador antes que outras pessoas possam vê-la.",
+    awaitingApproval:
+      "Ela vai aparecer no feed depois de uma verificação. Quem tiver o link já pode ver.",
+    updatedAwaiting: "Atualizada. Vai aparecer no feed depois de uma verificação.",
     picturesDropped: {
       one: "{n} imagem de outro site não pôde ser adicionada. Publique de novo para tentar outra vez.",
       many: "{n} imagens de outros sites não puderam ser adicionadas. Publique de novo para tentar outra vez.",

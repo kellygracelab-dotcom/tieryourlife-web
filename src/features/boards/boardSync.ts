@@ -62,4 +62,5 @@ export const publishedEntryOf = (list: MyList): PublishedEntry => ({
   updatedAt: list.updatedAt,
   itemCount: list.itemCount,
   underReview: list.underReview === true,
+  awaitingApproval: list.awaitingApproval === true,
 });

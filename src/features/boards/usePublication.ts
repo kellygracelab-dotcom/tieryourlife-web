@@ -12,6 +12,7 @@ import { boundToSource } from "./copiedPublication";
 import { copyRankingOf } from "./copyRanking";
 import {
   isOut,
+  setAwaiting,
   setHeld,
   setPublished,
   setRanking,
@@ -49,7 +50,8 @@ export interface PublishingDeps {
  * feed until a moderator looks (`held`). The page says so.
  */
 export type OnPublished = (
-  what: "published" | "updated" | "unpublished" | "ranking" | "held",
+  what:
+    "published" | "updated" | "unpublished" | "ranking" | "held" | "awaiting" | "updatedAwaiting",
   id: string | null,
   /** Pictures from other sites the backend left out of this publish (QA S11). */
   dropped?: number,
@@ -227,9 +229,17 @@ export function publicationActions(
       const ranking = answer.ranking === true;
       // Kept out of the feed until a moderator looks: its link works for nobody yet.
       const waits = !ranking && answer.underReview === true;
+      // New and out by its link, in no feed until staff approve it (26.11.2026).
+      const awaits = !ranking && !waits && answer.awaitingApproval === true;
       const out = ranking
         ? setRanking(after, answer.id, now())
-        : setHeld(setPublished(after, answer.id, me.displayName ?? after.authorName, now()), waits);
+        : setAwaiting(
+            setHeld(
+              setPublished(after, answer.id, me.displayName ?? after.authorName, now()),
+              waits,
+            ),
+            awaits,
+          );
       // A name proposed with it is a topic now, waiting for a moderator,
       // unless another was chosen while the request was on its way.
       const sent =
@@ -247,7 +257,15 @@ export function publicationActions(
           : { ...sent, publishedEditedAt: sent.editedAt - 1 },
       );
       onPublished(
-        ranking ? "ranking" : waits ? "held" : what,
+        ranking
+          ? "ranking"
+          : waits
+            ? "held"
+            : awaits
+              ? what === "published"
+                ? "awaiting"
+                : "updatedAwaiting"
+              : what,
         answer.id,
         ranking ? 0 : (answer.droppedPictures ?? 0),
       );

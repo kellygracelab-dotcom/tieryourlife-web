@@ -11,6 +11,12 @@ describe("useAdminCounts", () => {
     await waitFor(() => expect(result.current).toBe(7));
   });
 
+  it("adds the new lists waiting for approval too (Danylo, 26.11)", async () => {
+    const load = vi.fn(async () => ({ reports: 1, proposals: 2, awaitingApproval: 5 }));
+    const { result } = renderHook(() => useAdminCounts("u1", 0, load));
+    await waitFor(() => expect(result.current).toBe(8));
+  });
+
   it("falls back to the reports the menu holds when the backend has no count", async () => {
     const load = vi.fn(async () => Promise.reject(new Error("404")));
     const { result } = renderHook(() => useAdminCounts("u1", 2, load));

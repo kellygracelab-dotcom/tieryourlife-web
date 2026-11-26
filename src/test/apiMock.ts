@@ -113,6 +113,8 @@ export function apiStubs() {
     removeModerator: pending(),
     findCandidates: pending(),
     loadAdminCounts: pending(),
+    loadApprovals: pending(),
+    approveList: vi.fn(async () => undefined),
     loadAdminLists: pending(),
     moveList: pending(),
     loadHouseLists: pending(),

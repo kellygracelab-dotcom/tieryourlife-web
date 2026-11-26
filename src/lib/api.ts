@@ -1,8 +1,10 @@
 import * as account from "../api/account";
 import * as admin from "../api/admin";
 import type {
+  AdminCounts,
   AdminList,
   AdminListsQuery,
+  ApprovalList,
   AdminSections,
   Candidate,
   Moderator,
@@ -470,8 +472,11 @@ export const removeModerator = (uid: string): Promise<void> => admin.removeModer
 export const findCandidates = (q: string): Promise<{ people: Candidate[] }> =>
   admin.findCandidates(api, q);
 
-export const loadAdminCounts = (): Promise<{ reports: number; proposals: number }> =>
-  admin.loadAdminCounts(api);
+export const loadAdminCounts = (): Promise<AdminCounts> => admin.loadAdminCounts(api);
+
+export const loadApprovals = (): Promise<{ lists: ApprovalList[] }> => admin.loadApprovals(api);
+
+export const approveList = (id: string): Promise<void> => changing(id, admin.approveList(api, id));
 
 export const loadAdminLists = (
   query: AdminListsQuery,

@@ -139,6 +139,11 @@ export interface PublishedList extends ListSummary {
    * only its author and moderators, and its link nobody else yet.
    */
   underReview?: boolean;
+  /**
+   * Out by its link but in no feed until staff approve it (CONTRACT, Approval
+   * before the feed, 26.11.2026); absent once it is, and on older backends.
+   */
+  awaitingApproval?: boolean;
   /** A house list's editor's credit for its cover (CONTRACT, Editor's credit); absent for none. */
   coverAttribution?: EditorCredit;
   /**
