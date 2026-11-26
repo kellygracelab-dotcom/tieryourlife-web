@@ -101,8 +101,7 @@ const es: Translation = {
     faceNotMade: "Esa imagen no puede ser tu foto. Elige otra.",
     title: "Ajustes",
     guestTitle: "Inicia sesión para tener tus listas en todos tus dispositivos.",
-    guestBody:
-      "Tu nombre y tu imagen, y tus listas en todos tus dispositivos. El tema, el color y el idioma funcionan sin cuenta.",
+    guestBody: "También tu nombre y tu imagen. El tema, el color y el idioma funcionan sin cuenta.",
     themeGuestNote: "Se guarda en este dispositivo, con la sesión iniciada o sin ella.",
     nameTitle: "Tu nombre",
     nameBody:
@@ -1970,6 +1969,7 @@ const es: Translation = {
     placeKeys:
       "{start} elige una tarjeta y luego un nivel, o pulsa {keys}. También puedes arrastrar.",
     play: "¿No quieres colocar {n} a mano? {play}: elige la mejor de dos y los niveles se llenan solos.",
+    playRanked: "¿Las ordenas a tu manera? {play}: elige la mejor de dos.",
     add: "Escribe un nombre: la imagen viene con él.",
     gotIt: "Entendido",
     noMore: "No más consejos",

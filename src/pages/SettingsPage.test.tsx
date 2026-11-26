@@ -302,12 +302,14 @@ describe("SettingsPage", () => {
   it("asks a guest to sign in, and still offers the theme and the privacy policy", () => {
     open({ kind: "guest", uid: "g1" });
     expect(screen.getByText("Sign in to keep your lists on every device.")).toBeInTheDocument();
-    // It says what the account gives, and that theme, colour and language need none (Designer, 25.11).
+    // It says what else the account keeps, and that theme, colour and language need none
+    // (Designer, 25.11); the lists on every device are said once, in the title (26.11).
     expect(
       screen.getByText(
-        /lists on all your devices\. Theme, colour and language work without an account/,
+        "Also your name and picture. Theme, colour and language work without an account.",
       ),
     ).toBeInTheDocument();
+    expect(screen.getAllByText(/every device|all your devices/)).toHaveLength(1);
     expect(screen.queryByText(/change your settings/)).toBeNull();
     expect(screen.getByRole("radiogroup", { name: "Theme" })).toBeInTheDocument();
     // The theme is this device's, signed in or not: nothing says an account keeps it.

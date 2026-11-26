@@ -125,9 +125,11 @@ function textOf(id: TipId, at: HTMLElement) {
       : fillNodes(strings.tips.place, { start });
   }
   if (id === "play") {
-    return fillNodes(fill(strings.tips.play, { n: at.dataset.tipN ?? "" }), {
-      play: <strong>{strings.play.play}</strong>,
-    });
+    const play = <strong>{strings.play.play}</strong>;
+    // Every card already placed (someone's ranked list): nothing is left to
+    // place by hand, so the tip offers a ranking of one's own (Designer, 26.11).
+    if (at.dataset.tipRanked === "true") return fillNodes(strings.tips.playRanked, { play });
+    return fillNodes(fill(strings.tips.play, { n: at.dataset.tipN ?? "" }), { play });
   }
   return strings.tips.add;
 }

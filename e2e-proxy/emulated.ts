@@ -66,11 +66,10 @@ export async function device(browser: Browser): Promise<Page> {
 export async function newBoard(page: Page, title: string, cards: string[]): Promise<void> {
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
-  // A computer's new list puts the cursor in Add a card; its title opens with the pencil
-  // (walkthrough 25.11, item 5). A phone's title is open at once.
+  // A new list's title opens with the pencil at every width (walkthrough 25.11, item 5;
+  // on a phone too, 26.11).
   const field = page.getByRole("textbox", { name: "Title" });
-  if ((page.viewportSize()?.width ?? 0) >= 840)
-    await page.getByRole("button", { name: "Edit list name" }).click();
+  await page.getByRole("button", { name: "Edit list name" }).click();
   await field.fill(title);
   await field.press("Enter");
   for (const name of cards) {

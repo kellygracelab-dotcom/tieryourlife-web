@@ -112,15 +112,22 @@ test("New list opens a new board, where the list is made", async ({ page, hasTou
   await expect(page).toHaveURL(/\/b\/[^?]+\?new=/);
   const title = page.getByRole("textbox", { name: "Title" });
   const add = page.getByRole("textbox", { name: "Add a card" });
-  if (hasTouch) {
-    // A phone asks for the name first, as the app does.
-    await expect(title).toBeFocused();
-  } else {
+  // Nowhere is the name asked first: on a phone its keyboard covered Add your
+  // first cards (Designer, 26.11); it waits for a press on it.
+  await expect(title).toHaveCount(0);
+  if (!hasTouch) {
     // A computer puts the cursor where the cards come in, and the name waits for
     // a click on it: nothing to press Enter on before the first card (Danylo, 25.11).
     await expect(add).toBeFocused();
     await expect(title).toHaveCount(0);
     await page.getByRole("heading", { level: 1 }).click();
+    await expect(title).toBeFocused();
+  } else {
+    // A phone keeps the keyboard down: Add your first cards is in sight, no field
+    // has the cursor, and the name opens with a press on its pencil.
+    await expect(page.getByRole("heading", { name: "Add your first cards" })).toBeInViewport();
+    expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("INPUT");
+    await press(page.getByRole("button", { name: "Edit list name" }), hasTouch);
     await expect(title).toBeFocused();
   }
   await title.fill("Cheeses");
@@ -224,21 +231,14 @@ test("the old /new and a suggestion of the empty page make a list in its section
   await mockBackend(page);
   await page.goto("/new?title=Ramen");
   await expect(page).toHaveURL(/\/b\/[^?]+\?new=\d+&title=Ramen$/);
-  // A phone asks for the name first; a computer shows it (Danylo, 25.11).
-  if (hasTouch) await expect(page.getByRole("textbox", { name: "Title" })).toHaveValue("Ramen");
-  else await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ramen");
+  // The name is shown, not asked for (Danylo, 25.11; on a phone too, 26.11).
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ramen");
 
   await page.goto("/b");
   await expect(page.getByText("No lists yet")).toBeVisible();
   await press(page.getByRole("link", { name: "Restaurants" }), hasTouch);
   await expect(page).toHaveURL(/\/b\/[^?]+\?new=\d+&title=Restaurants&category=food$/);
-  if (hasTouch) {
-    const title = page.getByRole("textbox", { name: "Title" });
-    await expect(title).toBeFocused();
-    await expect(title).toHaveValue("Restaurants");
-  } else {
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Restaurants");
-  }
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Restaurants");
   await nameNewList(page, "Ramen in Kyiv");
   // Its section: under the name, or on a phone's one-row head (artboard 18) only in the markup.
   await expect(page.locator(".list-head__meta")).toHaveText("Food");

@@ -106,7 +106,7 @@ const fr: Translation = {
     title: "Paramètres",
     guestTitle: "Connectez-vous pour garder vos listes sur tous vos appareils.",
     guestBody:
-      "Votre nom et votre image, et vos listes sur tous vos appareils. Le thème, la couleur et la langue fonctionnent sans compte.",
+      "Aussi votre nom et votre image. Le thème, la couleur et la langue fonctionnent sans compte.",
     themeGuestNote: "Enregistré sur cet appareil, que vous soyez connecté ou non.",
     nameTitle: "Votre nom",
     nameBody:
@@ -1985,6 +1985,7 @@ const fr: Translation = {
     placeKeys:
       "{start} choisissez une carte, puis un rang — ou appuyez sur {keys}. Le glisser marche aussi.",
     play: "Pas envie de placer {n} cartes à la main ? {play} : choisissez la meilleure de deux, les rangs se remplissent.",
+    playRanked: "Les classer à votre façon ? {play} : choisissez la meilleure de deux.",
     add: "Tapez un nom : l’image vient avec.",
     gotIt: "Compris",
     noMore: "Plus de conseils",
