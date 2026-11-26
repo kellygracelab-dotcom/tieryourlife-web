@@ -30,9 +30,19 @@ export function spokenTitleOf(board: Board): string {
 /**
  * The label before a list's count in Your lists (artboard 42): Public for one
  * out in Community, Saved for a copy of somebody else's, none for one's own.
+ * One being sent in the background says so: Public · updating, or
+ * Publishing… for its first time out (BRIEF, 2).
  */
-export function labelOf(board: Board): string | null {
-  if (isOut(board)) return strings.listMenu.publicLabel;
+export function labelOf(
+  board: Board,
+  sending: "publishing" | "updating" | null = null,
+): string | null {
+  if (sending === "publishing" && !isOut(board)) return strings.boards.publishing;
+  if (isOut(board)) {
+    return sending === null
+      ? strings.listMenu.publicLabel
+      : `${strings.listMenu.publicLabel} · ${strings.listMenu.updating}`;
+  }
   return isSavedCopy(board) ? strings.listMenu.savedLabel : null;
 }
 

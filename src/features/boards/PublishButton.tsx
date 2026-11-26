@@ -34,6 +34,10 @@ interface PublishButtonProps {
   main: boolean;
   /** On its way: a ring in place of the icon, the button as wide as before. */
   busy?: boolean;
+  /** On its way, but waiting for a connection to try again (BRIEF, 4). */
+  waiting?: boolean;
+  /** On its way for over a minute: its hint says the person may go on (BRIEF, 2). */
+  long?: boolean;
   onClick: () => void;
 }
 
@@ -43,10 +47,18 @@ interface PublishButtonProps {
  * once all are placed; Show in Rankings opens it for a copy of somebody
  * else's list; Update sends the changes at once, its dot saying there are
  * some; Published is quiet and opens the window with the link and Take it
- * down. While a publish is on its way the ring turns in the button, and a
- * press opens the window again. Its word is always in sight, on a phone too.
+ * down. While a publish is on its way in the background the ring turns in
+ * the button, which takes no press (BRIEF, 1); without a connection it says it
+ * waits for one. Its word is always in sight, on a phone too.
  */
-export function PublishButton({ kind, main, busy = false, onClick }: PublishButtonProps) {
+export function PublishButton({
+  kind,
+  main,
+  busy = false,
+  waiting = false,
+  long = false,
+  onClick,
+}: PublishButtonProps) {
   const { icon, word } = LOOKS[kind];
   const look =
     kind === "published"
@@ -61,15 +73,25 @@ export function PublishButton({ kind, main, busy = false, onClick }: PublishButt
       type="button"
       className={`btn publish-button ${look}`}
       aria-busy={busy || undefined}
-      onClick={onClick}
+      aria-disabled={busy || undefined}
+      title={busy && long && !waiting ? strings.boards.stillUpdating : undefined}
+      onClick={busy ? undefined : onClick}
     >
-      {busy ? (
+      {busy && waiting ? (
+        <Icon name="cloud_off" className="btn__icon" />
+      ) : busy ? (
         <span className="publish-ring" aria-hidden="true" />
       ) : (
         <Icon name={icon} className="btn__icon" />
       )}
       <span className="publish-button__word">
-        {busy ? (kind === "update" ? strings.boards.updating : strings.boards.publishing) : word}
+        {busy && waiting
+          ? strings.boards.waitingConnection
+          : busy
+            ? kind === "update"
+              ? strings.boards.updating
+              : strings.boards.publishing
+            : word}
       </span>
       {kind === "update" && !busy && <span className="publish-button__dot" aria-hidden="true" />}
     </button>

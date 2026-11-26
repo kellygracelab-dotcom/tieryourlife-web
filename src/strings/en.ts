@@ -1410,9 +1410,16 @@ export const en = {
     publishedStatus: "Published",
     notPublishedYet: "Changes not published yet",
     changesNotPublished: { one: "{n} change not published", other: "{n} changes not published" },
-    // Under the board once it went out from its header, with View (Danylo, 16.11.2026).
-    publishedShort: "Published",
-    updatedShort: "Updated",
+    // Under the board once it went out, with View (Danylo, 16.11.2026); the same words as
+    // Android's first Publish (publish-update-speed BRIEF, 7; Android, 26.11).
+    publishedShort: "Your list is live",
+    // Update and Publish go on in the background (publish-update-speed BRIEF, Designer and Danylo, 26.11).
+    updatedInCommunity: "Updated in Community",
+    openInCommunity: "Open",
+    waitingConnection: "Waiting for connection",
+    stillUpdating: "Still updating — you can keep going",
+    updateFailed: "Couldn’t update. Your changes are safe here.",
+    tryAgain: "Try again",
     rankedShort: "In Rankings",
     seePublished: "View",
     inRankingsStatus: "In Rankings",
@@ -1504,6 +1511,7 @@ export const en = {
   listMenu: {
     label: "More for {name}",
     private: "private",
+    updating: "updating",
     public: "public",
     open: "Open",
     rename: "Rename",

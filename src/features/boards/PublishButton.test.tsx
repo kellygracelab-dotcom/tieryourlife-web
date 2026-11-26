@@ -99,14 +99,28 @@ describe("PublishButton", () => {
     expect(published).not.toHaveClass("btn--filled");
   });
 
-  it("turns a ring in place of its icon while on its way, and still opens on a press", async () => {
+  // In the background now: a ring, and no second send on a press (publish-update-speed BRIEF, 1).
+  it("turns a ring in place of its icon while on its way, and is not pressed again", async () => {
     const onClick = vi.fn();
     render(<PublishButton kind="publish" main={false} busy onClick={onClick} />);
     const button = screen.getByRole("button", { name: "Publishing…" });
     expect(button).toHaveAttribute("aria-busy", "true");
-    expect(button).toBeEnabled();
+    expect(button).toHaveAttribute("aria-disabled", "true");
     expect(button.querySelector(".publish-ring")).not.toBeNull();
     await userEvent.click(button);
-    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("says it waits for a connection, with the cloud, and that a long one goes on", () => {
+    const { rerender } = render(
+      <PublishButton kind="update" main={false} busy waiting onClick={() => undefined} />,
+    );
+    const button = screen.getByRole("button", { name: "Waiting for connection" });
+    expect(button).toHaveTextContent("cloud_off");
+    rerender(<PublishButton kind="update" main={false} busy long onClick={() => undefined} />);
+    expect(screen.getByRole("button", { name: "Updating…" })).toHaveAttribute(
+      "title",
+      "Still updating — you can keep going",
+    );
   });
 });

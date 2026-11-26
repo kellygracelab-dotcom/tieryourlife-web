@@ -1333,7 +1333,7 @@ describe("BoardPage: share and publish", () => {
     await userEvent.click(cover.getByRole("button", { name: "Done" }));
     await userEvent.click(headerPublish()!);
     await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
-    await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
+    await waitFor(() => expect(said()).toHaveTextContent(/^Your list is live/));
     expect(within(said()!).getByRole("button", { name: "View" })).toBeInTheDocument();
     // Out, the window closed by itself.
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -1453,7 +1453,7 @@ describe("BoardPage: Publish beside Play", () => {
     await waitFor(() => expect(signIn).toHaveBeenCalledOnce());
     // Signed in, nothing more to press: the window opens on Publish again and it goes out.
     await waitFor(() => expect(publishing.publish).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
+    await waitFor(() => expect(said()).toHaveTextContent(/^Your list is live/));
     expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
     expect(window.sessionStorage.getItem("tyl:publishAfterSignIn")).toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -1494,13 +1494,15 @@ describe("BoardPage: Publish beside Play", () => {
       }),
     ).toHaveAttribute("aria-checked", "true");
     await userEvent.click(box.getByRole("button", { name: "Publish" }));
-    // On its way: the window and the header both say so.
-    expect(box.getByRole("button", { name: "Publishing…" })).toBeDisabled();
+    // On its way in the background: the window closes at once and the header
+    // says so, not to be pressed again (publish-update-speed BRIEF, 7).
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(headerPublish()).toHaveTextContent("Publishing…");
+    expect(headerPublish()).toHaveAttribute("aria-disabled", "true");
     await act(async () => answer({ id: "L1", topicId: null }));
     expect(publishing.publish).toHaveBeenCalledTimes(1);
     expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
-    expect(said()).toHaveTextContent(/^Published/);
+    expect(said()).toHaveTextContent(/^Your list is live/);
     expect(screen.queryByRole("dialog")).toBeNull();
     // Out and up to date: Share, filled, where Published stood.
     expect(headerPublish()).toBeNull();
@@ -1523,7 +1525,7 @@ describe("BoardPage: Publish beside Play", () => {
     await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
     await waitFor(() =>
       expect(said()).toHaveTextContent(
-        /^Published. It will appear in the feed after a check. Anyone with the link can see it now./,
+        /^Your list is live\. It will appear in the feed after a check\. Anyone with the link can see it now\./,
       ),
     );
     expect(repository.get("films")).toMatchObject({ publishedId: "L1", awaitingApproval: true });
@@ -1581,16 +1583,29 @@ describe("BoardPage: Publish beside Play", () => {
     expect(box.queryByText("Pick a section first.")).toBeNull();
   });
 
-  it("keeps the window open when the backend refuses, with what it said", async () => {
+  // Publish goes on in the background (publish-update-speed BRIEF, 7): the
+  // window closes at once, the header says Publishing…, and a refusal opens
+  // the window again on what was said.
+  it("closes the window at once on Publish, and opens it again on a refusal, with what it said", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({ ...filmBoard(), category: "film_tv" });
+    let refuse: (reason: unknown) => void = () => undefined;
     const publishing: PublishingDeps = {
       ...noPublishing,
-      publish: vi.fn(() => Promise.reject(new ApiFailure({ kind: "offline" }))),
+      publish: vi.fn(
+        () =>
+          new Promise<never>((_, no) => {
+            refuse = no;
+          }),
+      ),
     };
     open(repository, "/b/films", { publishing, account: member });
     await userEvent.click(headerPublish()!);
     await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(headerPublish()).toHaveTextContent("Publishing…");
+    expect(headerPublish()).toHaveAttribute("aria-disabled", "true");
+    await act(async () => refuse(new ApiFailure({ kind: "unknown", status: 400 })));
     expect(await within(publishWindow()).findByRole("alert")).toBeInTheDocument();
     expect(repository.get("films")?.publishedId).toBeNull();
     expect(within(publishWindow()).getByRole("button", { name: "Publish" })).toBeEnabled();
@@ -1734,7 +1749,9 @@ describe("BoardPage: Publish beside Play", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("opens the window on Update only when the update fails, with what it said", async () => {
+  // Refused for good: Update again with its dot, and one line with Try again;
+  // no window (publish-update-speed BRIEF, 4).
+  it("says a refused Update in one line with Try again, and Update is there again", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({
       ...filmBoard(),
@@ -1743,17 +1760,60 @@ describe("BoardPage: Publish beside Play", () => {
       publishedEditedAt: 50,
       authorName: "Danylo",
     });
-    const publishing: PublishingDeps = {
-      ...noPublishing,
-      republish: vi.fn(() => Promise.reject(new ApiFailure({ kind: "offline" }))),
-    };
-    open(repository, "/b/films", { publishing, account: member });
+    const republish = vi
+      .fn<PublishingDeps["republish"]>()
+      .mockRejectedValueOnce(new ApiFailure({ kind: "unknown", status: 400 }))
+      .mockResolvedValueOnce({ id: "L1" });
+    open(repository, "/b/films", {
+      publishing: { ...noPublishing, republish },
+      account: member,
+    });
     await userEvent.click(headerPublish()!);
-    const out = within(await screen.findByRole("dialog", { name: "Films" }));
-    expect(out.getByRole("alert")).toBeInTheDocument();
-    expect(out.getByText("Changes not published yet")).toBeInTheDocument();
-    expect(out.getByRole("button", { name: "Update" })).toBeEnabled();
+    expect(
+      await screen.findByText("Couldn’t update. Your changes are safe here."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(headerPublish()).toHaveAccessibleName("Update");
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("Updated in Community")).toBeInTheDocument();
+    expect(republish).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: "Open" })).toBeInTheDocument();
+  });
+
+  // Without a connection it tries three times, then waits for one, saying so
+  // on the button; the board stays open to edit meanwhile (BRIEF, 1 and 4).
+  it("keeps the board open while an Update waits for a connection, and sends it once one is back", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const repository = boardsRepository(memoryStore());
+    repository.save({
+      ...filmBoard(),
+      category: "film_tv",
+      publishedId: "L1",
+      publishedEditedAt: 50,
+      authorName: "Danylo",
+    });
+    let online = false;
+    const republish = vi.fn<PublishingDeps["republish"]>(() =>
+      online ? Promise.resolve({ id: "L1" }) : Promise.reject(new ApiFailure({ kind: "offline" })),
+    );
+    open(repository, "/b/films", {
+      publishing: { ...noPublishing, republish },
+      account: member,
+    });
+    fireEvent.click(headerPublish()!);
+    expect(headerPublish()).toHaveTextContent("Updating…");
+    await act(() => vi.advanceTimersByTimeAsync(2_000 + 5_000 + 10_000 + 100));
+    expect(republish).toHaveBeenCalledTimes(4);
+    expect(headerPublish()).toHaveTextContent("Waiting for connection");
+    // The board is the person's to change meanwhile.
+    expect(screen.getByRole("button", { name: "Edit list name" })).toBeEnabled();
+    online = true;
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+      await vi.advanceTimersByTimeAsync(10);
+    });
+    expect(await screen.findByText("Updated in Community")).toBeInTheDocument();
+    expect(republish).toHaveBeenCalledTimes(5);
   });
 
   it("is Published once out and up to date, and opens the window with Open in Community", async () => {
@@ -1819,7 +1879,7 @@ describe("BoardPage: one's own list from its ⋮ menu", () => {
     await userEvent.keyboard("{Escape}");
     await userEvent.click(headerPublish()!);
     await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
-    await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
+    await waitFor(() => expect(said()).toHaveTextContent(/^Your list is live/));
     expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
 
     await userEvent.click(screen.getByLabelText("More about this list"));
@@ -1837,6 +1897,51 @@ describe("BoardPage: one's own list from its ⋮ menu", () => {
     expect(publishing.unpublish).toHaveBeenCalledWith("L1");
     await waitFor(() => expect(said()).toHaveTextContent("Unpublished. The link no longer works."));
     expect(screen.queryByRole("dialog")).toBeNull();
+    expect(headerPublish()).toHaveAccessibleName("Publish");
+  });
+
+  // Take it down while an Update is on its way (publish-update-speed BRIEF, 6):
+  // the Update's answer is not kept, and the takedown reaches the server after
+  // the request already sent, never before it.
+  it("takes a list down during an Update, after the request already sent, and says nothing of the Update", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({
+      ...filmBoard(),
+      category: "film_tv",
+      publishedId: "L1",
+      publishedEditedAt: 50,
+      authorName: "Danylo",
+    });
+    let answer: (out: { id: string }) => void = () => undefined;
+    const republish = vi.fn<PublishingDeps["republish"]>(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const unpublish = vi.fn(() => Promise.resolve());
+    open(repository, "/b/films", {
+      publishing: { ...noPublishing, republish, unpublish },
+      account: member,
+    });
+    await userEvent.click(headerPublish()!);
+    expect(headerPublish()).toHaveTextContent("Updating…");
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    await userEvent.click(within(moreMenu()).getByRole("button", { name: "Publishing settings" }));
+    const out = within(publishWindow("Films"));
+    await userEvent.click(out.getByRole("button", { name: "Take it down" }));
+    await userEvent.click(
+      within(out.getByRole("group", { name: /Take .* down\?/ })).getByRole("button", {
+        name: "Take it down",
+      }),
+    );
+    await act(async () => undefined);
+    expect(unpublish).not.toHaveBeenCalled();
+    await act(async () => answer({ id: "L1" }));
+    await waitFor(() => expect(unpublish).toHaveBeenCalledWith("L1"));
+    await waitFor(() => expect(repository.get("films")?.publishedId).toBeNull());
+    expect(republish).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Updated in Community")).toBeNull();
     expect(headerPublish()).toHaveAccessibleName("Publish");
   });
 
@@ -2798,7 +2903,7 @@ describe("BoardPage: usage statistics", () => {
     open(repository, "/b/films", { publishing, account: member });
     await userEvent.click(headerPublish()!);
     await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
-    await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
+    await waitFor(() => expect(said()).toHaveTextContent(/^Your list is live/));
     expect(step.mock.calls).toEqual([["published"]]);
 
     // Changed and sent again: an update, no list of its own.

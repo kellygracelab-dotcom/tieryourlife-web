@@ -205,6 +205,41 @@ describe("ListArt", () => {
     expect(images[0]!.parentElement).toHaveClass("art__shown");
   });
 
+  it("keeps the collage it showed until an Update's new one has come, never a grey tile", () => {
+    const art = (version: number) => (
+      <ListArt
+        cover={null}
+        previews={["https://img/a.jpg", "https://img/b.jpg", "https://img/c.jpg"]}
+        collage={`/img/collage/list-0009.webp?v=${version}`}
+        tierColors={["#000"]}
+      />
+    );
+    const view = render(art(5));
+    fireEvent.load(view.container.querySelector(".art--collage img")!);
+    // The list was sent again: the server draws its new collage when first asked.
+    view.rerender(art(6));
+    const sources = () =>
+      [...view.container.querySelectorAll(".art--collage img")].map((img) =>
+        img.getAttribute("src"),
+      );
+    expect(sources()).toEqual([
+      "/img/collage/list-0009.webp?v=5",
+      "/img/collage/list-0009.webp?v=6",
+    ]);
+    expect(view.container.querySelector(".art__before")).toHaveClass("art__shown");
+    expect(view.container.querySelector(".art--collage")).not.toHaveClass("art--waiting");
+    fireEvent.load(view.container.querySelectorAll(".art--collage img")[1]!);
+    expect(sources()).toEqual(["/img/collage/list-0009.webp?v=6"]);
+    view.unmount();
+    // A tile drawn afresh on this visit (the feed met again) starts from the one last shown.
+    const again = render(art(7));
+    expect(
+      [...again.container.querySelectorAll(".art--collage img")].map((img) =>
+        img.getAttribute("src"),
+      ),
+    ).toEqual(["/img/collage/list-0009.webp?v=6", "/img/collage/list-0009.webp?v=7"]);
+  });
+
   it("still shows the cover over a collage", () => {
     const { container } = render(
       <ListArt

@@ -5,6 +5,7 @@ import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
 import { shownOwner } from "./owners";
 import { fromOf, labelOf, metaPartsOf, spokenTitleOf, titleOf } from "./boardText";
+import { useSending } from "./publicationRuns";
 import { RenameField } from "./RenameField";
 import { cardFocusByPicture, coverFocusOf, previewsOf, rankedTiers, type Board } from "./model";
 
@@ -90,7 +91,7 @@ export const BoardTile = memo(function BoardTile({
   // The name replaces what the link holds, so whose it is and how far along
   // it is are read after it instead of lost.
   const id = useId();
-  const label = labelOf(board);
+  const label = labelOf(board, useSending(board.uid));
   const facts = label === null ? `${id}-meta` : `${id}-label ${id}-meta`;
   const art = (
     <ListArt

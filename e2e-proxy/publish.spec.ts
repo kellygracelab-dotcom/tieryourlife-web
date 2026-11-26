@@ -57,7 +57,7 @@ test("publishes, is read by a guest, sends an update and takes it down", async (
 
   const word = page.locator(".list-head .publish-button__word");
   await page.getByRole("dialog").getByRole("button", { name: "Publish", exact: true }).click();
-  await expect(page.locator(".snackbar")).toContainText("Published");
+  await expect(page.locator(".snackbar")).toContainText("Your list is live");
   await upToDate(page);
   const href = await listHref(page, title);
 
@@ -124,15 +124,13 @@ test("a publish whose answer was lost does not make a second list", async ({ pag
   const window = page.getByRole("dialog", { name: `Publish “${title}”` });
   const publishButton = window.getByRole("button", { name: "Publish", exact: true });
   await publishButton.click();
-  await expect(window.getByRole("alert")).toBeVisible();
-  expect(await listsTitled(title)).toHaveLength(1);
-
-  // The person tries again: the proxy knows the board and answers with the
-  // list it already has, so there is still one.
-  await publishButton.click();
-  await expect(page.locator(".snackbar")).toContainText("Published");
-  expect(await listsTitled(title)).toHaveLength(1);
+  // The window goes at once; the lost answer is tried again by itself
+  // (publish-update-speed BRIEF, 4): the proxy knows the board and answers
+  // with the list it already has, so there is still one.
   await expect(window).toHaveCount(0);
+  await expect(page.locator(".snackbar")).toContainText("Your list is live");
+  expect(lost).toBe(true);
+  expect(await listsTitled(title)).toHaveLength(1);
   const href = await listHref(page, title);
   expect((await listsTitled(title))[0]?.name.endsWith(href.slice(3))).toBe(true);
 });
