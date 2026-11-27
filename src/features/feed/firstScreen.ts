@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { summaryOf } from "../../api/lists";
 import type { SectionStats } from "../../api/sections";
 import type { ListSummary } from "../../api/types";
 import { onListChanged } from "../../lib/listChanges";
@@ -59,14 +60,24 @@ export function keepPlaces(placed: readonly string[], live: readonly ListSummary
   return [...kept, ...rest];
 }
 
+/*
+ * Each card as the live answer's comes to the page (api/lists, summaryOf):
+ * the same pictures kept, the collage at the same address, so the live card
+ * that takes its place draws the very same pictures.
+ */
+function pageOf(lists: unknown, next: unknown): RememberedPage | null {
+  const page = readRememberedPage({ lists, next });
+  return page === null ? null : { ...page, lists: page.lists.map(summaryOf) };
+}
+
 export function firstScreenOf(answer: HomeFirstAnswer | null): FirstScreen | null {
   if (answer === null) return null;
   const popular = isRecord(answer.popular)
-    ? readRememberedPage({ lists: answer.popular.lists, next: answer.popular.nextCursor ?? null })
+    ? pageOf(answer.popular.lists, answer.popular.nextCursor ?? null)
     : null;
   return {
     popular,
-    fresh: readRememberedPage({ lists: answer.fresh, next: null })?.lists ?? null,
+    fresh: pageOf(answer.fresh, null)?.lists ?? null,
     sections: sectionsOf(answer.sections),
   };
 }

@@ -45,6 +45,28 @@ describe("Community's first screen as the page draws it", () => {
     expect(screen?.fresh?.map((one) => one.id)).toEqual(["n1"]);
   });
 
+  it("reads each card as the live answer's is read: the collage at the site's own address, no picture the page would not draw", () => {
+    const card = {
+      ...summary("c1"),
+      collageUrl: "https://tieryourlife.com/img/collage/list-0001.webp?v=5",
+      previewImages: [
+        "https://tieryourlife.com/img/original/published/c1/p1",
+        "javascript:alert(1)",
+      ],
+    };
+    const screen = firstScreenOf({
+      sections: null,
+      fresh: [card],
+      popular: { lists: [card], nextCursor: null },
+    });
+    for (const shown of [screen?.popular?.lists[0], screen?.fresh?.[0]]) {
+      expect(shown?.collageUrl).toBe("/img/collage/list-0001.webp?v=5");
+      expect(shown?.previewImages).toEqual([
+        "https://tieryourlife.com/img/original/published/c1/p1",
+      ]);
+    }
+  });
+
   it("leaves out each part that does not read right, on its own", () => {
     const screen = firstScreenOf({
       sections: [{ name: "no id" }],
