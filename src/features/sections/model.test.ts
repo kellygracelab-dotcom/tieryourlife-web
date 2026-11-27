@@ -232,6 +232,30 @@ describe("sections", () => {
     });
   });
 
+  // The backend names pictures by the site's own address since 20.11 (Proxy #179):
+  // tiles went to the 30-330 KB originals the CDN keeps a minute (Coordinator, 27.11).
+  it("serves a section's or topic's picture named by the site's address at the tile's width too", () => {
+    for (const host of ["tieryourlife.com", "www.tieryourlife.com", "tieryourlife.web.app"]) {
+      expect(servedPicture(`https://${host}/img/original/sections/anime/a07ab72c-9`)).toBe(
+        "/img/480/sections/anime/a07ab72c-9",
+      );
+      expect(servedPicture(`https://${host}/img/original/topics/pFy4/p_1`, 1600)).toBe(
+        "/img/1600/topics/pFy4/p_1",
+      );
+    }
+    const look = sectionOf(
+      stats("sport", {
+        pictureUrl: "https://tieryourlife.com/img/original/sections/sport/fb2e704a",
+      }),
+    );
+    expect(sectionStyle(look)).toMatchObject({
+      "--section-picture": 'url("/img/480/sections/sport/fb2e704a")',
+    });
+    // Somebody else's /img/original/ is not ours to resize.
+    const theirs = "https://example.test/img/original/sections/sport/fb2e704a";
+    expect(servedPicture(theirs)).toBe(theirs);
+  });
+
   // CONTRACT, Cover focus: a section's and a topic's pictureFocus.
   it("reads a picture's focus only with a picture, and draws a focused one apart from the background", () => {
     const focus = { x: 0.3, y: 0.2, zoom: 1.5 };

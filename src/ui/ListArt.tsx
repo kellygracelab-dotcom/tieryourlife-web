@@ -4,6 +4,7 @@ import { FocusedPicture } from "./FocusedPicture";
 import { strings } from "../strings";
 import "./ListArt.css";
 import { shownLight } from "../lib/tierColour";
+import { sizedFor } from "../lib/pictureSize";
 import {
   GLUED_MIN,
   gluedBroken,
@@ -51,6 +52,15 @@ interface ListArtProps {
 }
 
 const MOSAIC_MAX = 6;
+/**
+ * A collage that would not load is asked for once more after this long, before
+ * the tile falls back to its pictures one by one: the site's function, woken by
+ * a new browser's whole page at once, may answer a few late (Danylo, 27.11:
+ * "covers load picture by picture again" on a first visit).
+ */
+export const COLLAGE_RETRY_MS = 1_500;
+/** A mosaic cell's width for its picture's copy: up to six of them in a tile. */
+const CELL_WIDTH = 200;
 
 /**
  * The collage each list last showed on this visit, by its address without the
@@ -86,6 +96,14 @@ export function ListArt({
   // back to the title or the colours, as for a list without pictures.
   const [loaded, setLoaded] = useState<ReadonlySet<string>>(() => new Set());
   const [collageFailed, setCollageFailed] = useState<string | null>(null);
+  // The collage asked for once more (after COLLAGE_RETRY_MS), and the one waiting to be.
+  const [collageAgain, setCollageAgain] = useState<string | null>(null);
+  const [collageMissed, setCollageMissed] = useState<string | null>(null);
+  useEffect(() => {
+    if (collageMissed === null) return;
+    const timer = setTimeout(() => setCollageAgain(collageMissed), COLLAGE_RETRY_MS);
+    return () => clearTimeout(timer);
+  }, [collageMissed]);
   // The collage last shown: an Update gives the list a new one (its ?v=), drawn
   // by the server when first asked, and until it has come the old one stays,
   // never a grey tile (Designer, background Update, 26.11).
@@ -185,7 +203,10 @@ export function ListArt({
   // One picture for the whole collage, drawn by the site's server, coming in
   // the same way; the pictures one by one only if it will not load.
   if (collage !== null && collage !== collageFailed) {
-    const key = `collage-${collage}`;
+    const again = collageAgain === collage;
+    // A new address for the second try: the CDN and the browser ask the function anew.
+    const src = again ? `${collage}${collage.includes("?") ? "&" : "?"}again=1` : collage;
+    const key = `collage-${src}`;
     const before =
       shownCollage !== null && shownCollage !== collage && !loaded.has(key) ? shownCollage : null;
     return (
@@ -205,15 +226,15 @@ export function ListArt({
         <FocusedPicture
           key={key}
           className={cellClass(key, "art__picture")}
-          src={collage}
+          src={src}
           focus={null}
           {...asked}
           onLoad={() => {
             add(setLoaded, key)();
-            setShownCollage(collage);
-            lastCollage.set(collageBase(collage), collage);
+            setShownCollage(src);
+            lastCollage.set(collageBase(collage), src);
           }}
-          onError={() => setCollageFailed(collage)}
+          onError={() => (again ? setCollageFailed(collage) : setCollageMissed(collage))}
         />
       </div>
     );
@@ -255,7 +276,9 @@ export function ListArt({
           <FocusedPicture
             key={key}
             className={cellClass(key, "art__cell")}
-            src={url}
+            // A cell is a sixth of a tile: its card's small copy, not the original
+            // (a board's own keeps the original, glued from the browser's cache).
+            src={glue === undefined ? sizedFor(url, CELL_WIDTH).src : url}
             focus={cell}
             {...asked}
             onLoad={add(setLoaded, key)}

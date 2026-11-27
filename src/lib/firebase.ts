@@ -120,6 +120,18 @@ function appCheckFor(env: Env): AppCheck | null {
   return appCheck;
 }
 
+/*
+ * The first token waits on reCAPTCHA Enterprise: its script, then its check,
+ * about two seconds in a browser new to the site (Coordinator, 27.11). Asked
+ * for as soon as this module is here, it runs while the app's own code still
+ * loads, and the first request finds it ready or nearly. The check itself is
+ * the same; a refusal is left for that request to meet.
+ */
+export function warmAppCheck(env: Env = readEnv()): void {
+  const check = appCheckFor(env);
+  if (check !== null) void getToken(check).catch(() => undefined);
+}
+
 export async function getAppCheckToken(env: Env = readEnv()): Promise<string | null> {
   const check = appCheckFor(env);
   if (check === null) return null;

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ListArt } from "./ListArt";
+import { COLLAGE_RETRY_MS, ListArt } from "./ListArt";
 import {
   gluedKey,
   gluedSettled,
@@ -256,7 +256,11 @@ describe("ListArt", () => {
     );
   });
 
-  it("goes back to the pictures one by one when the collage will not load", () => {
+  // A new browser's first page wakes the site's function with every collage at
+  // once, and a few may fail: each is asked for once more before the tile falls
+  // back to its pictures one by one (Danylo, 27.11).
+  it("asks for a collage once more before going back to the pictures one by one", () => {
+    vi.useFakeTimers();
     const { container } = render(
       <ListArt
         cover={null}
@@ -266,10 +270,45 @@ describe("ListArt", () => {
       />,
     );
     fireEvent.error(container.querySelector(".art--collage img")!);
+    // Still the collage's tile, waiting, not the mosaic.
+    expect(container.querySelector(".art--collage")).not.toBeNull();
+    expect(container.querySelector(".art--mosaic")).toBeNull();
+    act(() => vi.advanceTimersByTime(COLLAGE_RETRY_MS));
+    const again = container.querySelector(".art--collage img")!;
+    expect(again).toHaveAttribute("src", "/img/collage/list-0001.webp?v=5&again=1");
+    fireEvent.error(again);
     expect(container.querySelector(".art--collage")).toBeNull();
     expect(container.querySelector(".art--mosaic")).toHaveAttribute("data-count", "2");
     expect(Array.from(container.querySelectorAll("img"), (img) => img.getAttribute("src"))).toEqual(
       ["https://img/a.jpg", "https://img/b.jpg"],
+    );
+  });
+
+  it("keeps the collage that came on its second try", () => {
+    vi.useFakeTimers();
+    const { container } = render(
+      <ListArt
+        cover={null}
+        previews={["https://img/a.jpg", "https://img/b.jpg"]}
+        collage="/img/collage/list-0002.webp?v=1"
+        tierColors={[]}
+      />,
+    );
+    fireEvent.error(container.querySelector(".art--collage img")!);
+    act(() => vi.advanceTimersByTime(COLLAGE_RETRY_MS));
+    fireEvent.load(container.querySelector(".art--collage img")!);
+    expect(container.querySelector(".art--collage")).not.toHaveClass("art--waiting");
+    expect(container.querySelector(".art--mosaic")).toBeNull();
+  });
+
+  it("draws a feed tile's mosaic from its cards' small copies, a board's own from the originals", () => {
+    const own = "https://tieryourlife.com/img/original/published/L1/p1";
+    const { container } = render(
+      <ListArt cover={null} previews={[own, "https://img/b.jpg"]} tierColors={[]} />,
+    );
+    expect(container.querySelector(".art--mosaic img")).toHaveAttribute(
+      "src",
+      "/img/400/published/L1/p1",
     );
   });
 

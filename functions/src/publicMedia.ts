@@ -21,8 +21,31 @@ export function publicMediaPath(kind: string, id: string, picture: string): stri
     : null;
 }
 
-/** Decode only old media addresses for our bucket. Never interpret an arbitrary URL as a bucket read. */
+/*
+ * The site's own addresses for the same public bytes. Since 20.11.2026 the
+ * backend names every picture on the wire as https://tieryourlife.com/img/original/…
+ * (Proxy #179), and boards and apps keep the older hosts they were given.
+ * Read as the bucket path, a tile or a card goes to its small copy
+ * (/img/480, /img/200) instead of the original: missed, a new browser fetched
+ * ~1.7 MB of section originals the CDN keeps a minute (Coordinator, 27.11).
+ */
+const SITE_ORIGINALS = [
+  "https://tieryourlife.com/img/original/",
+  "https://www.tieryourlife.com/img/original/",
+  "https://tieryourlife.web.app/img/original/",
+  "https://tieryourlife.firebaseapp.com/img/original/",
+];
+
+/**
+ * Decode only our bucket's public media addresses: Storage's own, and the
+ * site's /img/original/ on its hosts. Never interpret an arbitrary URL as a bucket read.
+ */
 export function storedPublicMedia(url: string): string | null {
+  const site = SITE_ORIGINALS.find((prefix) => url.startsWith(prefix));
+  if (site !== undefined) {
+    const parts = url.slice(site.length).split(/[?#]/)[0]!.split("/");
+    return parts.length === 3 ? publicMediaPath(parts[0]!, parts[1]!, parts[2]!) : null;
+  }
   if (!url.startsWith(PREFIX)) return null;
   const query = url.indexOf("?", PREFIX.length);
   if (query < 0 || new URLSearchParams(url.slice(query + 1)).get("alt") !== "media") return null;
