@@ -17,6 +17,9 @@ and the outside catalogues only there (the proxy's `CONTRACT.md`, E2E).
 - `publish.spec.ts`:
   - publishing, a guest reading the list, Update and taking it down;
   - a publish whose answer was lost: the retry finds the same list by `boardUid`.
+- `firstScreen.spec.ts`: Community's first screen from the site's own `/api/home`
+  against the proxy's answers to a guest: Popular's order and cursor, the New row,
+  the section tiles and every card, field by field.
 - `sync.spec.ts`:
   - a board made on one device opens on a second, and a change made there comes back;
   - two devices that changed one board while apart end with both versions as two boards.

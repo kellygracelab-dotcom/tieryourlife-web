@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,6 +7,7 @@ import { CATEGORIES, type FeedPage, type FeedQuery, type ListSummary } from "../
 import { routes } from "../app/routes";
 import { SessionContext } from "../app/session";
 import { forgetFurtherPagesForTests } from "../features/feed/useFeed";
+import { askHomeFirst, HOME_FIRST_FOR_MS, resetHomeFirstForTests } from "../lib/homeFirst";
 
 const mocks = vi.hoisted(() => ({
   loadFeed: vi.fn<(query: FeedQuery) => Promise<FeedPage>>(),
@@ -60,6 +61,7 @@ const open = (path = "/") =>
 beforeEach(() => {
   // Show more's pages are kept for this visit: each test starts a visit of its own.
   forgetFurtherPagesForTests();
+  resetHomeFirstForTests();
   mocks.loadFeed.mockReset();
   mocks.loadFresh.mockReset();
   // People's newest lists, unless a test says: on their way for good.
@@ -219,5 +221,97 @@ describe("HomePage", () => {
     await within(popular).findByText("Perfect Blue");
     expect(within(popular).getAllByRole("article")).toHaveLength(2);
     expect(within(popular).queryByText("New")).toBeNull();
+  });
+});
+
+// Danylo's yes, 27.11: a browser new to the site draws Community's first
+// screen from the answer that came with the page, before App Check is done.
+describe("Community's first screen", () => {
+  const tile = (id: string, name: string, rank: number) => ({
+    id,
+    name,
+    status: "approved",
+    rank,
+    pictureUrl: null,
+    lists30d: 0,
+    following: false,
+  });
+  const answer = {
+    sections: [tile("games", "Games", 1), tile("film_tv", "Film & TV", 2)],
+    fresh: [summary("n1", "Somebody's new one")],
+    popular: { lists: [summary("a1", "Every A24 film, ranked")], nextCursor: null },
+  };
+  const came = (body: unknown, now?: () => number) =>
+    askHomeFirst(async () => ({ ok: true, json: async () => body }) as Response, now);
+
+  it("draws the newest lists and Popular at once, and the live feed takes the same cards over", async () => {
+    let live!: (page: FeedPage) => void;
+    mocks.loadFeed.mockImplementation(() => new Promise((resolve) => (live = resolve)));
+    await came(answer);
+    open();
+    const card = await screen.findByRole("link", { name: /Every A24 film, ranked/ });
+    expect(screen.getByRole("link", { name: /Somebody's new one/ })).toBeInTheDocument();
+
+    act(() => live({ lists: [summary("a1", "Every A24 film, ranked")], nextCursor: null }));
+    // The same card, not drawn again: nothing on the screen jumps or blinks.
+    expect(await screen.findByRole("link", { name: /Every A24 film, ranked/ })).toBe(card);
+  });
+
+  it("keeps the first screen up when the live feed cannot be had", async () => {
+    mocks.loadFeed.mockRejectedValue(new ApiFailure({ kind: "unavailable" }));
+    await came(answer);
+    open();
+    expect(await screen.findByRole("link", { name: /Every A24 film, ranked/ })).toBeInTheDocument();
+    expect(screen.queryByText("Could not load the lists.")).toBeNull();
+  });
+
+  it("draws nothing of an answer that does not read right, or that is two minutes old", async () => {
+    mocks.loadFeed.mockImplementation(() => new Promise(() => undefined));
+    await came({ popular: { lists: [{ id: "x" }] }, fresh: "no", sections: [{ name: "?" }] });
+    open();
+    // The nine stand in, and Popular waits.
+    expect(await screen.findByRole("link", { name: "Anime" })).toBeInTheDocument();
+    expect(screen.queryAllByRole("article")).toHaveLength(0);
+
+    resetHomeFirstForTests();
+    let now = 0;
+    await came(answer, () => now);
+    now = HOME_FIRST_FOR_MS;
+    open();
+    expect(await screen.findAllByRole("link", { name: "Anime" })).not.toHaveLength(0);
+    expect(screen.queryByRole("link", { name: /Every A24 film, ranked/ })).toBeNull();
+  });
+
+  it("never moves a card one already sees when the live feed comes in another order", async () => {
+    let live!: (page: FeedPage) => void;
+    mocks.loadFeed.mockImplementation(() => new Promise((resolve) => (live = resolve)));
+    await came({
+      ...answer,
+      fresh: [],
+      popular: {
+        lists: [summary("a1", "First"), summary("a2", "Second"), summary("a3", "Third")],
+        nextCursor: null,
+      },
+    });
+    open();
+    const titles = () =>
+      within(screen.getByRole("region", { name: "Popular" }))
+        .getAllByRole("article")
+        .map((card) =>
+          ["First", "Second", "Third", "Newly popular"].find((title) =>
+            card.textContent?.includes(title),
+          ),
+        );
+    await screen.findByRole("link", { name: /First/ });
+    expect(titles()).toEqual(["First", "Second", "Third"]);
+    act(() =>
+      live({
+        lists: [summary("n9", "Newly popular"), summary("a3", "Third"), summary("a1", "First")],
+        nextCursor: null,
+      }),
+    );
+    // Second was taken down meanwhile: the list not shown yet takes its place.
+    expect(await screen.findByRole("link", { name: /Newly popular/ })).toBeInTheDocument();
+    expect(titles()).toEqual(["First", "Newly popular", "Third"]);
   });
 });

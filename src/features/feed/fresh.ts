@@ -16,13 +16,17 @@ export const FRESH_KEY = "fresh";
  * People's newest lists, the server's pick (GET /lists?fresh=1): the last
  * answer from the device at once, so coming back draws Popular's top where it
  * was and nothing below it moves, then the new one. Nothing on a failure:
- * Popular stands as it is.
+ * Popular stands as it is. A browser with no answer of its own draws
+ * `standIn` (Community's first screen) until the new one comes.
  */
 export function useFresh(
   load: LoadFresh,
   memory: Remembered<RememberedPage> | null = feedMemory,
-): ListSummary[] {
-  const [lists, setLists] = useState<ListSummary[]>(() => memory?.recall(FRESH_KEY)?.lists ?? []);
+  standIn: readonly ListSummary[] | null = null,
+): readonly ListSummary[] {
+  const [lists, setLists] = useState<ListSummary[] | null>(
+    () => memory?.recall(FRESH_KEY)?.lists ?? null,
+  );
   useEffect(() => {
     let current = true;
     load().then(
@@ -40,8 +44,10 @@ export function useFresh(
       current = false;
     };
   }, [load, memory]);
-  return lists;
+  return lists ?? standIn ?? NONE;
 }
+
+const NONE: readonly ListSummary[] = [];
 
 /**
  * The first few of them a reader has not hidden, in the server's order. One

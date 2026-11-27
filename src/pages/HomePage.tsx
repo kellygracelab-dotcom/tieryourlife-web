@@ -11,6 +11,7 @@ import {
   withFreshOnTop,
   type LoadFresh,
 } from "../features/feed/fresh";
+import { keepPlaces, useFirstScreen } from "../features/feed/firstScreen";
 import { useHidden } from "../features/community/useHidden";
 import {
   FollowingTab,
@@ -80,15 +81,30 @@ function Explore({
   /** Somebody signed in, or by this device's last word about to be. */
   signedIn: boolean;
 }) {
-  const popular = useFeed({ sort: "popular" }, load);
-  const { sections, known } = useSections(store);
+  // Drawn at once in a browser new to the site, until the live answers come.
+  const first = useFirstScreen();
+  const popular = useFeed({ sort: "popular" }, load, undefined, undefined, first?.popular ?? null);
+  const live = useSections(store);
+  const standIn = live.known ? null : (first?.sections ?? null);
+  const sections = standIn ?? live.sections;
+  const known = live.known || standIn !== null;
   const { hidden, hiddenThisVisit } = useHidden();
-  const fresh = useFresh(loadFresh);
+  const fresh = useFresh(loadFresh, undefined, first?.fresh ?? null);
   const top = useMemo(
     () => freshOnTop(fresh, hidden, hiddenThisVisit),
     [fresh, hidden, hiddenThisVisit],
   );
   const freshIds = useFreshIds(top);
+  const shown = withFreshOnTop(popular.state, top);
+  // The places the first screen gave its cards, once it is drawn: they keep them.
+  const [placed, setPlaced] = useState<readonly string[] | null>(null);
+  if (placed === null && popular.standingIn && shown.status === "ready") {
+    setPlaced(shown.lists.map((list) => list.id));
+  }
+  const state =
+    placed !== null && shown.status === "ready"
+      ? { ...shown, lists: keepPlaces(placed, shown.lists) }
+      : shown;
   return (
     <>
       <SectionGrid sections={sections} known={known} />
@@ -99,7 +115,7 @@ function Explore({
           <p>{signedIn ? strings.home.popularNoteSignedIn : strings.home.popularNote}</p>
         </div>
         <FeedGrid
-          state={withFreshOnTop(popular.state, top)}
+          state={state}
           freshIds={freshIds}
           label={strings.sections.popular}
           retry={popular.retry}

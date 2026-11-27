@@ -111,3 +111,36 @@ export async function stored(collection: string): Promise<StoredDoc[]> {
 
 export const text = (doc: StoredDoc, field: string): string | undefined =>
   doc.fields[field]?.stringValue;
+
+export type Plain = null | boolean | number | string | Date | Plain[] | { [key: string]: Plain };
+
+const firestoreValue = (value: Plain): unknown => {
+  if (value === null) return { nullValue: null };
+  if (typeof value === "boolean") return { booleanValue: value };
+  if (typeof value === "number")
+    return Number.isInteger(value) ? { integerValue: String(value) } : { doubleValue: value };
+  if (typeof value === "string") return { stringValue: value };
+  if (value instanceof Date) return { timestampValue: value.toISOString() };
+  if (Array.isArray(value)) return { arrayValue: { values: value.map(firestoreValue) } };
+  return {
+    mapValue: {
+      fields: Object.fromEntries(Object.entries(value).map(([k, v]) => [k, firestoreValue(v)])),
+    },
+  };
+};
+
+/** Writes a document as it is, past the rules, as the proxy would have stored it. */
+export async function put(
+  collection: string,
+  id: string,
+  data: Record<string, Plain>,
+): Promise<void> {
+  const fields = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, firestoreValue(v)]));
+  const answer = await fetch(`${FIRESTORE}/${collection}/${id}`, {
+    method: "PATCH",
+    headers: { Authorization: "Bearer owner", "Content-Type": "application/json" },
+    body: JSON.stringify({ fields }),
+  });
+  if (!answer.ok)
+    throw new Error(`Firestore emulator: ${answer.status} writing ${collection}/${id}`);
+}
