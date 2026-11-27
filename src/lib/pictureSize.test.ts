@@ -37,6 +37,19 @@ describe("sizedFor", () => {
     expect(sizedFor(face, 64)).toEqual({ src: "/img/original/avatars/me/face1" });
   });
 
+  it("shows a published picture named by the site's address at its small copy too (27.11)", () => {
+    const path = "published/L1/p-2";
+    expect(sizedFor(`https://tieryourlife.com/img/original/${path}`, 64)).toEqual({
+      src: `/img/200/${path}`,
+    });
+    expect(sizedFor(`https://tieryourlife.web.app/img/original/${path}`, 120)).toEqual({
+      src: `/img/400/${path}`,
+    });
+    expect(sizedFor(`https://tieryourlife.com/img/original/${path}`, 300)).toEqual({
+      src: `/img/original/${path}`,
+    });
+  });
+
   it("leaves any other picture as it is: an own upload, another site", () => {
     expect(sizedFor("https://firebasestorage.googleapis.com/x.png", 64)).toEqual({
       src: "https://firebasestorage.googleapis.com/x.png",

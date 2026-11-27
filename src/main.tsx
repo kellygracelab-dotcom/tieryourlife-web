@@ -49,8 +49,13 @@ void boot({
     // Usage statistics (Settings → Send usage statistics) start before the
     // app writes anything of its own: a browser that already held the site's
     // things came before them, and is no newcomer.
-    const [{ countWith, defaultUsageDeps, startUsage }, { api }, { getFirebaseAuth }] =
-      await Promise.all([import("./lib/usage"), import("./lib/api"), import("./lib/firebase")]);
+    const [
+      { countWith, defaultUsageDeps, startUsage },
+      { api },
+      { getFirebaseAuth, warmAppCheck },
+    ] = await Promise.all([import("./lib/usage"), import("./lib/api"), import("./lib/firebase")]);
+    // App Check's first token, while the app's own code is on its way.
+    warmAppCheck();
     countWith(
       startUsage(
         defaultUsageDeps(api, () => getFirebaseAuth().currentUser !== null),

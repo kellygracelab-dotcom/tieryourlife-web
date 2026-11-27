@@ -70,9 +70,39 @@ describe("pictures through the site's address", () => {
       prefix.replace("tieryourlife.firebasestorage.app", "other-bucket") +
         "published%2Fa%2Fp?alt=media",
       "https://example.test/a.jpg",
+      "https://tieryourlife.com/img/original/users/abc/p",
+      "https://tieryourlife.com/img/original/published/../p",
+      "https://tieryourlife.com/img/original/published/a/p/q",
+      "https://tieryourlife.com/img/480/sections/a/p",
+      "https://example.test/img/original/published/a/p",
+      "http://tieryourlife.com/img/original/published/a/p",
     ]) {
       assert.equal(storedPublicMedia(url), null);
       assert.equal(mediaSrc(url), url);
+    }
+  });
+
+  // Since 20.11 the backend names pictures by the site's address (Proxy #179):
+  // read as the same bucket path on every host the site has had (27.11).
+  it("reads the site's own /img/original/ addresses on its hosts as the bucket path", () => {
+    for (const host of [
+      "tieryourlife.com",
+      "www.tieryourlife.com",
+      "tieryourlife.web.app",
+      "tieryourlife.firebaseapp.com",
+    ]) {
+      assert.equal(
+        storedPublicMedia(`https://${host}/img/original/sections/anime/a07ab72c-1`),
+        "sections/anime/a07ab72c-1",
+      );
+      assert.equal(
+        storedPublicMedia(`https://${host}/img/original/published/L1/p-2?v=3#x`),
+        "published/L1/p-2",
+      );
+      assert.equal(
+        mediaSrc(`https://${host}/img/original/topics/t1/p`),
+        "/img/original/topics/t1/p",
+      );
     }
   });
 

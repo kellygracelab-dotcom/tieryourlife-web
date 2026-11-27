@@ -290,10 +290,10 @@ describe("Play on a page", () => {
     const receipt = notify.mock.lastCall![0] as SnackbarNotice;
     expect(receipt.text).toBe("Saved game discarded");
     // The new game is kept from its first answer on.
-    expect(localGames(store).load("b1")).toBeNull();
+    expect(localGames(store, () => NOW).load("b1")).toBeNull();
 
     act(() => receipt.action!.onClick());
-    expect(localGames(store).load("b1")).toEqual(old);
+    expect(localGames(store, () => NOW).load("b1")).toEqual(old);
     // Back to the picker, where the old game waits.
     expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
   });
