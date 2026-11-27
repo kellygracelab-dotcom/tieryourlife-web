@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { boot, drawFailure, withoutFreshMark } from "./boot";
 import { recover } from "./lib/freshChunk";
+import { askHomeFirst } from "./lib/homeFirst";
 import { installSidewaysWheel } from "./lib/sidewaysWheel";
 import { applyLocale, LOCALE_PARAM, localeInAddress, pickLocale, readLocale } from "./lib/locale";
 import { localStorageStore, sessionStorageStore } from "./lib/storage";
@@ -12,6 +13,10 @@ import "@fontsource/roboto/500.css";
 import "./index.css";
 // The error page's look, here for the screen boot.ts draws when the app itself did not come.
 import "./app/RouteError.css";
+
+// Community's first screen, before the language and the app: Hosting asked
+// for it with the page, and this takes it over (src/lib/homeFirst.ts).
+if (window.location.pathname === "/") void askHomeFirst();
 
 const root = document.getElementById("root");
 if (root === null) throw new Error("index.html has no #root");

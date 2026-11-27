@@ -149,6 +149,10 @@
             {
               "key": "Cache-Control",
               "value": "no-cache"
+            },
+            {
+              "key": "Link",
+              "value": "</api/home>; rel=preload; as=fetch; crossorigin=anonymous"
             }
           ]
         },

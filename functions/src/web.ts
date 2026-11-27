@@ -22,6 +22,7 @@ import {
 } from "./pages";
 import { sendPicture, storagePictures, type PictureDeps } from "./pictures";
 import { collageSizeOf, sendCollage, type CollageDeps } from "./collage";
+import { sendHomeFirst, type HomeFirst } from "./homeFirst";
 import { discardOlderCopies, fetchPictureBytes } from "./shareImage";
 import {
   APP_CHECK_TOKEN_KEPT_MS,
@@ -114,6 +115,8 @@ export interface WebDeps {
   forgetPictures: (code: string) => Promise<unknown>;
   /** Section and topic pictures from the bucket, shrunk; the bucket's own when left out. */
   pictures?: PictureDeps;
+  /** Community's first screen; read from Firestore when left out. */
+  homeFirst?: (db: Firestore, nowMs: number) => Promise<HomeFirst>;
   /** A published list's collage pictures: fetched safely, or read from the bucket's published/. */
   collage?: CollageDeps;
 }
@@ -263,6 +266,17 @@ export async function route(
         if (room) write(violation);
       }
       return void response.status(204).end();
+    }
+
+    // Community's first screen, before a browser has its App Check token: what
+    // any visitor is shown, the same for everybody (src/homeFirst.ts).
+    if (resource === "home" && rest === undefined) {
+      if (!reading) return methodNotAllowed(response);
+      // One address, one copy at the edge: an address made up to pass it is refused.
+      if (Object.keys((request.query as Record<string, unknown> | undefined) ?? {}).length > 0) {
+        return void response.status(400).json({ error: "No parameters here", code: "BAD_REQUEST" });
+      }
+      return await sendHomeFirst(response, deps.db(), (deps.now ?? Date.now)(), deps.homeFirst);
     }
 
     if (resource === "me") {

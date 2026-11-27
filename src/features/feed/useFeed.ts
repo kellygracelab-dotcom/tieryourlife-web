@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { VisitMemory } from "../../app/visitMemory";
 import type { ApiError } from "../../api/errors";
 import type { FeedPage, FeedQuery, ListSummary } from "../../api/types";
@@ -135,13 +135,16 @@ interface Loaded {
  * One feed query: its first page on mount and when the query changes, further
  * pages on demand. The first page last read opens the feed at once, and the
  * fresh one takes its place; a Following feed is somebody's own and is never
- * kept.
+ * kept. `standIn` is a first page from elsewhere for a browser that has none
+ * of its own (Community's first screen, src/lib/homeFirst.ts): drawn the same
+ * way until the fresh one comes, and kept up if that one fails.
  */
 export function useFeed(
   query: FeedQuery,
   load: LoadFeed = loadFeed,
   memory: Remembered<RememberedPage> | null = feedMemory,
   visit: VisitMemory | null = null,
+  standIn: RememberedPage | null = null,
 ) {
   // The query travels as a string so a fresh object literal on each render does not refetch.
   const key = JSON.stringify(query);
@@ -163,15 +166,31 @@ export function useFeed(
       ? loaded.state
       : recalled !== null && (attempt === 0 || keptUp === true)
         ? readyFrom(recalled, attempt !== 0)
-        : ((attempt === 0 ? visit?.feed : null) ?? LOADING);
+        : ((attempt === 0
+            ? (visit?.feed ?? (standIn !== null ? readyFrom(standIn, false) : null))
+            : null) ?? LOADING);
+  // Whether what is drawn is the stand-in, the fresh page not here yet.
+  const standingIn =
+    !(loaded !== null && loaded.key === key && loaded.attempt === attempt) &&
+    recalled === null &&
+    attempt === 0 &&
+    !visit?.feed &&
+    standIn !== null;
+  // Read when the fresh page fails, never a reason to ask for it again.
+  const standInNow = useRef(standIn);
+  useEffect(() => {
+    standInNow.current = standIn;
+  }, [standIn]);
 
   useEffect(() => {
     let current = true;
     const settle = (next: FeedState) => current && setLoaded({ key, attempt, state: next });
     // A page read before stays when the fresh one fails: lists to read beat a
     // bare "No connection".
-    const failed = (reason: unknown): FeedState =>
-      recalled !== null ? readyFrom(recalled, true) : { status: "error", error: errorOf(reason) };
+    const failed = (reason: unknown): FeedState => {
+      const shown = recalled ?? standInNow.current;
+      return shown !== null ? readyFrom(shown, true) : { status: "error", error: errorOf(reason) };
+    };
     load(stable).then(
       (page) => {
         kept?.keep(key, { lists: page.lists.map(nobodys), next: page.nextCursor });
@@ -262,5 +281,5 @@ export function useFeed(
     });
   }, [state, key, stable, load, kept, visit]);
 
-  return { state, retry, more };
+  return { state, retry, more, standingIn };
 }
