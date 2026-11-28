@@ -4,7 +4,11 @@ export interface TokenProviders {
   appCheckToken(): Promise<string | null>;
   /** A token good for one request, which the server spends as it checks it (QA S25). */
   limitedAppCheckToken?(): Promise<string | null>;
-  idToken(options?: { forceRefresh?: boolean }): Promise<string | null>;
+  /**
+   * The account's token. With `existingOnly`, only an account already here:
+   * none is made for the request, a guest's sign-in included.
+   */
+  idToken(options?: { forceRefresh?: boolean; existingOnly?: boolean }): Promise<string | null>;
 }
 
 export type Query = Record<string, string | number | boolean | undefined>;
@@ -19,7 +23,13 @@ export interface RequestOptions {
   action?: AccountAction;
   query?: Query;
   body?: unknown;
-  auth?: "user" | "appCheckOnly";
+  /**
+   * "reader" for what the proxy lets anybody read with App Check alone (Proxy,
+   * 28.11.2026): the account's token when one is here, and none when there is
+   * nobody yet, so a new visitor's first page does not wait on a guest's
+   * sign-in. Turned away anyway (an older proxy), it is asked again as "user".
+   */
+  auth?: "user" | "appCheckOnly" | "reader";
   /** "limited" for a request the server lets through once per token: a new ranking. */
   appCheck?: "session" | "limited";
   /**
@@ -124,7 +134,11 @@ export function createApiClient({
         ? options.action.idToken(forceRefresh)
         : options.auth === "appCheckOnly"
           ? null
-          : idToken({ forceRefresh }),
+          : idToken(
+              options.auth === "reader" && !forceRefresh
+                ? { existingOnly: true }
+                : { forceRefresh },
+            ),
     ]);
     if (appCheck) headers["X-Firebase-AppCheck"] = appCheck;
     if (token) headers.Authorization = `Bearer ${token}`;

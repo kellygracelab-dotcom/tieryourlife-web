@@ -20,6 +20,16 @@
       content="Rank anything, or take someone else's list and rank it your way."
     />
     <meta name="theme-color" content="#fbf8ff" />
+    <!--
+      A visitor's first request to the backend waits on a chain of round trips:
+      reCAPTCHA's script and check (www.google.com, www.gstatic.com), App
+      Check's exchange, then a guest's sign-in. The connections open while the
+      page's own scripts are still coming (Danylo, 28.11.2026).
+    -->
+    <link rel="preconnect" href="https://www.google.com" />
+    <link rel="preconnect" href="https://www.gstatic.com" />
+    <link rel="preconnect" href="https://content-firebaseappcheck.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin />
     <script>
       // The kept scheme goes on <html> before the first paint; the stylesheet does the rest.
       try {

@@ -124,7 +124,7 @@ describe("lists", () => {
 
     await expect(loadList(client, "a b")).resolves.toMatchObject({ id: "a b" });
 
-    expect(request).toHaveBeenCalledWith("GET", "/lists/a%20b");
+    expect(request).toHaveBeenCalledWith("GET", "/lists/a%20b", { auth: "reader" });
   });
 
   it("reads a card's focus only on a card with a picture, and only in range", async () => {
@@ -174,6 +174,8 @@ describe("lists", () => {
 
     expect(request).toHaveBeenCalledWith("GET", "/lists", {
       query: { category: "games", sort: "popular", following: true },
+      // Followed lists are somebody's own: read as the account.
+      auth: "user",
       // No longer than this for App Check: past it the feed says the browser was not checked.
       appCheckWaitMs: 5_000,
     });
@@ -184,7 +186,11 @@ describe("lists", () => {
 
     await loadFeed(client);
 
-    expect(request).toHaveBeenCalledWith("GET", "/lists", { query: {}, appCheckWaitMs: 5_000 });
+    expect(request).toHaveBeenCalledWith("GET", "/lists", {
+      query: {},
+      auth: "reader",
+      appCheckWaitMs: 5_000,
+    });
   });
 
   it("leaves out the empty slots among a list's pictures, in the feed and in one's own lists", async () => {
