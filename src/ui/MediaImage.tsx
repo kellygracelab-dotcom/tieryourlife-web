@@ -7,6 +7,7 @@ import {
   type ComponentProps,
 } from "react";
 import { mediaSrc } from "../../functions/src/publicMedia";
+import { useCoverSizes } from "./coverSizes";
 import { PrivatePictureOwner } from "./privatePictureOwner";
 import { privatePicturePath } from "../lib/privatePictureRef";
 
@@ -56,8 +57,14 @@ function PrivateImage({ path, loading, ref, ...props }: ImageProps & { path: str
   );
 }
 
+function PublicImage({ ref, sizes, ...props }: ImageProps) {
+  const image = useRef<HTMLImageElement>(null);
+  useImperativeHandle(ref, () => image.current!, []);
+  return <img {...props} ref={image} sizes={useCoverSizes(image, sizes)} />;
+}
+
 export function MediaImage({ src, ...props }: ImageProps) {
   const path = privatePicturePath(src);
   if (path) return <PrivateImage key={path} {...props} path={path} />;
-  return <img {...props} src={src === undefined ? undefined : mediaSrc(src)} />;
+  return <PublicImage {...props} src={src === undefined ? undefined : mediaSrc(src)} />;
 }

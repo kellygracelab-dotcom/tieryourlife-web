@@ -5,7 +5,9 @@ import { describe, it } from "node:test";
 import sharp from "sharp";
 import {
   collageCells,
+  collagePath,
   collagePictures,
+  collageScaleOf,
   collageSizeOf,
   COLLAGE_HEIGHT,
   COLLAGE_WIDTH,
@@ -188,6 +190,68 @@ describe("collagePictures", () => {
 
   it("asks a catalogue for a poster size that fills a cell", () => {
     assert.equal(collageSizeOf(a), "https://image.tmdb.org/t/p/w342/a.jpg");
+  });
+});
+
+describe("a collage twice the size", () => {
+  it("lays the same cells out in twice the frame, gaps included", () => {
+    for (let count = 2; count <= 6; count++) {
+      const once = collageCells(count);
+      const twice = collageCells(count, 2);
+      assert.equal(twice.length, once.length);
+      assert.equal(Math.max(...twice.map((cell) => cell.left + cell.width)), COLLAGE_WIDTH * 2);
+      assert.equal(Math.max(...twice.map((cell) => cell.top + cell.height)), COLLAGE_HEIGHT * 2);
+      for (const [at, cell] of twice.entries()) {
+        assert.ok(Math.abs(cell.width - 2 * once[at]!.width) <= 2);
+        assert.ok(Math.abs(cell.height - 2 * once[at]!.height) <= 2);
+      }
+    }
+  });
+
+  it("is asked for with ?s=2, and anything else is the plain size", () => {
+    assert.equal(collageScaleOf("2"), 2);
+    for (const raw of [undefined, "1", "3", 2, ["2"], ""]) assert.equal(collageScaleOf(raw), 1);
+  });
+
+  it("is kept under a name of its own, the plain size under the name it had", () => {
+    const drawn = [{ url: "https://x.test/1", focus: null }];
+    assert.equal(collagePath("abc", drawn), collagePath("abc", drawn, 1));
+    assert.notEqual(collagePath("abc", drawn, 2), collagePath("abc", drawn));
+    assert.ok(collagePath("abc", drawn, 2).startsWith("share/c/abc/"));
+  });
+
+  it("takes the catalogue's poster as stored, the plain size its smaller one", () => {
+    const poster = "https://image.tmdb.org/t/p/w500/x.jpg";
+    assert.equal(collageSizeOf(poster), "https://image.tmdb.org/t/p/w342/x.jpg");
+    assert.equal(collageSizeOf(poster, 2), poster);
+  });
+
+  it("draws 960×600, each picture in its cell", async () => {
+    const asked: number[] = [];
+    const bytes: Record<string, Buffer> = {
+      "https://x.test/1": await solid(RED, 900, 600),
+      "https://x.test/2": await solid(BLUE, 900, 600),
+    };
+    const deps: CollageDeps = {
+      load: async (url, scale) => {
+        asked.push(scale);
+        return bytes[url] ?? null;
+      },
+    };
+    const webp = await drawCollage(
+      ["1", "2"].map((n) => ({ url: `https://x.test/${n}`, focus: null })),
+      deps,
+      undefined,
+      2,
+    );
+    assert.ok(webp !== null);
+    const meta = await sharp(webp).metadata();
+    assert.equal(meta.width, 960);
+    assert.equal(meta.height, 600);
+    assert.deepEqual(asked, [2, 2]);
+    const { at } = await pixels(webp);
+    assert.ok(near(at(200, 300), RED));
+    assert.ok(near(at(760, 300), BLUE));
   });
 });
 

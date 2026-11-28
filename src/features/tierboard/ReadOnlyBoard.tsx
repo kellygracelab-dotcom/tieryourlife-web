@@ -10,7 +10,7 @@ import { TierCaption, TierLabel } from "./TierLabel";
 import { useBoardSize } from "./useBoardSize";
 import type { BoardSize } from "./nameFit";
 import "./board.css";
-import { sizedFor } from "../../lib/pictureSize";
+import { sizedFor, TILE_BOX } from "../../lib/pictureSize";
 import { shownLight } from "../../lib/tierColour";
 import { cardLabel } from "../../lib/cardText";
 
@@ -46,7 +46,7 @@ function Tile({
     pictured && item.imageUrl !== null ? (
       <>
         <FocusedPicture
-          {...sizedFor(item.imageUrl, 64)}
+          {...sizedFor(item.imageUrl, TILE_BOX)}
           focus={item.pictureFocus}
           alt={cardLabel(item.title)}
           loading="lazy"

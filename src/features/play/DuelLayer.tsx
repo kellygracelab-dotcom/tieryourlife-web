@@ -1,7 +1,7 @@
 import { MediaImage } from "../../ui/MediaImage";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { sizedFor } from "../../lib/pictureSize";
+import { DUEL_CARD_BOX, sizedFor } from "../../lib/pictureSize";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
@@ -373,7 +373,11 @@ function Slot({ card, keycap, state, leaving, onPick }: SlotProps) {
         onClick={onPick}
       >
         {card.imageUrl !== null ? (
-          <MediaImage className="duel-card__picture" {...sizedFor(card.imageUrl, 300)} alt="" />
+          <MediaImage
+            className="duel-card__picture"
+            {...sizedFor(card.imageUrl, DUEL_CARD_BOX)}
+            alt=""
+          />
         ) : (
           <FittedName name={card.name} />
         )}

@@ -308,7 +308,7 @@ describe("ListArt", () => {
     );
     expect(container.querySelector(".art--mosaic img")).toHaveAttribute(
       "src",
-      "/img/400/published/L1/p1",
+      "/img/400/published/L1/p1?v=2",
     );
   });
 

@@ -208,7 +208,12 @@ function StartedCard({
           ) : (
             <span className="started__thumbs" aria-hidden="true">
               {one.pictures.map((url) => (
-                <MediaImage key={url} className="started__thumb" {...sizedFor(url, 96)} alt="" />
+                <MediaImage
+                  key={url}
+                  className="started__thumb"
+                  {...sizedFor(url, { width: 44, height: 64 })}
+                  alt=""
+                />
               ))}
             </span>
           )}

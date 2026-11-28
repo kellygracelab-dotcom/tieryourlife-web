@@ -142,12 +142,14 @@ function fakeHosting(options: { lose?: boolean; deployDuring?: "populate" | "rel
 }
 
 describe("a takedown's cards' copies", () => {
-  it("are the 200 and 400 copies of each deleted file in a list's folder, other lists' included", () => {
+  it("are the 200, 400 and 800 copies of each deleted file in a list's folder, other lists' included", () => {
     assert.deepEqual(copiesOf(["published/list-1/p1", "published/list-2/list-1-p1"]), [
       "published/list-1/w200/p1",
       "published/list-1/w400/p1",
+      "published/list-1/w800/p1",
       "published/list-2/w200/list-1-p1",
       "published/list-2/w400/list-1-p1",
+      "published/list-2/w800/list-1-p1",
     ]);
     assert.deepEqual(copiesOf(["users/u1/p", "published/list-1", 7, "published/a/b/c"]), []);
     assert.deepEqual(copiesOf(undefined), []);
@@ -314,7 +316,11 @@ describe("a takedown's request", () => {
     const removed: string[] = [];
     const deps = depsFor(clock, store, hosting.call, removed);
     assert.equal(await onPurgeRequest(T, ["published/list-1/p1"], deps), "run");
-    assert.deepEqual(removed, ["published/list-1/w200/p1", "published/list-1/w400/p1"]);
+    assert.deepEqual(removed, [
+      "published/list-1/w200/p1",
+      "published/list-1/w400/p1",
+      "published/list-1/w800/p1",
+    ]);
     assert.equal(hosting.releases.length, 2);
     assert.equal(box.state.canPurge, true);
     // Taken down with the first, their requests come after its purge started.
@@ -415,7 +421,7 @@ describe("the requests waiting for POST /api/cdn-purge", () => {
     assert.equal(box.state.wantedAt, T + 1_000);
     assert.equal(hosting.releases.length, 2);
     assert.deepEqual(done, ["a", "b"]);
-    assert.equal(removed.length, 4);
+    assert.equal(removed.length, 6);
     // Asked again, or by anybody: nothing waits, nothing is purged.
     assert.deepEqual(await carryOutPurges(requests, deps), { waiting: 0, result: "none" });
     assert.equal(hosting.releases.length, 2);

@@ -15,8 +15,8 @@ import { cardLabel, isNamed } from "../../lib/cardText";
 /** Where the device keeps whether the pool shows one card at a time; it is not synced. */
 export const ONE_BY_ONE_KEY = "tyl.board.oneByOne";
 
-/** The big card is asked for at this width: twice its widest drawing, for a sharp picture. */
-const CARD_WIDTH = 320;
+/** The big card at its largest drawing (ranking.css, .one__card): 160 × 224 on a wide window. */
+const CARD_BOX = { width: 160, height: 224 };
 
 interface OneByOneProps {
   card: PublishedItem;
@@ -75,7 +75,7 @@ export function OneByOne({
       >
         {pictured && card.imageUrl !== null ? (
           <FocusedPicture
-            {...sizedFor(card.imageUrl, CARD_WIDTH)}
+            {...sizedFor(card.imageUrl, CARD_BOX)}
             focus={card.pictureFocus}
             draggable={false}
             onError={onBroken}
