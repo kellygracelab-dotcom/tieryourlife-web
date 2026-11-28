@@ -22,9 +22,14 @@ test("reads older published photo URLs through Hosting when direct Storage reads
     return route.fulfill({ status: 401 });
   });
   const shown: string[] = [];
+  // A poster's shape, two wide for three high, while a tile's copy is checked.
+  let poster = false;
+  const POSTER = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300"></svg>';
   await page.route("**/img/**", (route) => {
     shown.push(new URL(route.request().url()).pathname);
-    return route.fulfill({ contentType: "image/png", body: PIXEL });
+    return poster
+      ? route.fulfill({ contentType: "image/svg+xml", body: POSTER })
+      : route.fulfill({ contentType: "image/png", body: PIXEL });
   });
   await page.route(
     (url) => url.pathname.endsWith("/lists"),
@@ -32,19 +37,29 @@ test("reads older published photo URLs through Hosting when direct Storage reads
   );
   await page.route("**/lists/abc", (route) => route.fulfill({ json: illustrated }));
   // A list opened first: a tile asks for the card's smallest copy that covers
-  // it on this screen, never the 600 × 900 original (Designer, 25.11). Its
-  // 124-pixel height is 200 pixels on a plain screen, 400 on a sharp one and
-  // 800 on a sharper one (Danylo, 28.11).
+  // it on this screen, never the 600 × 900 original (Designer, 25.11): the
+  // width a poster needs to cover the tile it has on this window, times the
+  // screen's density (Danylo, 28.11), and no other copy after it.
+  poster = true;
   await page.goto("/l/abc");
   const first = page.getByRole("button", { name: "Ex Machina", exact: true }).locator("img");
-  await expect(first).toHaveAttribute("sizes", "124px");
-  const density = await page.evaluate(() => window.devicePixelRatio);
-  const copy = 124 * density <= 200 ? 200 : 124 * density <= 400 ? 400 : 800;
   await expect
-    .poll(() => first.evaluate((img: HTMLImageElement) => img.complete && img.currentSrc))
-    .toMatch(new RegExp(`/img/${copy}/${photo}$`));
-  expect(shown).toContain(`/img/${copy}/${photo}`);
-  expect(shown).not.toContain(`/img/original/${photo}`);
+    .poll(() => first.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0))
+    .toBe(true);
+  const { needed, density } = await first.evaluate((img: HTMLImageElement) => {
+    const box = img.getBoundingClientRect();
+    return {
+      needed: Math.ceil(Math.max(box.width, (box.height * 2) / 3)),
+      density: window.devicePixelRatio,
+    };
+  });
+  await expect(first).toHaveAttribute("sizes", `${needed}px`);
+  const copy = [200, 400, 800].find((w) => w >= needed * density) ?? "original";
+  expect(new URL(await first.evaluate((img: HTMLImageElement) => img.currentSrc)).pathname).toBe(
+    `/img/${copy}/${photo}`,
+  );
+  expect(shown.filter((one) => one.endsWith(photo))).toEqual([`/img/${copy}/${photo}`]);
+  poster = false;
   await page.goto("/");
   const entry = page.locator('.list-card__main[href="/l/abc"]').first();
   const cover = entry.locator("img").first();
