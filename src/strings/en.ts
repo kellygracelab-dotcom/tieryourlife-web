@@ -1254,11 +1254,7 @@ export const en = {
     estimate: "{duels} · {time}",
     // The Play window's one line under its title (audit B4, the phone's artboard 8).
     lead: "Pick the better of two cards. The tiers fill in by themselves.",
-    // "25 cards · about 63 duels · 2 min": the game Start begins, in one line.
-    summary: "{cards} · {estimate}",
-    summaryOf: "{game} · {cards} · {estimate}",
     kept: "Leave any time — the game is kept.",
-    otherWays: "Other ways to play",
     savedLine: "{game} · {asked} of {total}",
     startedToday: "Started today",
     startedYesterday: "Started yesterday",
