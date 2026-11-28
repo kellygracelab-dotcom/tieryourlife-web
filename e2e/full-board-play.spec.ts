@@ -1,12 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { list, mockBackend } from "./fixtures";
 
-/** Unfolds the other games when Smart keeps them folded (audit B4); leaves them open otherwise. */
-async function otherWays(page: Page) {
-  const more = page.getByRole("button", { name: "Other ways to play" });
-  if ((await more.getAttribute("aria-expanded")) === "false") await more.click();
-}
-
 const uid = "qa-full-board-play";
 const key = "tyl:board:" + uid;
 const title = "Local game fixture";
@@ -53,10 +47,9 @@ for (const mode of ["Smart", "Losers stay", "King of the hill", "Bracket"]) {
   test(mode + " keeps all 91 cards and the same next duel after reloading", async ({ page }) => {
     await openBoard(page);
     await play(page).click();
-    await expect(page.locator(".play-summary__line")).toContainText("91 cards");
-    await otherWays(page);
-    await page.locator("label.play-game").filter({ hasText: mode }).click();
-    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await expect(page.locator(".play-cards")).toContainText("All 91 cards");
+    await page.locator("label.play-tile").filter({ hasText: mode }).click();
+    await page.getByRole("button", { name: /^Start/ }).click();
     const picks = page.getByRole("button", { name: /^Pick / });
     await picks.first().click();
     await expect.poll(async () => (await persisted(page)).play?.history?.length).toBe(1);
@@ -82,7 +75,7 @@ for (const mode of ["Smart", "Losers stay", "King of the hill", "Bracket"]) {
 async function playTwo(page: Page, row: string) {
   await openBoard(page);
   await play(page).click();
-  await page.getByRole("button", { name: "Choose cards" }).click();
+  await page.getByRole("button", { name: /Choose cards/ }).click();
   await page
     .locator("li.play-row")
     .filter({ hasText: row })
@@ -93,7 +86,7 @@ async function playTwo(page: Page, row: string) {
   const next = page.getByRole("button", { name: "Continue" });
   await next.click();
   await next.click();
-  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page.getByRole("button", { name: /^Start/ }).click();
   await page
     .getByRole("button", { name: /^Pick / })
     .first()
@@ -285,7 +278,7 @@ for (const scope of ["whole board", "two tiers", "one occupied tier"]) {
     }));
     await openBoard(page, { ...board, items });
     await play(page).click();
-    await page.getByRole("button", { name: "Choose cards" }).click();
+    await page.getByRole("button", { name: /Choose cards/ }).click();
     if (scope === "two tiers") await page.getByRole("checkbox", { name: /Cards left/ }).uncheck();
     if (scope === "one occupied tier") {
       // Everything on a board of one tier; ticking the tier alone only orders it.
@@ -296,12 +289,11 @@ for (const scope of ["whole board", "two tiers", "one occupied tier"]) {
     }
     await page.getByRole("button", { name: "16", exact: true }).click();
     await page.getByRole("button", { name: "Continue" }).click();
-    await expect(page.locator(".play-summary__line")).toContainText(
-      scope === "whole board" ? "16 cards ·" : "16 cards from " + areaTitle[scope],
+    await expect(page.locator(".play-cards")).toContainText(
+      scope === "whole board" ? "All 16 cards" : "16 cards from " + areaTitle[scope],
     );
-    await otherWays(page);
-    await page.locator("label.play-game").filter({ hasText: "Bracket" }).click();
-    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await page.locator("label.play-tile").filter({ hasText: "Bracket" }).click();
+    await page.getByRole("button", { name: /^Start/ }).click();
     const pick = page.getByRole("button", { name: /^Pick / }).first();
     await pick.click();
     await expect.poll(async () => (await persisted(page)).play?.history.length).toBe(1);

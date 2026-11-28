@@ -69,7 +69,7 @@ test.describe("Play on a wide screen", () => {
     await page.setViewportSize({ width: 2560, height: 1271 });
     await openMine(page);
     await playButton(page).click();
-    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await page.getByRole("button", { name: /^Start/ }).click();
     await settled(page);
     const [left, right] = await page.getByRole("button", { name: /^Pick / }).all();
     const a = await boxOf(left!);
@@ -105,13 +105,13 @@ test.describe("Play on a phone", () => {
     expect(Math.abs(box.y + box.height - viewport.height)).toBeLessThan(2);
     expect(Math.round(box.width)).toBe(viewport.width);
 
-    // Smart's summary and Start first, the other games one tap away (audit B4).
-    await expect(sheet.locator(".play-summary__line")).toContainText("about");
-    await page.getByRole("button", { name: "Other ways to play" }).tap();
+    // All four games on the sheet, Smart chosen, Start saying so (Designer's variant B).
+    await expect(page.getByRole("radio", { name: /Smart/ })).toBeChecked();
+    await expect(sheet.getByRole("button", { name: /^Start Smart · / })).toBeVisible();
     // The radio itself is drawn over by its card: tap the card, as a thumb would.
     await page.locator("label", { hasText: "King of the hill" }).tap();
     await expect(page.getByRole("radio", { name: /King of the hill/ })).toBeChecked();
-    await page.getByRole("button", { name: "Start", exact: true }).tap();
+    await page.getByRole("button", { name: /^Start/ }).tap();
     await settled(page);
 
     const [left, right] = await page.getByRole("button", { name: /^Pick / }).all();

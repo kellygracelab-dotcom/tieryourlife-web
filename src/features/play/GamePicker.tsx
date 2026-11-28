@@ -1,12 +1,12 @@
-import { useId, useState } from "react";
+import { useId } from "react";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import type { IconName } from "../../ui/icons";
 import { playable } from "./chosen";
 import type { GameKind } from "./engine";
-import { gameProgress, type Resume } from "./game";
-import { estimateText, gameName, startedText } from "./labels";
+import { estimate, gameProgress, type Resume } from "./game";
+import { gameName, startedText } from "./labels";
 import { PlaySheet, SheetCancel } from "./PlaySheet";
 
 /** The games in the picker's order, smart first, with the app's icons. */
@@ -46,10 +46,13 @@ interface GamePickerProps {
 }
 
 /**
- * "Play" as the phone's artboard 8 has it (audit B4): one line on what the
- * game is, the game Start begins in one line with its length, Start itself
- * large, and the other games behind "Other ways to play". Smart is the one
- * chosen until somebody picks another; then their choice opens with them.
+ * "Play" with its four games side by side (Designer's variant B, chosen by
+ * Danylo 28.11): each game a tile with its icon, its time largest, its name,
+ * one line and its duels; the chosen one filled. The cards a game is over are
+ * a chip by the title, which opens Choose cards, and Start says what it
+ * starts. A saved game comes first, as the window's main action; Start is
+ * then outlined and starts a new one. Smart is chosen until somebody picks
+ * another; then their choice opens with them.
  */
 export function GamePicker({
   from,
@@ -72,27 +75,53 @@ export function GamePicker({
 }: GamePickerProps) {
   const id = useId();
   const fits = playable(count);
-  const [others, setOthers] = useState(kind !== "smart");
   const warned = fits && placed > 0;
   const cards =
     from === null
-      ? plural(strings.boards.cards, count)
+      ? plural(strings.play.allCards, count)
       : fill(plural(strings.play.cardsFrom, count), { title: from });
-  const summary = !fits
-    ? strings.play.needsCards
-    : kind === "smart"
-      ? fill(strings.play.summary, { cards, estimate: estimateText(kind, count) })
-      : fill(strings.play.summaryOf, {
-          game: gameName(kind),
-          cards,
-          estimate: estimateText(kind, count),
-        });
+  // A saved game that can go on is the main action; Start then begins a new one.
+  const resumable = saved !== null && saved.kind !== "changed";
+  const minutes = (game: GameKind) => plural(strings.play.minutes, estimate(game, count).minutes);
+  const start = fits
+    ? fill(resumable ? strings.play.startNew : strings.play.startGame, {
+        game: gameName(kind),
+        time: minutes(kind),
+      })
+    : strings.play.start;
+  const described = [!fits && `${id}-needs`, warned && `${id}-placed`].filter(Boolean).join(" ");
   return (
     <PlaySheet
       title={strings.play.play}
       subtitle={strings.play.lead}
+      wide
       onClose={onCancel}
-      actions={<SheetCancel />}
+      aside={
+        <button
+          type="button"
+          className="play-cards"
+          aria-label={`${cards}, ${strings.play.chooseCards}`}
+          onClick={onChooseCards}
+        >
+          <span>{cards}</span>
+          <Icon name="expand_more" className="play-cards__chevron" />
+        </button>
+      }
+      actions={
+        <>
+          <SheetCancel />
+          <Button
+            variant={resumable ? "outlined" : "filled"}
+            className={resumable ? "play-start play-start--new" : "play-start"}
+            onClick={onStart}
+            disabled={!fits}
+            aria-describedby={described === "" ? undefined : described}
+          >
+            {start}
+          </Button>
+        </>
+      }
+      after={fits ? <p className="play-kept">{strings.play.kept}</p> : undefined}
     >
       <div className="play-choice">
         {saved !== null && (
@@ -107,12 +136,45 @@ export function GamePicker({
             <p className="play-choice__label">{strings.play.newGame}</p>
           </>
         )}
-        <div className="play-summary">
-          <p className="play-summary__line" id={`${id}-summary`}>
-            {summary}
-          </p>
-          {fits && <p className="play-summary__note">{strings.play.kept}</p>}
+        <div className="play-tiles" role="radiogroup" aria-label={strings.play.game}>
+          {GAMES.map((game) => {
+            const { duels, rough } = estimate(game.kind, count);
+            return (
+              <label key={game.kind} className="play-tile">
+                <input
+                  type="radio"
+                  name={`${id}-game`}
+                  className="play-tile__input"
+                  checked={kind === game.kind}
+                  onChange={() => onKind(game.kind)}
+                />
+                <span className="play-tile__top">
+                  <Icon name={game.icon} className="play-tile__icon" />
+                  {fits && <span className="play-tile__time">{minutes(game.kind)}</span>}
+                </span>
+                <span className="play-tile__text">
+                  <span className="play-tile__name">
+                    {gameName(game.kind)}
+                    {game.kind === "smart" && (
+                      <span className="play-tile__badge">{strings.play.bestTiers}</span>
+                    )}
+                  </span>
+                  <span className="play-tile__line">{game.line()}</span>
+                  {fits && (
+                    <span className="play-tile__duels">
+                      {plural(rough ? strings.play.duelsAbout : strings.play.duels, duels)}
+                    </span>
+                  )}
+                </span>
+              </label>
+            );
+          })}
         </div>
+        {!fits && (
+          <p className="play-placed" id={`${id}-needs`}>
+            {strings.play.needsCards}
+          </p>
+        )}
         {warned && (
           // Cards placed by hand are moved by the game, said before Start (artboards 15, 24).
           <p className="play-placed" id={`${id}-placed`}>
@@ -125,61 +187,6 @@ export function GamePicker({
               placed,
             )}
           </p>
-        )}
-        <Button
-          variant="filled"
-          className="play-start"
-          onClick={onStart}
-          disabled={!fits}
-          aria-describedby={warned ? `${id}-summary ${id}-placed` : `${id}-summary`}
-        >
-          {strings.play.start}
-        </Button>
-        <div className="play-more">
-          <button type="button" className="play-link" onClick={onChooseCards}>
-            {strings.play.chooseCards}
-          </button>
-          <button
-            type="button"
-            className="play-link"
-            aria-expanded={others}
-            aria-controls={`${id}-games`}
-            onClick={() => setOthers((open) => !open)}
-          >
-            {strings.play.otherWays}
-            <Icon name="expand_more" className="play-more__chevron" />
-          </button>
-        </div>
-        {others && (
-          <div
-            id={`${id}-games`}
-            className="play-games"
-            role="radiogroup"
-            aria-label={strings.play.game}
-          >
-            {GAMES.map((game) => (
-              <label key={game.kind} className="play-game">
-                <input
-                  type="radio"
-                  name={`${id}-game`}
-                  className="play-game__input"
-                  checked={kind === game.kind}
-                  onChange={() => onKind(game.kind)}
-                />
-                <span className="play-radio" aria-hidden="true" />
-                <span className="play-game__icon" aria-hidden="true">
-                  <Icon name={game.icon} />
-                </span>
-                <span className="play-game__text">
-                  <span className="play-game__name">{gameName(game.kind)}</span>
-                  <span className="play-game__line">{game.line()}</span>
-                  {fits && (
-                    <span className="play-game__estimate">{estimateText(game.kind, count)}</span>
-                  )}
-                </span>
-              </label>
-            ))}
-          </div>
         )}
       </div>
       {theirs && (
@@ -215,15 +222,23 @@ function SavedRow({
     asked: overall.asked,
     total: overall.total,
   });
-  const note = saved.kind === "changed" ? strings.play.changed : startedText(game.startedAt, now);
+  const changed = saved.kind === "changed";
+  const title = changed
+    ? strings.play.changed
+    : fill(strings.play.yourGame, { started: startedText(game.startedAt, now) });
+  const share = overall.total > 0 ? Math.min(1, overall.asked / overall.total) : 0;
   return (
-    <div className="play-saved">
-      <Icon name="history" className="play-saved__icon" />
+    <div className={changed ? "play-saved play-saved--changed" : "play-saved"}>
       <span className="play-saved__text">
+        <span className="play-saved__note">{title}</span>
         <span className="play-saved__line">{line}</span>
-        <span className="play-saved__note">{note}</span>
       </span>
-      {saved.kind === "changed" ? (
+      {!changed && (
+        <span className="play-saved__bar" aria-hidden="true">
+          <span style={{ width: `${Math.round(share * 100)}%` }} />
+        </span>
+      )}
+      {changed ? (
         <button
           type="button"
           className="btn play-outlined play-saved__action"
@@ -232,7 +247,7 @@ function SavedRow({
           <span>{onStartAgain === null ? strings.play.discard : strings.play.startAgain}</span>
         </button>
       ) : (
-        <Button variant="tonal" className="play-tonal play-saved__action" onClick={onResume}>
+        <Button variant="filled" className="play-saved__action" onClick={onResume}>
           {strings.play.resume}
         </Button>
       )}

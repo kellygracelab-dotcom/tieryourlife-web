@@ -1347,6 +1347,11 @@ const de: Translation = {
     intoYoursHouse: "Das Ergebnis kommt in deine Version.",
     cancel: "Abbrechen",
     start: "Starten",
+    bestTiers: "Beste Stufen",
+    allCards: { one: "{n} Karte", other: "Alle {n} Karten" },
+    startGame: "{game} starten · {time}",
+    startNew: "Neues Spiel · {game} · {time}",
+    yourGame: "Dein Spiel · {started}",
     savedDiscarded: "Gespeichertes Spiel verworfen",
     undo: "Rückgängig",
     thePool: {
