@@ -1,0 +1,67 @@
+# Developing and releasing the website
+
+It talks to the same backend as the app, [tieryourlife-proxy](https://github.com/kellygracelab-dotcom/tieryourlife-proxy), and never to Firestore directly.
+
+## Stack
+
+- Vite, React 19, TypeScript. A single-page app served by Firebase Hosting.
+- Firebase JS SDK for Auth (Google and anonymous), App Check and Storage.
+- One small Cloud Functions codebase, `web`, for the pages that need OpenGraph tags and for saving rankings.
+- In the same codebase, `onUserDeleted` runs when a Firebase user is deleted: their rankings stay, without an owner, as every ranking page promises.
+- `POST /api/cdn-purge` is called by the shared Proxy after it records a takedown in Firestore `webCdnPurges`. It removes the cards' copies of the deleted pictures and releases the live Hosting version again with one header changed, which clears Hosting's CDN. A call with no waiting request does nothing. So the site's pictures from `published/` are kept a day on the CDN, and a picture taken down still stops reaching anyone new within a minute. Until a purge has gone through, after one fails or is refused, or with `keep: false` in `config/webCdn`, they are kept a minute as before. A card's 200 and 400 px copies are kept in Storage next to their picture (`published/{list}/w200/…`) and given only while the picture is still there.
+- oxlint and Prettier for style, Vitest for tests, Playwright for two browser smokes, GitHub Actions for CI.
+
+## Commands
+
+```bash
+npm install
+```
+
+```bash
+npm run dev
+```
+
+```bash
+npm run check
+```
+
+`check` is what CI runs: typecheck, lint, formatting, tests with coverage, build, the functions' own checks, and the browser smokes (`npm run e2e`; once, `npx playwright install chromium`).
+
+## Deploying
+
+Once any dependent Proxy release is live, finish the Web PR from this checkout:
+
+```bash
+npm run release:pr -- <PR-number>
+```
+
+The command checks the CI run for the exact PR head, accepts a PR already squash-merged by GitHub,
+and waits for both checks on its merge commit on remote main. If a newer commit has reached main,
+it reports the original release as superseded. The push job tests the compiled production bundle,
+archives that bundle and the compiled Web Functions, and passes the same artifact to deployment.
+Four parallel browser shards and the Proxy suite remain mandatory. After admission to the
+web-production environment, OIDC authorizes only the Web deploy. The public release marker, HTML,
+JavaScript bytes and two Web API probes are verified. Functions are skipped only if their inputs
+and live revisions still match the verified release currently served by Hosting.
+
+The local command downloads that same push artifact into an isolated checkout: it independently
+checks production after cloud success, or deploys the artifact if cloud identity is unconfigured.
+It never substitutes a local rebuild after a failed cloud job or for missing CI evidence.
+
+For an already checked main, `npm run deploy` runs the main part of this process.
+The target is the hosting site `tieryourlife`, served at `tieryourlife.com`, the site's one
+address (20.11.2026). On `tieryourlife.web.app` and `tieryourlife.firebaseapp.com` a page moves
+there, path and query kept: `/l` and `/r` by a 301 from the `web` function, the pages hosting
+serves itself by their first script; the API and the pictures still answer there. The GitHub deployment job
+needs the workload identity and deployment account described in [AGENTS.md](AGENTS.md).
+
+`/lists` and `/3/search` are rewritten to the backend's Cloud Functions, so the browser talks to its own
+origin and never runs into CORS. In development, `vite` proxies the same two paths to the backend's
+Firebase emulator on port 5001.
+
+## Working agreement
+
+- Branch, pull request, green CI, squash-merge, delete the branch. `main` is the only long-lived branch.
+- Tests land in the same pull request as the code they cover.
+- Comments only where the code cannot say why.
+- A release is complete when the public site has been verified against the build from main.
