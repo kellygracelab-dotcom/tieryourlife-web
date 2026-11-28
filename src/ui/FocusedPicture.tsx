@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { isCentre, placedBox, shownFocus, type CoverFocus } from "../lib/coverFocus";
 import type { Size } from "../lib/framing";
+import { zoomedSizes } from "../lib/pictureSize";
 import { MediaImage } from "./MediaImage";
 import "./FocusedPicture.css";
 
@@ -8,6 +9,8 @@ interface FocusedPictureProps {
   src: string;
   /** Larger copies for sharper screens, as sizedFor gives them. */
   srcSet?: string;
+  /** The width the copy is picked for, as sizedFor gives it; a zoomed focus widens it. */
+  sizes?: string;
   focus: CoverFocus | null | undefined;
   className?: string;
   alt?: string;
@@ -33,6 +36,7 @@ export function FocusedPicture(props: FocusedPictureProps) {
 function Placed({
   src,
   srcSet,
+  sizes,
   focus,
   className,
   alt = "",
@@ -97,6 +101,7 @@ function Placed({
       <MediaImage
         src={src}
         srcSet={srcSet}
+        sizes={zoomedSizes(sizes, focus?.zoom)}
         alt={alt}
         loading={loading}
         fetchPriority={fetchPriority}

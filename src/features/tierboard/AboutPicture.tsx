@@ -1,4 +1,5 @@
 import tmdbLogo from "../../assets/tmdb.svg";
+import { sizedFor } from "../../lib/pictureSize";
 import {
   useEffect,
   useId,
@@ -218,7 +219,12 @@ export function AboutPicture({
           {name}
         </h2>
         {imageUrl !== null && (
-          <FocusedPicture className="card-detail__picture" src={imageUrl} focus={pictureFocus} />
+          <FocusedPicture
+            className="card-detail__picture"
+            // Its own window: up to 340 × 340 (board.css), sharp at any density.
+            {...sizedFor(imageUrl, 340)}
+            focus={pictureFocus}
+          />
         )}
         {form && editing !== undefined ? (
           <CreditForm

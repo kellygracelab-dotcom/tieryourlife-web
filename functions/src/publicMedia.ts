@@ -4,13 +4,15 @@ const ID = /^[A-Za-z0-9_-]{1,128}$/;
 // Republished pictures can carry a publication UUID after the original picture ID.
 const PICTURE = /^[A-Za-z0-9_-]+$/;
 /*
- * A published list's card picture at a tile's width: /img/{200|400}/published/{id}/{picture}.
+ * A published list's card picture at a tile's width: /img/{200|400|800}/published/{id}/{picture}.
  * A 600 × 900 copy shown at 64 × 96 made a list of 177 cards 28 MB, its tiles
- * grey for 10-17 s (Designer, 25.11). 200 is a tile on any screen, 400 a
- * search answer's or a sheet's poster; Play and a picture's own window keep
- * the original.
+ * grey for 10-17 s (Designer, 25.11). A page takes the smallest copy that
+ * covers what it draws on that screen: 200 a tile on a plain screen, 400 a
+ * tile on a sharp one, 800 Play's duel and a picture's own window, which
+ * took the whole original before and still do past it (Danylo, 28.11:
+ * beautiful on any device, not blurry).
  */
-export const CARD_WIDTHS: readonly number[] = [200, 400];
+export const CARD_WIDTHS: readonly number[] = [200, 400, 800];
 
 const PREFIX = "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/";
 

@@ -59,8 +59,19 @@ const MOSAIC_MAX = 6;
  * "covers load picture by picture again" on a first visit).
  */
 export const COLLAGE_RETRY_MS = 1_500;
-/** A mosaic cell's width for its picture's copy: up to six of them in a tile. */
-const CELL_WIDTH = 200;
+/**
+ * How wide a list's tile is drawn (feed.css: two to a row on a phone, about
+ * 320 px at most on a computer), and a mosaic cell in it, at most half a tile
+ * across and the whole tile high: the browser takes the copy or collage that
+ * covers this on its screen (Danylo, 28.11: not blurry on any device).
+ */
+const ART_SIZES = "(max-width: 600px) 50vw, 320px";
+const CELL_SIZES = "(max-width: 600px) 32vw, 200px";
+/** A mosaic cell's box for its picture's copies. */
+const CELL_BOX = { width: 160, height: 200 };
+
+/** The collage at twice its size, for a sharp screen (collage.ts, ?s=2). */
+const collageTwice = (src: string): string => `${src}${src.includes("?") ? "&" : "?"}s=2`;
 
 /**
  * The collage each list last showed on this visit, by its address without the
@@ -227,6 +238,8 @@ export function ListArt({
           key={key}
           className={cellClass(key, "art__picture")}
           src={src}
+          srcSet={`${src} 480w, ${collageTwice(src)} 960w`}
+          sizes={ART_SIZES}
           focus={null}
           {...asked}
           onLoad={() => {
@@ -278,7 +291,9 @@ export function ListArt({
             className={cellClass(key, "art__cell")}
             // A cell is a sixth of a tile: its card's small copy, not the original
             // (a board's own keeps the original, glued from the browser's cache).
-            src={glue === undefined ? sizedFor(url, CELL_WIDTH).src : url}
+            {...(glue === undefined
+              ? { ...sizedFor(url, CELL_BOX), sizes: CELL_SIZES }
+              : { src: url })}
             focus={cell}
             {...asked}
             onLoad={add(setLoaded, key)}

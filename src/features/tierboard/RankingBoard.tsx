@@ -69,7 +69,7 @@ import { useBoardSize } from "./useBoardSize";
 import type { BoardSize } from "./nameFit";
 import "./board.css";
 import "./ranking.css";
-import { sizedFor } from "../../lib/pictureSize";
+import { sizedFor, TILE_BOX } from "../../lib/pictureSize";
 import { shownLight } from "../../lib/tierColour";
 import { cardLabel } from "../../lib/cardText";
 
@@ -174,9 +174,6 @@ interface RankingBoardProps {
 type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed"; error: ApiError };
 
 type PointerDownFor = (item: number) => (event: ReactPointerEvent<HTMLElement>) => void;
-
-/** The widest a tile is drawn (board.css): pictures are asked for at this size. */
-const TILE_WIDTH = 64;
 
 /** A pool longer than this gets a search box in the side column. */
 export const POOL_SEARCH_FROM = 24;
@@ -364,7 +361,7 @@ const Tile = memo(function Tile({
         {pictured && card.imageUrl !== null ? (
           <>
             <FocusedPicture
-              {...sizedFor(card.imageUrl, TILE_WIDTH)}
+              {...sizedFor(card.imageUrl, TILE_BOX)}
               focus={card.pictureFocus}
               loading="lazy"
               draggable={false}

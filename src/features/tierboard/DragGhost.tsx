@@ -4,7 +4,7 @@ import type { PublishedItem } from "../../api/types";
 import type { DragState } from "./drag";
 import { CardName } from "./CardName";
 import type { BoardSize } from "./nameFit";
-import { sizedFor } from "../../lib/pictureSize";
+import { sizedFor, TILE_BOX } from "../../lib/pictureSize";
 
 interface DragGhostProps {
   /** The drag as it is right now, the pointer's place included. */
@@ -34,7 +34,7 @@ export function DragGhost({ now, subscribe, items, board }: DragGhostProps) {
   return (
     <div className="ghost" style={style} aria-hidden="true">
       {card.imageUrl !== null ? (
-        <FocusedPicture {...sizedFor(card.imageUrl, 64)} focus={card.pictureFocus} />
+        <FocusedPicture {...sizedFor(card.imageUrl, TILE_BOX)} focus={card.pictureFocus} />
       ) : (
         <CardName title={card.title} board={board} onBoard />
       )}
