@@ -28,6 +28,13 @@ a:hover {
   color: var(--link-hover);
 }
 
+/* The site's mark keeps its own colours. Chrome's "darken websites" on Android
+   paints the light theme dark and turns small pictures like this one inside out:
+   the dark square went pale and its S vanished on Danylo's Samsung (28.11.2026). */
+img[src="/favicon.svg"] {
+  color-scheme: only light;
+}
+
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
