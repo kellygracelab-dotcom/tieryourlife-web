@@ -79,7 +79,7 @@ describe("api", () => {
 
   it("loads a list through that client", async () => {
     await expect(loadList("abc")).resolves.toMatchObject({ id: "abc" });
-    expect(mocks.request).toHaveBeenCalledWith("GET", "/lists/abc");
+    expect(mocks.request).toHaveBeenCalledWith("GET", "/lists/abc", { auth: "reader" });
   });
 
   it("takes what the page already carries without asking the network", async () => {
@@ -111,13 +111,14 @@ describe("api", () => {
     await loadList("embedded", true);
     expect(mocks.request).not.toHaveBeenCalled();
     await loadList("nameless", true);
-    expect(mocks.request).toHaveBeenCalledWith("GET", "/lists/nameless");
+    expect(mocks.request).toHaveBeenCalledWith("GET", "/lists/nameless", { auth: "reader" });
   });
 
   it("loads a page of the feed for a query", async () => {
     await loadFeed({ category: "anime", sort: "popular" });
     expect(mocks.request).toHaveBeenCalledWith("GET", "/lists", {
       query: { category: "anime", sort: "popular" },
+      auth: "reader",
       appCheckWaitMs: 5_000,
     });
   });

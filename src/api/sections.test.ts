@@ -110,16 +110,18 @@ describe("sections", () => {
     ];
     const { client, request } = recordingClient({ sections });
     await expect(loadSections(client)).resolves.toEqual({ sections });
-    expect(request).toHaveBeenCalledWith("GET", "/lists/sections");
+    expect(request).toHaveBeenCalledWith("GET", "/lists/sections", { auth: "reader" });
   });
 
   it("reads one section by its id, escaped", async () => {
     const section = { id: "street-food", listCount: 0, followerCount: 0, newThisWeek: 0 };
     const { client, request } = recordingClient(section);
     await expect(loadSection(client, "street-food")).resolves.toEqual(section);
-    expect(request).toHaveBeenLastCalledWith("GET", "/lists/sections/street-food");
+    expect(request).toHaveBeenLastCalledWith("GET", "/lists/sections/street-food", {
+      auth: "reader",
+    });
     await loadSection(client, "a/b");
-    expect(request).toHaveBeenLastCalledWith("GET", "/lists/sections/a%2Fb");
+    expect(request).toHaveBeenLastCalledWith("GET", "/lists/sections/a%2Fb", { auth: "reader" });
   });
 
   it("follows and unfollows a section, escaping its id", async () => {
@@ -142,9 +144,11 @@ describe("sections", () => {
     expect(topics.map((one) => one.id)).toEqual(["a", "b", "c", "d"]);
     expect(request).toHaveBeenNthCalledWith(1, "GET", "/lists/topics", {
       query: { section: "games", limit: 50, cursor: undefined },
+      auth: "reader",
     });
     expect(request).toHaveBeenNthCalledWith(3, "GET", "/lists/topics", {
       query: { section: "games", limit: 50, cursor: "0:c" },
+      auth: "reader",
     });
 
     // A backend that hands the same cursor back is not followed round for ever.
@@ -159,23 +163,27 @@ describe("sections", () => {
     await loadTopics(client, "games");
     expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics", {
       query: { section: "games", limit: undefined },
+      auth: "reader",
     });
     await loadTopics(client, "games", 50);
     expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics", {
       query: { section: "games", limit: 50 },
+      auth: "reader",
     });
     await findTopics(client, "zel");
     expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics", {
       query: { q: "zel", section: undefined },
+      auth: "reader",
     });
     await findTopics(client, "zel", "games");
     expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics", {
       query: { q: "zel", section: "games" },
+      auth: "reader",
     });
     await loadMyTopics(client);
     expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics/mine");
     await loadTopic(client, "t/1");
-    expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics/t%2F1");
+    expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics/t%2F1", { auth: "reader" });
     await followTopic(client, "t/1");
     expect(request).toHaveBeenLastCalledWith("POST", "/lists/topics/t%2F1/follow");
     await unfollowTopic(client, "t/1");

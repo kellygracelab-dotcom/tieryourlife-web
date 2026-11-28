@@ -51,7 +51,7 @@ describe("community", () => {
   it("reads, starts and ends following an author, escaping the uid", async () => {
     const { client, request } = recordingClient({ following: true, followers: 3 });
     await expect(followState(client, "u/1")).resolves.toEqual({ following: true, followers: 3 });
-    expect(request).toHaveBeenCalledWith("GET", "/lists/follow/u%2F1");
+    expect(request).toHaveBeenCalledWith("GET", "/lists/follow/u%2F1", { auth: "reader" });
     await followAuthor(client, "u1");
     expect(request).toHaveBeenLastCalledWith("POST", "/lists/follow/u1");
     await unfollowAuthor(client, "u1");
@@ -67,10 +67,12 @@ describe("community", () => {
     // The author's arrangement heads the first page (K1).
     expect(request).toHaveBeenCalledWith("GET", "/lists/a%20b/rankings", {
       query: { withAuthor: "1" },
+      auth: "reader",
     });
     await loadListRankings(client, "abc", "abc_u7");
     expect(request).toHaveBeenLastCalledWith("GET", "/lists/abc/rankings", {
       query: { withAuthor: "1", after: "abc_u7" },
+      auth: "reader",
     });
     await withdrawListRanking(client, "abc");
     expect(request).toHaveBeenLastCalledWith("DELETE", "/lists/abc/rankings/mine");

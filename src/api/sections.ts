@@ -60,7 +60,9 @@ export interface SectionStats {
 }
 
 export function loadSections(client: ApiClient): Promise<{ sections: SectionStats[] }> {
-  return client.request<{ sections: SectionStats[] }>("GET", "/lists/sections");
+  return client.request<{ sections: SectionStats[] }>("GET", "/lists/sections", {
+    auth: "reader",
+  });
 }
 
 /**
@@ -70,7 +72,9 @@ export function loadSections(client: ApiClient): Promise<{ sections: SectionStat
  * when it became a topic there.
  */
 export function loadSection(client: ApiClient, id: string): Promise<SectionStats> {
-  return client.request<SectionStats>("GET", `/lists/sections/${encodeURIComponent(id)}`);
+  return client.request<SectionStats>("GET", `/lists/sections/${encodeURIComponent(id)}`, {
+    auth: "reader",
+  });
 }
 
 export function followSection(client: ApiClient, id: string): Promise<{ following: true }> {
@@ -214,6 +218,7 @@ export function loadTopics(
 ): Promise<{ topics: Topic[] }> {
   return client.request<{ topics: Topic[] }>("GET", "/lists/topics", {
     query: { section, limit },
+    auth: "reader",
   });
 }
 
@@ -236,7 +241,7 @@ export async function loadAllTopics(
     const answer = await client.request<{ topics: Topic[]; nextCursor?: string | null }>(
       "GET",
       "/lists/topics",
-      { query: { section, limit: 50, cursor } },
+      { query: { section, limit: 50, cursor }, auth: "reader" },
     );
     for (const topic of answer.topics) {
       if (seen.has(topic.id)) continue;
@@ -258,6 +263,7 @@ export function findTopics(
 ): Promise<{ topics: Topic[] }> {
   return client.request<{ topics: Topic[] }>("GET", "/lists/topics", {
     query: { q, section },
+    auth: "reader",
   });
 }
 
@@ -271,7 +277,9 @@ export function loadMyTopics(client: ApiClient): Promise<{ topics: Topic[] }> {
  * merged one names the topic it went into.
  */
 export function loadTopic(client: ApiClient, id: string): Promise<Topic> {
-  return client.request<Topic>("GET", `/lists/topics/${encodeURIComponent(id)}`);
+  return client.request<Topic>("GET", `/lists/topics/${encodeURIComponent(id)}`, {
+    auth: "reader",
+  });
 }
 
 export function followTopic(client: ApiClient, id: string): Promise<{ following: true }> {
