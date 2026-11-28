@@ -42,6 +42,14 @@ export const longerSide = (box: Box): number =>
 export const ORIGINAL_WIDTH = 2000;
 
 /**
+ * Published pictures' copies by a new address, after the Proxy drew them
+ * again larger in the same files (Backend #215, 28.11): a browser keeps a
+ * copy a year (/img is immutable), and the new address is a new one to it.
+ * /img reads no parameters, so any copy answers it.
+ */
+export const PICTURES_VERSION = "?v=2";
+
+/**
  * A card's picture at the size it is drawn: a 64-pixel tile does not need the
  * 500-pixel poster the card keeps for the share image, and a sharp screen
  * needs twice or three times the tile (Danylo, 28.11: beautiful on any
@@ -73,12 +81,13 @@ export function sizedFor(url: string, box: Box): Sized {
   const stored = storedPublicMedia(url);
   if (stored !== null && stored.startsWith("published/")) {
     const copy = CARD_WIDTHS.find((w) => w >= longer * 2);
+    const at = (width: number | "original") => `/img/${width}/${stored}${PICTURES_VERSION}`;
     return {
       // For a browser that reads no srcset: twice the box, as before.
-      src: copy === undefined ? `/img/original/${stored}` : `/img/${copy}/${stored}`,
+      src: at(copy ?? "original"),
       srcSet: [
-        ...CARD_WIDTHS.map((w) => `/img/${w}/${stored} ${w}w`),
-        `/img/original/${stored} ${ORIGINAL_WIDTH}w`,
+        ...CARD_WIDTHS.map((w) => `${at(w)} ${w}w`),
+        `${at("original")} ${ORIGINAL_WIDTH}w`,
       ].join(", "),
       sizes: `${Math.ceil(longer)}px`,
     };

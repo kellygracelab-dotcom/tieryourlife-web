@@ -33,19 +33,23 @@ describe("sizedFor", () => {
     const copy =
       "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/published%2Fcatalogue%2Fw-0123456789abcdef0123456789abcdef?alt=media";
     const path = "published/catalogue/w-0123456789abcdef0123456789abcdef";
-    const srcSet = `/img/200/${path} 200w, /img/400/${path} 400w, /img/800/${path} 800w, /img/original/${path} 2000w`;
-    expect(sizedFor(copy, 64)).toEqual({ src: `/img/200/${path}`, srcSet, sizes: "64px" });
-    expect(sizedFor(copy, TILE_BOX)).toEqual({ src: `/img/400/${path}`, srcSet, sizes: "124px" });
+    const srcSet = `/img/200/${path}?v=2 200w, /img/400/${path}?v=2 400w, /img/800/${path}?v=2 800w, /img/original/${path}?v=2 2000w`;
+    expect(sizedFor(copy, 64)).toEqual({ src: `/img/200/${path}?v=2`, srcSet, sizes: "64px" });
+    expect(sizedFor(copy, TILE_BOX)).toEqual({
+      src: `/img/400/${path}?v=2`,
+      srcSet,
+      sizes: "124px",
+    });
     // Play's duel card: the 800 copy, where it took the whole original before.
     expect(sizedFor(copy, DUEL_CARD_BOX)).toEqual({
-      src: `/img/original/${path}`,
+      src: `/img/original/${path}?v=2`,
       srcSet,
       sizes: "422px",
     });
-    expect(sizedFor(copy, 401).src).toBe(`/img/original/${path}`);
-    expect(sizedFor(copy, 400).src).toBe(`/img/800/${path}`);
-    expect(sizedFor(copy, 200).src).toBe(`/img/400/${path}`);
-    expect(sizedFor(copy, 201).src).toBe(`/img/800/${path}`);
+    expect(sizedFor(copy, 401).src).toBe(`/img/original/${path}?v=2`);
+    expect(sizedFor(copy, 400).src).toBe(`/img/800/${path}?v=2`);
+    expect(sizedFor(copy, 200).src).toBe(`/img/400/${path}?v=2`);
+    expect(sizedFor(copy, 201).src).toBe(`/img/800/${path}?v=2`);
     // An avatar, a section's or a topic's picture: no card copies of those.
     const face =
       "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/avatars%2Fme%2Fface1?alt=media";
@@ -55,10 +59,10 @@ describe("sizedFor", () => {
   it("shows a published picture named by the site's address through its copies too (27.11)", () => {
     const path = "published/L1/p-2";
     expect(sizedFor(`https://tieryourlife.com/img/original/${path}`, 64).src).toBe(
-      `/img/200/${path}`,
+      `/img/200/${path}?v=2`,
     );
     expect(sizedFor(`https://tieryourlife.web.app/img/original/${path}`, 120).src).toBe(
-      `/img/400/${path}`,
+      `/img/400/${path}?v=2`,
     );
     expect(sizedFor(`https://tieryourlife.com/img/original/${path}`, 300).sizes).toBe("300px");
   });

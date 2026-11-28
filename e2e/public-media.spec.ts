@@ -73,6 +73,6 @@ test("reads older published photo URLs through Hosting when direct Storage reads
   const tile = page.getByRole("button", { name: "Ex Machina", exact: true }).locator("img");
   // A picture already in the browser's cache serves any size, so here only
   // the copies the tile offers are checked.
-  await expect(tile).toHaveAttribute("srcset", new RegExp(`^/img/200/${photo} 200w, `));
+  await expect(tile).toHaveAttribute("srcset", new RegExp(`^/img/200/${photo}\?v=2 200w, `));
   expect(direct).toEqual([]);
 });
