@@ -1398,6 +1398,11 @@ const fr: Translation = {
     intoYoursHouse: "Le résultat va dans votre version.",
     cancel: "Annuler",
     start: "Commencer",
+    bestTiers: "Meilleurs rangs",
+    allCards: { one: "{n} carte", other: "Toutes les {n} cartes" },
+    startGame: "Lancer {game} · {time}",
+    startNew: "Nouvelle partie · {game} · {time}",
+    yourGame: "Votre partie · {started}",
     savedDiscarded: "Partie sauvegardée abandonnée",
     undo: "Annuler",
     thePool: {

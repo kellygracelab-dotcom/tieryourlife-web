@@ -1422,6 +1422,11 @@ const uk: Translation = {
     intoYoursHouse: "Результат потрапить у вашу версію.",
     cancel: "Скасувати",
     start: "Почати",
+    bestTiers: "Найкращі рівні",
+    allCards: { other: "Усі картки: {n}" },
+    startGame: "Почати: {game} · {time}",
+    startNew: "Нова гра · {game} · {time}",
+    yourGame: "Ваша гра · {started}",
     savedDiscarded: "Збережену гру скасовано",
     undo: "Скасувати",
     thePool: {

@@ -1512,9 +1512,8 @@ describe("ListPage, Play", () => {
     open();
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByRole("button", { name: "Play" }));
-    await userEvent.click(screen.getByRole("button", { name: "Other ways to play" }));
     await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Start .+ · / }));
     await playToTheEnd();
     // No result screen, no Put in Mine, no Refine: the ordinary board of the list.
     expect(screen.queryByRole("heading", { name: "Your result" })).toBeNull();
@@ -1542,9 +1541,8 @@ describe("ListPage, Play", () => {
     open();
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByRole("button", { name: "Play" }));
-    await userEvent.click(screen.getByRole("button", { name: "Other ways to play" }));
     await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Start .+ · / }));
     await playToTheEnd();
     const after = rowsNow();
     // A move by hand after the game.
@@ -1573,9 +1571,8 @@ describe("ListPage, Play", () => {
       screen.queryByRole("complementary", { name: "Show others how you ranked it?" }),
     ).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Play" }));
-    await userEvent.click(screen.getByRole("button", { name: "Other ways to play" }));
     await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Start .+ · / }));
     // The end window says it first; the offer under it waits until it closes (artboard 35).
     const ready = await playToTheWindow();
     expect(
@@ -1603,9 +1600,8 @@ describe("ListPage, Play", () => {
     openAs({ kind: "guest", uid: "g1" });
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByRole("button", { name: "Play" }));
-    await userEvent.click(screen.getByRole("button", { name: "Other ways to play" }));
     await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Start .+ · / }));
     await playToTheEnd();
     await screen.findByRole("complementary", { name: "Show others how you ranked it?" });
     await userEvent.click(barUndo());
@@ -1629,9 +1625,8 @@ describe("ListPage, Play", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Play" }));
-    await userEvent.click(screen.getByRole("button", { name: "Other ways to play" }));
     await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Start .+ · / }));
     await userEvent.keyboard("{ArrowLeft}");
     await waitFor(() => expect(screen.getAllByText("Duel 2 of 2")).not.toHaveLength(0));
     await act(() => router.navigate(-1));

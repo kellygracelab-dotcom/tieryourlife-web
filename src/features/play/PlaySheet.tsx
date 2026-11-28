@@ -31,6 +31,12 @@ interface PlaySheetProps {
   onClose: () => void;
   /** A selector for what takes the focus on open; the first control otherwise. */
   focus?: string;
+  /** At the end of the title row: the picker's cards chip. */
+  aside?: ReactNode;
+  /** Under the buttons: the picker's note that leaving keeps the game. */
+  after?: ReactNode;
+  /** The picker's 640 instead of 520, for its four games side by side (Designer's variant B). */
+  wide?: boolean;
 }
 
 /**
@@ -49,6 +55,9 @@ export function PlaySheet({
   actions,
   onClose,
   focus,
+  aside,
+  after,
+  wide = false,
 }: PlaySheetProps) {
   const id = useId();
   const box = useRef<HTMLDivElement>(null);
@@ -85,7 +94,7 @@ export function PlaySheet({
     <div className={`scrim play-scrim${motion}`} onClick={leave}>
       <div
         ref={box}
-        className="dialog play-sheet"
+        className={wide ? "dialog play-sheet play-sheet--wide" : "dialog play-sheet"}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-title`}
@@ -115,6 +124,7 @@ export function PlaySheet({
             <h2 id={`${id}-title`} className="dialog__title">
               {title}
             </h2>
+            {aside}
           </div>
           {subtitle !== undefined && <p className="play-sheet__subtitle">{subtitle}</p>}
           {children}
@@ -123,6 +133,7 @@ export function PlaySheet({
         <div className="dialog__actions play-sheet__actions">
           <SheetLeave.Provider value={leave}>{actions}</SheetLeave.Provider>
         </div>
+        {after}
       </div>
     </div>,
     document.body,

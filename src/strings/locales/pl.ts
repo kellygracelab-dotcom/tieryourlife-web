@@ -1425,6 +1425,11 @@ const pl: Translation = {
     intoYoursHouse: "Wynik trafi do Twojej wersji.",
     cancel: "Anuluj",
     start: "Zacznij",
+    bestTiers: "Najlepsze poziomy",
+    allCards: { other: "Wszystkie karty: {n}" },
+    startGame: "Zacznij: {game} · {time}",
+    startNew: "Nowa gra · {game} · {time}",
+    yourGame: "Twoja gra · {started}",
     savedDiscarded: "Odrzucono zapisaną grę",
     undo: "Cofnij",
     thePool: {
