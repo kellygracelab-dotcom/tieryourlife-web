@@ -173,6 +173,38 @@ describe("createApiClient", () => {
     expect(headersOf(calls[0]!).Authorization).toBeUndefined();
   });
 
+  it("reads as whoever is here, and makes no guest for a read anybody may do", async () => {
+    const { client, calls, idToken } = clientWith([ok({}), ok({})], { id: null });
+
+    await client.request("GET", "/lists", { auth: "reader" });
+    expect(idToken).toHaveBeenLastCalledWith({ existingOnly: true });
+    expect(headersOf(calls[0]!).Authorization).toBeUndefined();
+    expect(headersOf(calls[0]!)["X-Firebase-AppCheck"]).toBe("app-check-token");
+
+    const signedIn = clientWith([ok({})]);
+    await signedIn.client.request("GET", "/lists", { auth: "reader" });
+    expect(headersOf(signedIn.calls[0]!).Authorization).toBe("Bearer id-token");
+  });
+
+  it("asks a refused read again as an account, a guest's sign-in included", async () => {
+    const { fetch, calls } = stubFetch([refused(401, { code: "UNAUTHENTICATED" }), ok({ a: 1 })]);
+    const idToken = vi.fn(async (options?: { existingOnly?: boolean }) =>
+      options?.existingOnly === true ? null : "guest-token",
+    );
+    const client = createApiClient({
+      fetch,
+      appCheckToken: async () => "app-check-token",
+      idToken,
+    });
+
+    await expect(client.request("GET", "/lists/abc", { auth: "reader" })).resolves.toEqual({
+      a: 1,
+    });
+    expect(idToken).toHaveBeenLastCalledWith({ forceRefresh: true });
+    expect(headersOf(calls[0]!).Authorization).toBeUndefined();
+    expect(headersOf(calls[1]!).Authorization).toBe("Bearer guest-token");
+  });
+
   it("asks for both tokens at once, not one after the other", async () => {
     const { fetch, calls } = stubFetch([ok({})]);
     const asked: string[] = [];

@@ -48,7 +48,9 @@ export interface FollowState {
 }
 
 export function followState(client: ApiClient, authorUid: string): Promise<FollowState> {
-  return client.request<FollowState>("GET", `/lists/follow/${encodeURIComponent(authorUid)}`);
+  return client.request<FollowState>("GET", `/lists/follow/${encodeURIComponent(authorUid)}`, {
+    auth: "reader",
+  });
 }
 
 export function followAuthor(client: ApiClient, authorUid: string): Promise<{ following: true }> {
@@ -189,6 +191,7 @@ export async function loadListRankings(
   return rankingsPageOf(
     await client.request<unknown>("GET", `/lists/${encodeURIComponent(listId)}/rankings`, {
       query: after === null ? { withAuthor: "1" } : { withAuthor: "1", after },
+      auth: "reader",
     }),
   );
 }

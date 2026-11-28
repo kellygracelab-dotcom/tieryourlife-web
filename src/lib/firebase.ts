@@ -158,8 +158,10 @@ export async function getLimitedAppCheckToken(env: Env = readEnv()): Promise<str
 let guestSignIn: Promise<User> | undefined;
 
 // Persisted sign-ins arrive a moment after the page loads; asking before that
-// would mint a fresh guest on every visit.
-async function currentUser(on: Auth): Promise<User> {
+// would mint a fresh guest on every visit. With `existingOnly` (a read the
+// proxy answers anybody) only an account already here: the guest is made all
+// the same, as it always was on a first visit, but the read does not wait for it.
+async function currentUser(on: Auth, existingOnly = false): Promise<User | null> {
   await on.authStateReady();
   if (on.currentUser !== null) return on.currentUser;
   guestSignIn ??= signInAnonymously(on)
@@ -167,12 +169,19 @@ async function currentUser(on: Auth): Promise<User> {
     .finally(() => {
       guestSignIn = undefined;
     });
+  if (existingOnly) {
+    guestSignIn.catch(() => undefined);
+    return null;
+  }
   return guestSignIn;
 }
 
-export async function getIdToken(options: { forceRefresh?: boolean } = {}): Promise<string | null> {
+export async function getIdToken(
+  options: { forceRefresh?: boolean; existingOnly?: boolean } = {},
+): Promise<string | null> {
   try {
-    const user = await currentUser(getFirebaseAuth());
+    const user = await currentUser(getFirebaseAuth(), options.existingOnly === true);
+    if (user === null) return null;
     return await user.getIdToken(options.forceRefresh ?? false);
   } catch {
     return null;
