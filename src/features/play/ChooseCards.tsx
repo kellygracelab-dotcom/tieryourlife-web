@@ -493,7 +493,7 @@ function PickCards({ board, ids: from, where, initial, onBack, onDone, onCancel 
                   />
                   {card.imageUrl !== null ? (
                     <MediaImage
-                      {...sizedFor(card.imageUrl, 64)}
+                      {...sizedFor(card.imageUrl, { width: 64, height: 90 })}
                       alt={cardLabel(card.name)}
                       loading="lazy"
                     />
