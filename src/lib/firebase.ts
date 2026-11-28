@@ -158,17 +158,21 @@ export async function getLimitedAppCheckToken(env: Env = readEnv()): Promise<str
 let guestSignIn: Promise<User> | undefined;
 
 // Persisted sign-ins arrive a moment after the page loads; asking before that
-// would mint a fresh guest on every visit. Only an account already here when
-// `existingOnly`: a read the proxy answers anybody makes no guest.
+// would mint a fresh guest on every visit. With `existingOnly` (a read the
+// proxy answers anybody) only an account already here: the guest is made all
+// the same, as it always was on a first visit, but the read does not wait for it.
 async function currentUser(on: Auth, existingOnly = false): Promise<User | null> {
   await on.authStateReady();
   if (on.currentUser !== null) return on.currentUser;
-  if (existingOnly) return guestSignIn ?? null;
   guestSignIn ??= signInAnonymously(on)
     .then((credential) => credential.user)
     .finally(() => {
       guestSignIn = undefined;
     });
+  if (existingOnly) {
+    guestSignIn.catch(() => undefined);
+    return null;
+  }
   return guestSignIn;
 }
 
