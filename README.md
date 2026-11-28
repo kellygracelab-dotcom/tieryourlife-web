@@ -43,3 +43,9 @@ Vite, React 19 and TypeScript, served by Firebase Hosting, with one small Cloud 
 
 - [Developing and releasing](DEVELOPMENT.md): the stack, the commands, how a release reaches the public site.
 - [The API](https://github.com/kellygracelab-dotcom/tieryourlife-proxy/blob/main/CONTRACT.md) the site and the app both follow.
+
+## License
+
+The code is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0). © 2026 Artiuillab.
+
+The license covers the code only. The TierYourLife name, the logo and the pictures in the lists are not covered by it.
