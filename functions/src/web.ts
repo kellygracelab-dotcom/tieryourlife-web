@@ -22,7 +22,7 @@ import {
   withdrawnByModeration,
 } from "./pages";
 import { sendPicture, storagePictures, storedCopies, type PictureDeps } from "./pictures";
-import { collageSizeOf, sendCollage, type CollageDeps } from "./collage";
+import { collageScaleOf, collageSizeOf, sendCollage, type CollageDeps } from "./collage";
 import { sendHomeFirst, type HomeFirst } from "./homeFirst";
 import { discardOlderCopies, fetchPictureBytes } from "./shareImage";
 import {
@@ -134,9 +134,12 @@ const bucketPictures: PictureDeps = {
 // The same guarded fetch the link previews use: public addresses only, every
 // redirect checked, sizes capped; the list's own uploads straight from the bucket.
 const collagePictures: CollageDeps = {
-  load: async (url) =>
-    (await fetchPictureBytes(url, undefined, undefined, bucketPictures.read, collageSizeOf))
-      ?.bytes ?? null,
+  load: async (url, scale) =>
+    (
+      await fetchPictureBytes(url, undefined, undefined, bucketPictures.read, (one) =>
+        collageSizeOf(one, scale),
+      )
+    )?.bytes ?? null,
   // Drawn once, then read: a bucket read is a tenth of a drawing.
   shelf: {
     read: async (path) => {
@@ -236,6 +239,7 @@ export async function route(
         request.method === "HEAD",
         deps.db,
         deps.collage ?? collagePictures,
+        collageScaleOf((request.query as Record<string, unknown> | undefined)?.s),
       );
     }
     // A section's or topic's picture at a page's width: /img/{width}/{kind}/{id}/{picture}.

@@ -18,6 +18,13 @@ import { PUBLISHED_ORIGINAL, rasterType } from "./pictures";
 
 export const COLLAGE_WIDTH = 480;
 export const COLLAGE_HEIGHT = 300;
+/**
+ * The collage at once or twice that size: /img/collage/{id}.webp?s=2 is
+ * 960×600, for a cover on a sharp screen, where 480×300 was soft (Designer's
+ * measure, 28.11: 87-91% of the pixels a DPR 2 screen draws).
+ */
+export type CollageScale = 1 | 2;
+export const collageScaleOf = (raw: unknown): CollageScale => (raw === "2" ? 2 : 1);
 /** The site's mosaic leaves 2px between its pictures (src/ui/ListArt.css, .art--mosaic). */
 export const COLLAGE_GAP = 2;
 /** The most pictures the mosaic shows, and the fewest that make a collage. */
@@ -64,16 +71,17 @@ const ROWS: Readonly<Record<number, readonly number[]>> = {
  * row of equal width, 2px apart. Edges are rounded, so a gap may come out
  * a pixel wider or narrower, as a browser rounds a grid of thirds.
  */
-export function collageCells(count: number): Cell[] {
+export function collageCells(count: number, scale: CollageScale = 1): Cell[] {
   const rows = ROWS[Math.min(Math.max(count, COLLAGE_MIN), COLLAGE_MAX)] ?? [];
-  const rowHeight = (COLLAGE_HEIGHT - (rows.length - 1) * COLLAGE_GAP) / rows.length;
+  const gap = COLLAGE_GAP * scale;
+  const rowHeight = (COLLAGE_HEIGHT * scale - (rows.length - 1) * gap) / rows.length;
   return rows.flatMap((perRow, row) => {
-    const width = (COLLAGE_WIDTH - (perRow - 1) * COLLAGE_GAP) / perRow;
-    const top = Math.round(row * (rowHeight + COLLAGE_GAP));
-    const bottom = Math.round(row * (rowHeight + COLLAGE_GAP) + rowHeight);
+    const width = (COLLAGE_WIDTH * scale - (perRow - 1) * gap) / perRow;
+    const top = Math.round(row * (rowHeight + gap));
+    const bottom = Math.round(row * (rowHeight + gap) + rowHeight);
     return Array.from({ length: perRow }, (_, at) => {
-      const left = Math.round(at * (width + COLLAGE_GAP));
-      const right = Math.round(at * (width + COLLAGE_GAP) + width);
+      const left = Math.round(at * (width + gap));
+      const right = Math.round(at * (width + gap) + width);
       return { left, top, width: right - left, height: bottom - top };
     });
   });
@@ -184,8 +192,12 @@ export function collagePictures(data: StoredList): CollagePicture[] {
   return previews.map((url) => ({ url, focus: focusByPicture.get(url) ?? null }));
 }
 
-/** The catalogue's poster at a size a collage cell of up to 239×300 shows sharply. */
-export const collageSizeOf = (url: string): string => url.replace("/t/p/w500/", "/t/p/w342/");
+/**
+ * The catalogue's poster at a size a collage cell of up to 239×300 shows
+ * sharply; twice that size takes the w500 it is stored at.
+ */
+export const collageSizeOf = (url: string, scale: CollageScale = 1): string =>
+  scale === 1 ? url.replace("/t/p/w500/", "/t/p/w342/") : url;
 
 /** Where drawn collages are kept: a cache, anything in it can be drawn again. */
 export interface CollageShelf {
@@ -197,7 +209,7 @@ export interface CollageShelf {
 
 export interface CollageDeps {
   /** One picture's bytes, or null when it cannot be had: fetched safely, or read from the bucket. */
-  load: (url: string) => Promise<Buffer | null>;
+  load: (url: string, scale: CollageScale) => Promise<Buffer | null>;
   /** Drawn collages kept between visitors; none draws every time. */
   shelf?: CollageShelf;
 }
@@ -210,11 +222,15 @@ export const collageFolder = (id: string): string => `share/c/${id}/`;
  * focus and the drawing, so any change to what the card shows is another
  * name, whatever the list's version says.
  */
-export function collagePath(id: string, pictures: readonly CollagePicture[]): string {
-  const digest = createHash("sha256")
-    .update(JSON.stringify({ look: COLLAGE_LOOK, pictures }))
-    .digest("hex")
-    .slice(0, 32);
+export function collagePath(
+  id: string,
+  pictures: readonly CollagePicture[],
+  scale: CollageScale = 1,
+): string {
+  // The plain size keeps the names its collages were kept under.
+  const drawing =
+    scale === 1 ? { look: COLLAGE_LOOK, pictures } : { look: COLLAGE_LOOK, pictures, scale };
+  const digest = createHash("sha256").update(JSON.stringify(drawing)).digest("hex").slice(0, 32);
   return `${collageFolder(id)}${digest}.webp`;
 }
 
@@ -259,6 +275,7 @@ async function loadPieces(
   pictures: readonly CollagePicture[],
   deps: CollageDeps,
   missed: () => void,
+  scale: CollageScale,
 ): Promise<Piece[]> {
   const pieces: Piece[] = [];
   let next = 0;
@@ -266,7 +283,7 @@ async function loadPieces(
     const batch = pictures.slice(next, next + COLLAGE_MAX - pieces.length);
     next += batch.length;
     const loaded = await Promise.all(
-      batch.map((picture) => deps.load(picture.url).catch(() => null)),
+      batch.map((picture) => deps.load(picture.url, scale).catch(() => null)),
     );
     for (const [at, bytes] of loaded.entries()) {
       const piece = await pieceOf(sharp, bytes, batch[at]?.focus ?? null);
@@ -306,11 +323,12 @@ export async function drawCollage(
   pictures: readonly CollagePicture[],
   deps: CollageDeps,
   missed: () => void = () => undefined,
+  scale: CollageScale = 1,
 ): Promise<Buffer | null> {
   const sharp = await loadSharp();
-  let pieces = await loadPieces(sharp, pictures, deps, missed);
+  let pieces = await loadPieces(sharp, pictures, deps, missed, scale);
   while (pieces.length >= COLLAGE_MIN) {
-    const cells = collageCells(pieces.length);
+    const cells = collageCells(pieces.length, scale);
     const cuts: { input: Buffer; left: number; top: number }[] = [];
     let failed = -1;
     // One at a time: a few decoded pictures at once is all the memory this takes.
@@ -331,8 +349,8 @@ export async function drawCollage(
     }
     return sharp({
       create: {
-        width: COLLAGE_WIDTH,
-        height: COLLAGE_HEIGHT,
+        width: COLLAGE_WIDTH * scale,
+        height: COLLAGE_HEIGHT * scale,
         channels: 4,
         background: { r: 0, g: 0, b: 0, alpha: 0 },
       },
@@ -355,15 +373,21 @@ async function keptOrDrawn(
   id: string,
   pictures: readonly CollagePicture[],
   deps: CollageDeps,
+  scale: CollageScale,
 ): Promise<Buffer | null> {
-  const path = collagePath(id, pictures);
+  const path = collagePath(id, pictures, scale);
   const kept = await deps.shelf?.read(path).catch(() => null);
   if (kept) return kept;
   let whole = true;
   const webp = await drawing(() =>
-    drawCollage(pictures, deps, () => {
-      whole = false;
-    }),
+    drawCollage(
+      pictures,
+      deps,
+      () => {
+        whole = false;
+      },
+      scale,
+    ),
   );
   if (webp !== null && whole && deps.shelf) {
     await deps.shelf
@@ -380,7 +404,7 @@ const notFound = (response: Response): void => {
 };
 
 /**
- * Answers /img/collage/{listId}.webp; `name` is the last part. A list
+ * Answers /img/collage/{listId}.webp, ?s=2 for twice its size; `name` is the last part. A list
  * missing or under review gets nothing, as its page and its link's picture
  * (pages.ts listPage, listShareImage); so does one whose card shows no
  * collage. The `v` in the address only tells versions apart.
@@ -391,6 +415,7 @@ export async function sendCollage(
   head: boolean,
   db: () => Firestore,
   deps: CollageDeps,
+  scale: CollageScale = 1,
 ): Promise<void> {
   const id = name.endsWith(".webp") ? name.slice(0, -".webp".length) : "";
   if (!LIST_ID.test(id)) return notFound(response);
@@ -399,7 +424,7 @@ export async function sendCollage(
   if (data === undefined || data.underReview === true) return notFound(response);
   const pictures = collagePictures(data);
   if (pictures.length < COLLAGE_MIN) return notFound(response);
-  const webp = await keptOrDrawn(id, pictures, deps);
+  const webp = await keptOrDrawn(id, pictures, deps, scale);
   if (webp === null) return notFound(response);
   response.setHeader("Content-Type", "image/webp");
   response.setHeader("Content-Length", String(webp.length));
