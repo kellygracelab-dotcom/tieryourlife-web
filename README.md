@@ -13,6 +13,7 @@ and never to Firestore directly.
 - Firebase JS SDK for Auth (Google and anonymous), App Check and Storage.
 - One small Cloud Functions codebase, `web`, for the pages that need OpenGraph tags and for saving rankings.
 - In the same codebase, `onUserDeleted` runs when a Firebase user is deleted: their rankings stay, without an owner, as every ranking page promises.
+- `cdnPurge` runs when the shared Proxy records a takedown in Firestore `webCdnPurges`. It removes the cards' copies of the deleted pictures and releases the live Hosting version again with one header changed, which clears Hosting's CDN. So the site's pictures from `published/` are kept a day on the CDN, and a picture taken down still stops reaching anyone new within a minute. Until a purge has gone through, after one fails or is refused, or with `keep: false` in `config/webCdn`, they are kept a minute as before. A card's 200 and 400 px copies are kept in Storage next to their picture (`published/{list}/w200/…`) and given only while the picture is still there.
 - oxlint and Prettier for style, Vitest for tests, Playwright for two browser smokes, GitHub Actions for CI.
 
 ## Commands
