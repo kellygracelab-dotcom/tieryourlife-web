@@ -321,14 +321,42 @@ describe("a takedown's request", () => {
     assert.equal(deps.logs[0]?.waitedMs, SKEW_MS + 1);
   });
 
-  it("throws when the purge fails, so the request is tried again", async () => {
+  it("tries a failed purge again twice, then marks it failing and throws", async () => {
     const clock = { now: T };
-    const { store, box } = memoryStore(clock);
-    await assert.rejects(
-      onPurgeRequest(T, [], depsFor(clock, store, fakeHosting({ lose: true }).call)),
+    const { store, box } = memoryStore(clock, { ...fresh(), canPurge: true });
+    let calls = 0;
+    const hosting = fakeHosting({ lose: true });
+    const counting: HostingCall = (method, path, body) => {
+      if (method === "POST" && path === "/sites/tieryourlife/versions") calls++;
+      return hosting.call(method, path, body);
+    };
+    const deps = depsFor(clock, store, counting);
+    await assert.rejects(onPurgeRequest(T, [], deps), /lost 1 files/);
+    assert.equal(calls, 3);
+    assert.deepEqual(
+      deps.logs.map((entry) => entry.message),
+      ["CDN purge failed, trying again", "CDN purge failed, trying again"],
     );
     assert.notEqual(box.state.failingSince, null);
+    assert.equal(cdnKeeps(box.state), false);
     assert.equal(box.state.leaseUntil, 0);
+  });
+
+  it("goes through when a later try does", async () => {
+    const clock = { now: T };
+    const { store, box } = memoryStore(clock);
+    const hosting = fakeHosting();
+    let failOnce = true;
+    const flaky: HostingCall = (method, path, body) => {
+      if (failOnce && method === "POST" && path === "/sites/tieryourlife/versions") {
+        failOnce = false;
+        return Promise.reject(new HostingError(503, "Hosting POST: 503"));
+      }
+      return hosting.call(method, path, body);
+    };
+    assert.equal(await onPurgeRequest(T, [], depsFor(clock, store, flaky)), "run");
+    assert.equal(box.state.canPurge, true);
+    assert.equal(box.state.failingSince, null);
   });
 
   it("does not try again what Hosting refuses, and keeps pictures a minute", async () => {

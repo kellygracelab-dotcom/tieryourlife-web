@@ -35,6 +35,11 @@ export const LEASE_MS = 120_000;
 /** Clocks of Storage's events and of this function may differ a little. */
 export const SKEW_MS = 2_000;
 const MAX_ROUNDS = 10;
+/**
+ * A failed purge is tried again here, after these pauses: Firebase deploys a
+ * function that the platform retries only with --force, which is Danylo's.
+ */
+export const RETRY_AFTER_MS: readonly number[] = [5_000, 15_000];
 
 /** What config/webCdn holds; people write only `keep`. */
 export interface CdnState {
@@ -342,8 +347,9 @@ export function copiesOf(paths: unknown): string[] {
  * A takedown at `deletedAt`: its cards' copies go, and it is covered by a
  * purge that starts after it. The first request to find none running runs
  * them, one after another, while requests keep coming; the rest leave theirs
- * to it. A purge that fails throws, so the request is tried again; one that
- * Hosting refuses (no permission) is not, and pictures are kept a minute.
+ * to it. A purge that fails is tried again twice, a few seconds apart, then
+ * marked failing (pictures kept a minute) and thrown; one that Hosting
+ * refuses (no permission) is not tried again.
  */
 export async function onPurgeRequest(
   deletedAt: number,
@@ -361,7 +367,7 @@ export async function onPurgeRequest(
       continue;
     }
     try {
-      const purged = await purgeCdn(deps.call, deps.now);
+      const purged = await purgeWithRetries(deps);
       await deps.store.done(step.startedAt, true);
       deps.log({
         message: "CDN purge",
@@ -384,13 +390,32 @@ export async function onPurgeRequest(
   return "run";
 }
 
+async function purgeWithRetries(deps: PurgeDeps): Promise<Purged> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await purgeCdn(deps.call, deps.now);
+    } catch (error) {
+      const refused =
+        error instanceof HostingError && (error.status === 401 || error.status === 403);
+      const pause = RETRY_AFTER_MS[attempt];
+      if (refused || pause === undefined) throw error;
+      deps.log({
+        message: "CDN purge failed, trying again",
+        attempt: attempt + 1,
+        detail: String(error),
+      });
+      await deps.sleep(pause);
+    }
+  }
+}
+
 const readAt = (value: unknown, fallback: number): number => {
   const millis = (value as { toMillis?: () => number } | null)?.toMillis?.();
   return typeof millis === "number" && Number.isFinite(millis) ? millis : fallback;
 };
 
 export const cdnPurge = region("europe-west1")
-  .runWith({ timeoutSeconds: 300, failurePolicy: true })
+  .runWith({ timeoutSeconds: 300 })
   .firestore.document(`${PURGE_REQUESTS}/{id}`)
   .onCreate(async (snapshot) => {
     // The emulators have no Hosting to purge.
