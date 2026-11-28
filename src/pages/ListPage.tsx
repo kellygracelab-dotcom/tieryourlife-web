@@ -321,11 +321,23 @@ export function ListPage(props: ListPageProps) {
   const location = useLocation();
   const board = seenAsCommunity(location.state) ? null : boardOfList(props.repository ?? site, id);
   // In place of this page, so Back returns to where the list was tapped.
-  if (board !== null && account?.kind === "signedIn") {
-    return <Navigate to={`/b/${encodeURIComponent(board.uid)}`} replace />;
-  }
+  const toBoard =
+    board !== null && account?.kind === "signedIn" ? `/b/${encodeURIComponent(board.uid)}` : null;
+  // A list in the page's HTML stays drawn while the board's page comes, as on
+  // a reload of one's own board at its public address: the board goes to the
+  // board, with no empty frame between (Danylo, 15.11 and 28.11).
+  const atHand = peek() !== undefined;
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (toBoard !== null && atHand) void navigate(toBoard, { replace: true });
+  }, [toBoard, atHand, navigate]);
+  if (toBoard !== null && !atHand) return <Navigate to={toBoard} replace />;
 
-  if (state.status === "loading" || (board !== null && account === null)) {
+  // While it is unknown who is here, the list as the page's HTML has it: one's
+  // own board, at the public address its address bar shows, reloads from the
+  // board to the board, not through a skeleton (Danylo, 15.11 and 28.11).
+  // Without that copy it waits, so as not to show the Community's view first.
+  if (state.status === "loading" || (board !== null && account === null && !atHand)) {
     return <ListPageLoading note={strings.list.opening} rows={3} />;
   }
   if (state.status === "error") {

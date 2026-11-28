@@ -85,6 +85,30 @@ test.describe("a reload keeps the board", () => {
     expect(await reloadSeen(page)).toEqual(["nothing", "board"]);
   });
 
+  // Its address bar shows the list's public address, copied from there to the
+  // Community (Danylo, 28.11.2026); a reload there comes back to the board.
+  test("one's own published board, at the list's public address", async ({ page }) => {
+    const account = await signIn(page);
+    // The account's own list, as /lists/mine names it: else the board lets the id go.
+    account.published.set(list.id, { title: list.title, category: list.category });
+    await servedWithList(page);
+    await ownBoard(page);
+    const uid = new URL(page.url()).pathname.split("/").pop()!;
+    await page.evaluate(
+      ({ key, id }) => {
+        const board = JSON.parse(localStorage.getItem(key)!);
+        localStorage.setItem(key, JSON.stringify({ ...board, publishedId: id }));
+      },
+      { key: `tyl:board@me:${uid}`, id: list.id },
+    );
+    await page.goto(`/b/${uid}`);
+    await expect(page.getByRole("button", { name: "Edit list name" })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/l/${list.id}$`));
+    expect(await reloadSeen(page)).toEqual(["nothing", "board"]);
+    await expect(page.getByRole("button", { name: "Edit list name" })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/l/${list.id}$`));
+  });
+
   test("a published list, signed in", async ({ page }) => {
     await signIn(page);
     await servedWithList(page);

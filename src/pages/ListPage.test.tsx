@@ -46,6 +46,7 @@ const mocks = vi.hoisted(() => ({
   followAuthor: vi.fn<(uid: string) => Promise<unknown>>(),
   unfollowAuthor: vi.fn<(uid: string) => Promise<unknown>>(),
   preloadHidesAuthor: vi.fn<(id: string) => boolean>(() => false),
+  listAtHand: vi.fn<(id: string) => PublishedList | undefined>(() => undefined),
 }));
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
@@ -60,6 +61,7 @@ vi.mock("../lib/api", async () => ({
   rearrangeRanking: vi.fn(),
   loadList: mocks.loadList,
   preloadHidesAuthor: mocks.preloadHidesAuthor,
+  listAtHand: mocks.listAtHand,
   noteTake: vi.fn(),
   loadRanking: vi.fn(),
 }));
@@ -141,6 +143,8 @@ let hiddenStore = memoryStore();
 
 beforeEach(() => {
   mocks.loadList.mockReset();
+  mocks.listAtHand.mockReset();
+  mocks.listAtHand.mockReturnValue(undefined);
   mocks.report.mockReset();
   mocks.unpublish.mockReset();
   mocks.followState.mockReset();
@@ -1328,6 +1332,15 @@ describe("ListPage for its author", () => {
     expect(router.state.historyAction).toBe("REPLACE");
   });
 
+  it("goes from the list in the page's HTML to one's own board in its place, the list drawn meanwhile", async () => {
+    mocks.listAtHand.mockReturnValue(list);
+    mocks.loadList.mockResolvedValue(list);
+    boards.save({ ...newBoard("b1", "Every A24 film", 1, () => "t"), publishedId: "abc" });
+    const router = openAs(author);
+    await waitFor(() => expect(router.state.location.pathname).toBe("/b/b1"));
+    expect(router.state.historyAction).toBe("REPLACE");
+  });
+
   it("keeps the list's page for its author without a board here, or when the board asked to see it as others do", async () => {
     mocks.loadList.mockResolvedValue(list);
     // In the trash, the board is not where the list is changed.
@@ -1405,6 +1418,15 @@ describe("ListPage for its author", () => {
     openAs(null);
     expect(await screen.findByText("Opening the list…")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 1, name: list.title })).toBeNull();
+  });
+
+  it("shows the list in the page's HTML while it is unknown who is here, then its board", async () => {
+    mocks.listAtHand.mockReturnValue(list);
+    mocks.loadList.mockResolvedValue(list);
+    boards.save({ ...newBoard("b1", "Every A24 film", 1, () => "t"), publishedId: "abc" });
+    openAs(null);
+    expect(await screen.findByRole("heading", { level: 1, name: list.title })).toBeInTheDocument();
+    expect(screen.queryByText("Opening the list…")).toBeNull();
   });
 
   it("makes the board the list was published from its own again once it is down", async () => {
