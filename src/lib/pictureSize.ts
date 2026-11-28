@@ -43,11 +43,12 @@ export const ORIGINAL_WIDTH = 2000;
 
 /**
  * Published pictures' copies by a new address, after the Proxy drew them
- * again larger in the same files (Backend #215, 28.11): a browser keeps a
+ * again larger in the same files (Backend #215, 28.11; v3 after #217 fitted
+ * Open Library and Commons copies to 1200 px, same day): a browser keeps a
  * copy a year (/img is immutable), and the new address is a new one to it.
  * /img reads no parameters, so any copy answers it.
  */
-export const PICTURES_VERSION = "?v=2";
+export const PICTURES_VERSION = "?v=3";
 
 /**
  * A card's picture at the size it is drawn: a 64-pixel tile does not need the

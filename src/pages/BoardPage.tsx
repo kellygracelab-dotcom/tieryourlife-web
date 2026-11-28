@@ -82,6 +82,7 @@ import {
 import { usePublishedChanges } from "../features/boards/publishedChanges";
 import { houseBoards, type BoardsRepository } from "../features/boards/repository";
 import { boards as site } from "../features/boards/owners";
+import { usePublicAddress } from "../features/boards/publicAddress";
 import { takenDown, unpublished } from "../features/boards/takeDown";
 import {
   applyTierAction,
@@ -415,6 +416,18 @@ function OpenBoard({
   useEffect(() => {
     if (toRemember) linkToHouse(uid, houseListId, houseStore);
   }, [toRemember, uid, houseListId, houseStore]);
+  // One's own published list shows its public address, copied from there to
+  // the Community; only where the list page hands it back to this board on a
+  // reload (boardOfList, an account here) and where anybody can open it.
+  usePublicAddress(
+    house === null &&
+      own !== null &&
+      own.deletedAt === null &&
+      own.heldForReview !== true &&
+      me !== null
+      ? own.publishedId
+      : null,
+  );
   // A new list does not open with its name being edited, at any width: the
   // name is changed with a press on it. On a computer the cursor goes to the
   // field that adds cards (Danylo, 25.11); on a phone a name being edited
