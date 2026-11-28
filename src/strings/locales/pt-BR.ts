@@ -1367,6 +1367,11 @@ const ptBR: Translation = {
     intoYoursHouse: "O resultado vai para a sua versão.",
     cancel: "Cancelar",
     start: "Começar",
+    bestTiers: "Melhores níveis",
+    allCards: { one: "{n} cartão", other: "Todos os {n} cartões" },
+    startGame: "Começar {game} · {time}",
+    startNew: "Novo jogo · {game} · {time}",
+    yourGame: "Seu jogo · {started}",
     savedDiscarded: "Jogo salvo descartado",
     undo: "Desfazer",
     thePool: {

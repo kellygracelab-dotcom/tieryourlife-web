@@ -1297,6 +1297,11 @@ const ja: Translation = {
     intoYoursHouse: "結果は自分のバージョンに入ります。",
     cancel: "キャンセル",
     start: "開始",
+    bestTiers: "最適なティア",
+    allCards: { other: "すべてのカード {n} 枚" },
+    startGame: "{game}を開始 · {time}",
+    startNew: "新しく開始 · {game} · {time}",
+    yourGame: "あなたのゲーム · {started}",
     savedDiscarded: "保存したゲームを破棄しました",
     undo: "元に戻す",
     thePool: {

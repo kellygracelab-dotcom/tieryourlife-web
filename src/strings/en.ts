@@ -1276,6 +1276,12 @@ export const en = {
     intoYoursHouse: "The result goes into your version.",
     cancel: "Cancel",
     start: "Start",
+    // The Play window's tiles (Designer's variant B, 28.11): the cards chip, Start saying what it starts.
+    bestTiers: "Best tiers",
+    allCards: { one: "{n} card", other: "All {n} cards" },
+    startGame: "Start {game} · {time}",
+    startNew: "Start new · {game} · {time}",
+    yourGame: "Your game · {started}",
     savedDiscarded: "Saved game discarded",
     undo: "Undo",
     thePool: { one: "Cards left · {n}", other: "Cards left · {n}" },

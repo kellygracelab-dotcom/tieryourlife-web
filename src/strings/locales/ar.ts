@@ -1530,6 +1530,11 @@ const ar: Translation = {
     intoYoursHouse: "تذهب النتيجة إلى نسختك.",
     cancel: "إلغاء",
     start: "ابدأ",
+    bestTiers: "أدق المستويات",
+    allCards: { other: "كل البطاقات: {n}" },
+    startGame: "ابدأ {game} · {time}",
+    startNew: "لعبة جديدة · {game} · {time}",
+    yourGame: "لعبتك · {started}",
     savedDiscarded: "تم تجاهل اللعبة المحفوظة",
     undo: "تراجع",
     thePool: {

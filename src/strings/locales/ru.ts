@@ -1425,6 +1425,11 @@ const ru: Translation = {
     intoYoursHouse: "Результат попадёт в вашу версию.",
     cancel: "Отмена",
     start: "Начать",
+    bestTiers: "Лучшие уровни",
+    allCards: { other: "Все карточки: {n}" },
+    startGame: "Начать: {game} · {time}",
+    startNew: "Новая игра · {game} · {time}",
+    yourGame: "Ваша игра · {started}",
     savedDiscarded: "Сохранённая игра отменена",
     undo: "Отменить",
     thePool: {
