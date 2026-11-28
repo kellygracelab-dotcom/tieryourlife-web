@@ -31,6 +31,12 @@ const MISSING = "public, max-age=60, s-maxage=60";
  */
 export const PUBLISHED_ORIGINAL = "public, max-age=31536000, s-maxage=60, immutable";
 /*
+ * The same, kept a day on the CDN while a deletion purges it (cdnPurge.ts,
+ * 28.11.2026): a list's pictures come from the nearest edge to whoever opens
+ * it after the first, and a takedown still stops them within a minute.
+ */
+export const PUBLISHED_KEPT = "public, max-age=31536000, s-maxage=86400, immutable";
+/*
  * The shared catalogue copies boards show (published/catalogue/w-…): a poster
  * or a Commons photo, named by its catalogue address, never a person's own
  * picture and never taken down by moderation, so the CDN keeps it a day and
@@ -55,7 +61,33 @@ export interface PictureDeps {
   read: (path: string, limit?: number) => Promise<Buffer | null>;
   /** The picture at most this wide, as a WebP. */
   shrink: (bytes: Buffer, width: number) => Promise<Buffer>;
+  /** Where a card's smaller copies are kept; without it each is made again every time. */
+  copies?: SmallCopies;
 }
+
+/**
+ * A card's smaller copy of a published picture, kept next to it
+ * (Coordinator, Backend, 28.11.2026): a list of 127 cards opened by someone
+ * new made 127 copies at once on one processor, half a second to six
+ * seconds each; a kept one is a small file read. Under the list's own
+ * folder, so a takedown, a withdrawn list or an erased account deletes the
+ * copies with it; and only given while the picture it was made from is
+ * still there, so a copy left behind is never shown.
+ */
+export interface SmallCopies {
+  exists: (path: string) => Promise<boolean>;
+  save: (path: string, bytes: Buffer) => Promise<void>;
+  remove: (path: string) => Promise<void>;
+}
+
+/** published/{list}/{name} -> published/{list}/w{width}/{name}. */
+export function smallCopyPath(path: string, width: number): string {
+  const at = path.lastIndexOf("/");
+  return `${path.slice(0, at)}/w${width}/${path.slice(at + 1)}`;
+}
+
+// A card's copy is a few tens of kilobytes; anything far bigger is not one of ours.
+const SMALL_LIMIT = 1024 * 1024;
 
 // The shared publisher accepts these four raster formats, up to four MiB.
 const ORIGINAL_LIMIT = 4 * 1024 * 1024;
@@ -75,6 +107,7 @@ export async function sendPicture(
   response: Response,
   segments: readonly string[],
   deps: PictureDeps,
+  kept: () => Promise<boolean> = async () => false,
 ): Promise<void> {
   const [width, kind, id, picture] = segments;
   const wide = Number(width);
@@ -88,7 +121,23 @@ export async function sendPicture(
         ? picturePathOf(kind ?? "", id ?? "", picture ?? "")
         : null;
   const limited = original || card;
-  const bytes = path === null ? null : await deps.read(path, limited ? ORIGINAL_LIMIT : undefined);
+  const copies = card && path !== null ? deps.copies : undefined;
+  const copy = copies === undefined || path === null ? null : smallCopyPath(path, wide);
+  // The kept copy, and whether its picture is still there, asked together.
+  const [small, there] =
+    copies === undefined || copy === null || path === null
+      ? [null, true]
+      : await Promise.all([
+          deps.read(copy, SMALL_LIMIT).catch(() => null),
+          copies.exists(path).catch(() => false),
+        ]);
+  const keptCopy = small !== null && rasterType(small) === "image/webp" ? small : null;
+  const bytes =
+    path === null || !there
+      ? null
+      : keptCopy !== null
+        ? keptCopy
+        : await deps.read(path, limited ? ORIGINAL_LIMIT : undefined);
   const raster = limited && bytes !== null ? rasterType(bytes) : "image/webp";
   const type = original ? raster : raster === null ? null : "image/webp";
   if (bytes === null || type === null) {
@@ -108,10 +157,62 @@ export async function sendPicture(
         ? OTHER_ORIGINAL
         : id === "catalogue"
           ? CATALOGUE_ORIGINAL
-          : PUBLISHED_ORIGINAL,
+          : (await kept())
+            ? PUBLISHED_KEPT
+            : PUBLISHED_ORIGINAL,
   );
-  response.status(200).send(original ? bytes : await deps.shrink(bytes, wide));
+  if (original || keptCopy !== null) {
+    response.status(200).send(bytes);
+    return;
+  }
+  const shrunk = await deps.shrink(bytes, wide);
+  // The card first; the copy is kept after it has gone, not on its way.
+  response.status(200).send(shrunk);
+  if (copies !== undefined && copy !== null && path !== null)
+    await keepCopy(copies, copy, path, shrunk);
 }
+
+/** Keeps a card's copy; one made while its picture was being deleted goes again at once. */
+async function keepCopy(
+  copies: SmallCopies,
+  copy: string,
+  path: string,
+  bytes: Buffer,
+): Promise<void> {
+  try {
+    await copies.save(copy, bytes);
+    if (!(await copies.exists(path))) await copies.remove(copy);
+  } catch (error) {
+    console.warn("Card copy not kept", copy, error);
+  }
+}
+
+export const storedCopies = (
+  bucket: () => {
+    file: (path: string) => {
+      exists: () => Promise<[boolean]>;
+      save: (
+        bytes: Buffer,
+        options: { contentType: string; resumable: false; metadata: { cacheControl: string } },
+      ) => Promise<unknown>;
+      delete: (options: { ignoreNotFound: true }) => Promise<unknown>;
+    };
+  },
+): SmallCopies => ({
+  exists: async (path) => (await bucket().file(path).exists())[0],
+  save: async (path, bytes) => {
+    await bucket()
+      .file(path)
+      .save(bytes, {
+        contentType: "image/webp",
+        resumable: false,
+        metadata: { cacheControl: "private, max-age=0" },
+      });
+  },
+  remove: async (path) => {
+    await bucket().file(path).delete({ ignoreNotFound: true });
+  },
+});
 
 export const storagePictures = (
   bucket: () => {

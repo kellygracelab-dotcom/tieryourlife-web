@@ -2,6 +2,7 @@ import { randomBytes, randomInt } from "node:crypto";
 import { FieldValue, getFirestore, Timestamp, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import { onRequest } from "firebase-functions/v2/https";
+import { publishedKept } from "./cdnPurge";
 import type { Response } from "express";
 import { requireAppCheck, requireFreshAppCheck } from "./appCheck";
 import { payloadOf, reportLimiter, violationsOf, type Violation } from "./cspReport";
@@ -20,7 +21,7 @@ import {
   unavailablePage,
   withdrawnByModeration,
 } from "./pages";
-import { sendPicture, storagePictures, type PictureDeps } from "./pictures";
+import { sendPicture, storagePictures, storedCopies, type PictureDeps } from "./pictures";
 import { collageSizeOf, sendCollage, type CollageDeps } from "./collage";
 import { sendHomeFirst, type HomeFirst } from "./homeFirst";
 import { discardOlderCopies, fetchPictureBytes } from "./shareImage";
@@ -119,9 +120,14 @@ export interface WebDeps {
   homeFirst?: (db: Firestore, nowMs: number) => Promise<HomeFirst>;
   /** A published list's collage pictures: fetched safely, or read from the bucket's published/. */
   collage?: CollageDeps;
+  /** Whether a published picture may be kept long on the CDN (cdnPurge.ts); config/webCdn when left out. */
+  publishedKept?: () => Promise<boolean>;
 }
 
-const bucketPictures = storagePictures(() => getStorage().bucket());
+const bucketPictures: PictureDeps = {
+  ...storagePictures(() => getStorage().bucket()),
+  copies: storedCopies(() => getStorage().bucket()),
+};
 
 // The same guarded fetch the link previews use: public addresses only, every
 // redirect checked, sizes capped; the list's own uploads straight from the bucket.
@@ -230,7 +236,12 @@ export async function route(
     }
     // A section's or topic's picture at a page's width: /img/{width}/{kind}/{id}/{picture}.
     if (reading && segments[0] === "img") {
-      return await sendPicture(response, segments.slice(1), deps.pictures ?? bucketPictures);
+      return await sendPicture(
+        response,
+        segments.slice(1),
+        deps.pictures ?? bucketPictures,
+        deps.publishedKept ?? (() => publishedKept(deps.db)),
+      );
     }
     // Pages: /l/{id} and /r/{code} are the site's own shell with the words a
     // chat needs and the data the board needs.
