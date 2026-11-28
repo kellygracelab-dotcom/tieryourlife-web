@@ -14,7 +14,7 @@ import { createHash } from "node:crypto";
 import type { Firestore } from "firebase-admin/firestore";
 import type { Response } from "express";
 import { limiter } from "./limit";
-import { PUBLISHED_ORIGINAL, rasterType } from "./pictures";
+import { PUBLISHED_KEPT, PUBLISHED_ORIGINAL, rasterType } from "./pictures";
 
 export const COLLAGE_WIDTH = 480;
 export const COLLAGE_HEIGHT = 300;
@@ -416,6 +416,7 @@ export async function sendCollage(
   db: () => Firestore,
   deps: CollageDeps,
   scale: CollageScale = 1,
+  kept: () => Promise<boolean> = async () => false,
 ): Promise<void> {
   const id = name.endsWith(".webp") ? name.slice(0, -".webp".length) : "";
   if (!LIST_ID.test(id)) return notFound(response);
@@ -430,8 +431,10 @@ export async function sendCollage(
   response.setHeader("Content-Length", String(webp.length));
   response.setHeader("X-Content-Type-Options", "nosniff");
   response.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
-  // A browser keeps a version for good; the CDN a minute, so a takedown stops it soon (pictures.ts).
-  response.setHeader("Cache-Control", PUBLISHED_ORIGINAL);
+  // A browser keeps a version for good; the CDN a day while a takedown purges it, a minute
+  // otherwise, as a card's picture (pictures.ts). A minute had the home page's fifteen
+  // collages drawn by the function for nearly every visitor: 7-9 s on a phone (28.11).
+  response.setHeader("Cache-Control", (await kept()) ? PUBLISHED_KEPT : PUBLISHED_ORIGINAL);
   response.status(200);
   if (head) response.end();
   else response.send(webp);

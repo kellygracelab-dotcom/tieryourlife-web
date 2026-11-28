@@ -240,6 +240,7 @@ export async function route(
         deps.db,
         deps.collage ?? collagePictures,
         collageScaleOf((request.query as Record<string, unknown> | undefined)?.s),
+        deps.publishedKept ?? (() => publishedKept(deps.db)),
       );
     }
     // A section's or topic's picture at a page's width: /img/{width}/{kind}/{id}/{picture}.
