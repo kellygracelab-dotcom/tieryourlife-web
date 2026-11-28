@@ -16,6 +16,8 @@ import {
   markedConfig,
   next,
   onPurgeRequest,
+  removeAll,
+  REMOVING_AT_ONCE,
   publishedKept,
   purgeCdn,
   readCdnState,
@@ -579,5 +581,30 @@ describe("a published picture's cache header", () => {
     data = undefined;
     assert.equal(await publishedKept(db, T + 62_000), false);
     assert.equal(reads, 3);
+  });
+});
+
+describe("removing many copies", () => {
+  it("removes every copy, never more than a few at once", async () => {
+    const copies = Array.from({ length: 1000 }, (_, n) => `published/l/w200/p${n}`);
+    const removed: string[] = [];
+    let flying = 0;
+    let most = 0;
+    await removeAll(copies, {
+      remove: async (path: string) => {
+        flying++;
+        most = Math.max(most, flying);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        removed.push(path);
+        flying--;
+      },
+    });
+    assert.equal(removed.length, 1000);
+    assert.deepEqual(new Set(removed), new Set(copies));
+    assert.ok(most <= REMOVING_AT_ONCE, `${most} at once`);
+  });
+
+  it("does nothing for none", async () => {
+    await removeAll([], { remove: async () => assert.fail("nothing to remove") });
   });
 });
