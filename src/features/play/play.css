@@ -333,29 +333,6 @@
 }
 
 /*
- * The game Start begins, in one plate (audit B4, the phone's artboard 8):
- * its cards, duels and minutes, and that leaving keeps it.
- */
-.play-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: var(--surface-container);
-}
-
-.play-summary__line {
-  font: 500 15px/21px var(--font);
-  color: var(--ink);
-}
-
-.play-summary__note {
-  font: 400 13px/18px var(--font);
-  color: var(--ink-dim);
-}
-
-/*
  * Cards placed by hand, which the game will move (artboards 15, 24): an
  * outlined line under the plate, so Start is not pressed blind.
  */
@@ -368,44 +345,45 @@
   color: var(--ink);
 }
 
-/* Start, the window's one main action: filled, the full width, 56 high; 48 under a mouse (artboard 24). */
+/* Start says what it starts and takes the rest of the buttons' row (Designer's variant B). */
 .btn.play-start {
+  flex: 1;
   justify-content: center;
-  width: 100%;
-  min-height: 56px;
-  margin-top: 16px;
-  font-size: 16px;
+  min-height: 52px;
+  font-size: 15px;
 }
 
-@media (min-width: 600px) and (hover: hover) and (pointer: fine) {
-  .btn.play-start {
-    min-height: 48px;
-    font-size: 14px;
-  }
+.play-kept {
+  padding: 0 24px 24px;
+  margin-top: -12px;
+  font: 400 13px/20px var(--font);
+  color: var(--ink-dim);
+  text-align: center;
 }
 
-/* Choose cards and Other ways to play: two quiet words under Start. */
-.play-more {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 4px 16px;
-  padding-block: 8px;
-}
-
-.play-more .play-link {
+/* The cards a game is over, by the title: opens Choose cards. */
+.play-cards {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: 2px;
-  min-height: 48px;
+  gap: 6px;
+  min-height: 44px;
+  margin-inline-start: auto;
+  padding: 0 12px 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  background: transparent;
+  color: var(--ink);
+  font: 500 14px/20px var(--font);
+  cursor: pointer;
 }
 
-.play-more__chevron {
-  transition: transform 150ms;
+.play-cards:hover {
+  background: var(--hover);
 }
 
-.play-link[aria-expanded="true"] .play-more__chevron {
-  transform: rotate(180deg);
+.play-cards__chevron {
+  font-size: 18px;
 }
 
 .play-choice__label {
@@ -414,150 +392,207 @@
   color: var(--ink-dim);
 }
 
+/* A saved game, the window's main action: what it is, how far it got, Resume. */
 .play-saved {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  min-height: 64px;
-  padding: 0 12px 0 16px;
+  gap: 12px 16px;
+  padding: 16px;
   border-radius: 16px;
   background: var(--surface-container);
 }
 
-.play-saved__icon {
-  flex: none;
-  font-size: 20px;
-  color: var(--ink-dim);
-}
-
 .play-saved__text {
   display: flex;
-  flex: 1;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  padding-block: 8px;
-}
-
-.play-saved__line {
-  font: 500 14px/20px var(--font);
-  color: var(--ink);
 }
 
 .play-saved__note {
-  font: 400 12px/16px var(--font);
+  font: 400 13px/18px var(--font);
   color: var(--ink-dim);
+}
+
+.play-saved__line {
+  font: 500 16px/22px var(--font);
+  color: var(--ink);
+}
+
+.play-saved__bar {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-container-high);
+}
+
+.play-saved__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--link);
 }
 
 .btn.play-saved__action {
   flex: none;
-  min-height: 36px;
+  min-height: 40px;
 }
 
 /*
- * The three games as the app's radio cards: a visible radio, the game's icon
- * in a 40 circle, the name, its line and the estimate under it. Chosen, the
- * card takes the primary container and the radio fills; nothing else moves.
+ * The four games as tiles, two by two (Designer's variant B): the game's
+ * icon and its time on top, the time the largest thing on it, then its name,
+ * one line and its duels. The chosen one takes the primary container; the
+ * others sit on the plain container. A tile grows with its words: eleven
+ * languages, nothing cut.
  */
-.play-games {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.play-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.play-game {
+.play-tile {
   position: relative;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 12px;
-  min-height: 72px;
-  padding: 12px 16px 12px 12px;
+  min-height: 168px;
+  padding: 16px;
   border-radius: 16px;
-  box-shadow: inset 0 0 0 1px var(--line);
+  background: var(--surface-container);
   color: var(--ink);
   cursor: pointer;
 }
 
-.play-game:has(input:checked) {
-  background: var(--primary-container);
-  color: var(--on-primary-container);
-  box-shadow: none;
+.play-tile:hover {
+  background: color-mix(in srgb, var(--ink) 6%, var(--surface-container));
 }
 
-.play-game:has(input:focus-visible) {
+.play-tile:has(input:checked) {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.play-tile:has(input:focus-visible) {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
-/* The radio is the control a keyboard and a screen reader reach; the card and its dot are its face. */
-.play-game__input {
+/* The radio is the control a keyboard and a screen reader reach; the tile is its face. */
+.play-tile__input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
 
-/* M3's radio, 20 round, centred on the icon's circle. */
-.play-radio {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  margin-block: 10px;
-  border: 2px solid var(--ink-dim);
-  border-radius: 50%;
-}
-
-.play-game:has(input:checked) .play-radio {
-  border-color: var(--link);
-  background: radial-gradient(circle, var(--link) 0 4.5px, transparent 5px);
-}
-
-.play-game__icon {
+.play-tile__top {
   display: flex;
-  flex: none;
   align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--surface-container-high);
-  color: var(--link);
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.play-game__icon .ms {
-  font-size: 22px;
-}
-
-/* The design's paper: the sheet's own surface, white in the light, so the circle stands off the fill. */
-.play-game:has(input:checked) .play-game__icon {
-  background: var(--surface);
-}
-
-.play-game__text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.play-game__name {
-  font: 500 16px/24px var(--font);
-}
-
-.play-game__line {
-  font: 400 14px/20px var(--font);
+.play-tile__icon {
+  font-size: 28px;
   color: var(--ink-dim);
 }
 
-/* On its own line under the description, at every width. */
-.play-game__estimate {
-  margin-top: 2px;
-  font: 400 12px/16px var(--font);
-  color: var(--ink-faint);
+.play-tile__time {
+  font: 500 26px/1 var(--font);
+  white-space: nowrap;
 }
 
-.play-game:has(input:checked) .play-game__line,
-.play-game:has(input:checked) .play-game__estimate {
+.play-tile__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.play-tile__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font: 500 17px/1.2 var(--font);
+}
+
+.play-tile__badge {
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: var(--on-primary-container);
+  color: var(--primary-container);
+  font: 500 11px/1.5 var(--font);
+}
+
+.play-tile__line {
+  font: 400 13px/1.45 var(--font);
+  color: var(--ink-dim);
+}
+
+.play-tile__duels {
+  font: 400 12px/1.5 var(--font);
+  color: var(--ink-dim);
+}
+
+.play-tile:has(input:checked) .play-tile__icon,
+.play-tile:has(input:checked) .play-tile__line,
+.play-tile:has(input:checked) .play-tile__duels {
   color: inherit;
+}
+
+/* Where two don't fit side by side, the games are rows: icon, name and line, time at the end. */
+@media (max-width: 599px) {
+  .play-tiles {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .play-tile {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+    min-height: 0;
+    padding: 12px 16px;
+  }
+
+  .play-tile__top {
+    display: contents;
+  }
+
+  .play-tile__icon {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 24px;
+  }
+
+  .play-tile__text {
+    grid-column: 2;
+    grid-row: 1;
+    margin-top: 0;
+  }
+
+  .play-tile__time {
+    grid-column: 3;
+    grid-row: 1;
+    font-size: 17px;
+    line-height: 1.2;
+  }
+}
+
+/* The wide window: 640, for two tiles side by side. */
+.dialog.play-sheet.play-sheet--wide {
+  width: min(640px, 100%);
+}
+
+/* The title, its lead and the cards chip on one row while it fits. */
+.play-sheet--wide .play-sheet__head {
+  flex-wrap: wrap;
+  gap: 8px 16px;
 }
 
 .play-footnote {

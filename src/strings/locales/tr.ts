@@ -1304,6 +1304,11 @@ const tr: Translation = {
     intoYoursHouse: "Sonuç sizin sürümünüze gider.",
     cancel: "İptal",
     start: "Başla",
+    bestTiers: "En iyi seviyeler",
+    allCards: { other: "Tüm kartlar: {n}" },
+    startGame: "{game} başlat · {time}",
+    startNew: "Yeni oyun · {game} · {time}",
+    yourGame: "Oyununuz · {started}",
     savedDiscarded: "Kayıtlı oyundan vazgeçildi",
     undo: "Geri al",
     thePool: {
