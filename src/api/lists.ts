@@ -20,7 +20,9 @@ import type {
 
 export async function loadList(client: ApiClient, id: string): Promise<PublishedList> {
   return publishedListOf(
-    await client.request<PublishedList>("GET", `/lists/${encodeURIComponent(id)}`),
+    await client.request<PublishedList>("GET", `/lists/${encodeURIComponent(id)}`, {
+      auth: "reader",
+    }),
   );
 }
 
@@ -226,6 +228,8 @@ export const FEED_CHECK_WAIT_MS = 5_000;
 export async function loadFeed(client: ApiClient, query: FeedQuery = {}): Promise<FeedPage> {
   const page = await client.request<FeedPage>("GET", "/lists", {
     query,
+    // Followed lists are somebody's; every other feed is anybody's to read.
+    auth: query.following === true ? "user" : "reader",
     appCheckWaitMs: FEED_CHECK_WAIT_MS,
   });
   return { ...page, lists: (page.lists ?? []).map(summaryOf) };
@@ -239,6 +243,7 @@ export async function loadFeed(client: ApiClient, query: FeedQuery = {}): Promis
 export async function loadFresh(client: ApiClient): Promise<ListSummary[]> {
   const page = await client.request<{ lists?: ListSummary[] }>("GET", "/lists", {
     query: { fresh: true },
+    auth: "reader",
     appCheckWaitMs: FEED_CHECK_WAIT_MS,
   });
   return (page.lists ?? []).map(summaryOf);
