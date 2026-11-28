@@ -18,6 +18,18 @@ import "./app/RouteError.css";
 // for it with the page, and this takes it over (src/lib/homeFirst.ts).
 if (window.location.pathname === "/") void askHomeFirst();
 
+// App Check's first token and the account, before the language: lib/firebase
+// says no words, and the backend's first answer waits on both, reCAPTCHA's
+// check first. Started here they run while the dictionary and the app come,
+// about a quarter of a second sooner on a laptop and more on a phone.
+const firebase = import("./lib/firebase").then((module) => {
+  module.warmAppCheck();
+  module.getFirebaseAuth();
+  return module;
+});
+// A failed fetch of the chunk is met where boot() waits on it, as before.
+firebase.catch(() => undefined);
+
 const root = document.getElementById("root");
 if (root === null) throw new Error("index.html has no #root");
 const reload = () => window.location.reload();
@@ -54,13 +66,8 @@ void boot({
     // Usage statistics (Settings → Send usage statistics) start before the
     // app writes anything of its own: a browser that already held the site's
     // things came before them, and is no newcomer.
-    const [
-      { countWith, defaultUsageDeps, startUsage },
-      { api },
-      { getFirebaseAuth, warmAppCheck },
-    ] = await Promise.all([import("./lib/usage"), import("./lib/api"), import("./lib/firebase")]);
-    // App Check's first token, while the app's own code is on its way.
-    warmAppCheck();
+    const [{ countWith, defaultUsageDeps, startUsage }, { api }, { getFirebaseAuth }] =
+      await Promise.all([import("./lib/usage"), import("./lib/api"), firebase]);
     countWith(
       startUsage(
         defaultUsageDeps(api, () => getFirebaseAuth().currentUser !== null),
