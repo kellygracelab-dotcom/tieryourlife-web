@@ -1,72 +1,45 @@
-# TierYourLife Web
+<h1 align="center">TierYourLife: the website</h1>
 
-The web client of [TierYourLife](https://github.com/kellygracelab-dotcom/TierYourLife): open a list
-somebody published, rank it yourself in the browser, get a link to your ranking and share it. No account
-needed to rank; signing in with Google keeps your rankings together with the boards on your phone.
+<p align="center">
+  <b>Open a list, rank it your way, share the link.</b><br>
+  The browser version of <a href="https://github.com/kellygracelab-dotcom/TierYourLife">TierYourLife</a>. Free, with no ads, and no account needed to start.
+</p>
 
-It talks to the same backend as the app, [tieryourlife-proxy](https://github.com/kellygracelab-dotcom/tieryourlife-proxy),
-and never to Firestore directly.
+<p align="center">
+  <a href="https://tieryourlife.com"><b>Open tieryourlife.com</b></a>
+</p>
 
-## Stack
+<p align="center">
+  <a href="https://tieryourlife.com"><img src=".github/readme/board.jpg" alt="A list of school subjects being ranked into tiers S to D, with three cards still waiting on the right"></a>
+</p>
 
-- Vite, React 19, TypeScript. A single-page app served by Firebase Hosting.
-- Firebase JS SDK for Auth (Google and anonymous), App Check and Storage.
-- One small Cloud Functions codebase, `web`, for the pages that need OpenGraph tags and for saving rankings.
-- In the same codebase, `onUserDeleted` runs when a Firebase user is deleted: their rankings stay, without an owner, as every ranking page promises.
-- `POST /api/cdn-purge` is called by the shared Proxy after it records a takedown in Firestore `webCdnPurges`. It removes the cards' copies of the deleted pictures and releases the live Hosting version again with one header changed, which clears Hosting's CDN. A call with no waiting request does nothing. So the site's pictures from `published/` are kept a day on the CDN, and a picture taken down still stops reaching anyone new within a minute. Until a purge has gone through, after one fails or is refused, or with `keep: false` in `config/webCdn`, they are kept a minute as before. A card's 200 and 400 px copies are kept in Storage next to their picture (`published/{list}/w200/…`) and given only while the picture is still there.
-- oxlint and Prettier for style, Vitest for tests, Playwright for two browser smokes, GitHub Actions for CI.
+## What you can do
 
-## Commands
+- **Rank any list.** Drag a card into a tier, click the tier, or press 1 to 5.
+- **Duel it out.** Pick the better of two cards and the tiers fill in by themselves. There are four ways to play.
+- **Make your own list.** Type a name and get the picture, or paste a link to one.
+- **See how others ranked it,** and share your own ranking as a link or a picture.
+- **Sign in with Google** and your lists are the same here and in the Android app.
 
-```bash
-npm install
-```
+<p align="center">
+  <img src=".github/readme/duel.jpg" height="290" alt="A duel between two cards on a computer">
+  <img src=".github/readme/phone-board.jpg" height="290" alt="The same list on a phone">
+  <img src=".github/readme/phone-duel.jpg" height="290" alt="A duel on a phone">
+</p>
 
-```bash
-npm run dev
-```
+<p align="center"><sub>A duel · the same list and the same duel on a phone. The list is <a href="https://tieryourlife.com/l/h9fMXtQMunEyoHvb7qHs">School subjects</a>.</sub></p>
 
-```bash
-npm run check
-```
+## Three repositories
 
-`check` is what CI runs: typecheck, lint, formatting, tests with coverage, build, the functions' own checks, and the browser smokes (`npm run e2e`; once, `npx playwright install chromium`).
+|                 | Repository                                                                                                              | Where it runs                                |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **Website**     | this one: React, TypeScript                                                                                             | [tieryourlife.com](https://tieryourlife.com) |
+| **Android app** | [TierYourLife](https://github.com/kellygracelab-dotcom/TierYourLife): Kotlin, Jetpack Compose                           | Google Play, in closed testing               |
+| **Server**      | [tieryourlife-proxy](https://github.com/kellygracelab-dotcom/tieryourlife-proxy): Cloud Functions in front of Firestore | behind both                                  |
 
-## Deploying
+## For developers
 
-Once any dependent Proxy release is live, finish the Web PR from this checkout:
+Vite, React 19 and TypeScript, served by Firebase Hosting, with one small Cloud Functions codebase for share pages and rankings.
 
-```bash
-npm run release:pr -- <PR-number>
-```
-
-The command checks the CI run for the exact PR head, accepts a PR already squash-merged by GitHub,
-and waits for both checks on its merge commit on remote main. If a newer commit has reached main,
-it reports the original release as superseded. The push job tests the compiled production bundle,
-archives that bundle and the compiled Web Functions, and passes the same artifact to deployment.
-Four parallel browser shards and the Proxy suite remain mandatory. After admission to the
-web-production environment, OIDC authorizes only the Web deploy. The public release marker, HTML,
-JavaScript bytes and two Web API probes are verified. Functions are skipped only if their inputs
-and live revisions still match the verified release currently served by Hosting.
-
-The local command downloads that same push artifact into an isolated checkout: it independently
-checks production after cloud success, or deploys the artifact if cloud identity is unconfigured.
-It never substitutes a local rebuild after a failed cloud job or for missing CI evidence.
-
-For an already checked main, `npm run deploy` runs the main part of this process.
-The target is the hosting site `tieryourlife`, served at `tieryourlife.com`, the site's one
-address (20.11.2026). On `tieryourlife.web.app` and `tieryourlife.firebaseapp.com` a page moves
-there, path and query kept: `/l` and `/r` by a 301 from the `web` function, the pages hosting
-serves itself by their first script; the API and the pictures still answer there. The GitHub deployment job
-needs the workload identity and deployment account described in [AGENTS.md](AGENTS.md).
-
-`/lists` and `/3/search` are rewritten to the backend's Cloud Functions, so the browser talks to its own
-origin and never runs into CORS. In development, `vite` proxies the same two paths to the backend's
-Firebase emulator on port 5001.
-
-## Working agreement
-
-- Branch, pull request, green CI, squash-merge, delete the branch. `main` is the only long-lived branch.
-- Tests land in the same pull request as the code they cover.
-- Comments only where the code cannot say why.
-- A release is complete when the public site has been verified against the build from main.
+- [Developing and releasing](DEVELOPMENT.md): the stack, the commands, how a release reaches the public site.
+- [The API](https://github.com/kellygracelab-dotcom/tieryourlife-proxy/blob/main/CONTRACT.md) the site and the app both follow.
