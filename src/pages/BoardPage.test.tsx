@@ -1974,9 +1974,8 @@ describe("BoardPage: Play", () => {
     repository.save(filmBoard());
     open(repository, "/b/films");
     await userEvent.click(screen.getByRole("button", { name: /^Play/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Other ways to play" }));
     await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Start/ }));
 
     // Two duels for three cards; the left card wins each, once the pair has landed.
     for (const duel of ["Duel 1 of 2", "Duel 2 of 2"]) {
@@ -2876,9 +2875,8 @@ describe("BoardPage: usage statistics", () => {
     repository.save(fiveBoard(0));
     open(repository, "/b/films");
     await userEvent.click(screen.getByRole("button", { name: /^Play/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Other ways to play" }));
     await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Start/ }));
     expect(count).toHaveBeenCalledWith("game.king.start");
     for (let duel = 1; duel <= 4; duel++) {
       await screen.findByText(`Duel ${duel} of 4`, { selector: "[aria-live] *, [aria-live]" });

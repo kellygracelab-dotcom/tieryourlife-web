@@ -5,10 +5,16 @@ import { memoryStore } from "../../lib/storage";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import type { PlayCard, PlayTier } from "./board";
 
-/** The Play window's summary holds this part ("3 cards", "Losers stay", …) between its dots. */
-const inSummary = (part: string) => (_: string, element: Element | null) =>
-  element?.classList.contains("play-summary__line") === true &&
-  (element.textContent ?? "").split(" · ").includes(part);
+/**
+ * The Play window says this part: its cards chip the cards ("All 3 cards",
+ * "3 cards from Cards left"), its Start the game ("Start Bracket · 2 min").
+ */
+const inSummary = (part: string) => (_: string, element: Element | null) => {
+  const text = element?.textContent ?? "";
+  if (element?.matches(".play-cards > span") === true)
+    return text === part || text === `All ${part}`;
+  return element?.matches(".play-start") === true && text.includes(part);
+};
 
 // A chunk as the network brings it: held back, or not at all (and no reload).
 const chunk = vi.hoisted(() => ({ fail: false, held: null as Promise<void> | null, loads: 0 }));
