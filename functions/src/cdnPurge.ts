@@ -345,6 +345,28 @@ export function copiesOf(paths: unknown): string[] {
   );
 }
 
+/** How many copies are removed at once. */
+export const REMOVING_AT_ONCE = 32;
+
+/**
+ * The copies, removed a few at a time: 6894 pictures drawn again at once
+ * (Backend, 28.11) were 20 682 removals in flight, and the function ran out
+ * of its 512 MiB.
+ */
+export async function removeAll(
+  copies: readonly string[],
+  bucket: Pick<SmallCopies, "remove">,
+): Promise<void> {
+  let next = 0;
+  const worker = async () => {
+    while (next < copies.length) {
+      const copy = copies[next++]!;
+      await bucket.remove(copy);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(REMOVING_AT_ONCE, copies.length) }, worker));
+}
+
 /**
  * A takedown at `deletedAt`: its cards' copies go, and it is covered by a
  * purge that starts after it. The first request to find none running runs
@@ -358,7 +380,7 @@ export async function onPurgeRequest(
   paths: unknown,
   deps: PurgeDeps,
 ): Promise<Claim | "refused"> {
-  await Promise.all(copiesOf(paths).map((copy) => deps.copies.remove(copy)));
+  await removeAll(copiesOf(paths), deps.copies);
   const claimed = await deps.store.claim(deletedAt);
   if (claimed !== "run") return claimed;
   for (let round = 0; round < MAX_ROUNDS; round++) {

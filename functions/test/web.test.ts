@@ -1060,6 +1060,38 @@ describe("the router", () => {
     assert.equal((await call(withCollage, "GET", `/img/collage/${LIST_ID}.webp`)).status, 404);
   });
 
+  it("lets the CDN keep a collage a day while a takedown purges it, a minute otherwise", async () => {
+    const { default: sharp } = await import("sharp");
+    const { deps, table } = setup(null);
+    const red = await sharp({
+      create: { width: 60, height: 90, channels: 3, background: { r: 255, g: 0, b: 0 } },
+    })
+      .png()
+      .toBuffer();
+    const previews = [1, 2, 3].map((n) => `https://image.tmdb.org/t/p/w500/${n}.jpg`);
+    table("publishedLists").set(LIST_ID, { ...LIST, coverImageUrl: null, previewImages: previews });
+    const drawing: WebDeps = { ...deps, collage: { load: async () => red } };
+    const purged = await call(
+      { ...drawing, publishedKept: async () => true },
+      "GET",
+      `/img/collage/${LIST_ID}.webp`,
+    );
+    assert.equal(purged.status, 200);
+    assert.equal(
+      purged.headers["Cache-Control"],
+      "public, max-age=31536000, s-maxage=86400, immutable",
+    );
+    const unpurged = await call(
+      { ...drawing, publishedKept: async () => false },
+      "GET",
+      `/img/collage/${LIST_ID}.webp`,
+    );
+    assert.equal(
+      unpurged.headers["Cache-Control"],
+      "public, max-age=31536000, s-maxage=60, immutable",
+    );
+  });
+
   it("draws no collage for a list missing, under review, with a cover or with one preview", async () => {
     const { deps, table } = setup(null);
     let loads = 0;
