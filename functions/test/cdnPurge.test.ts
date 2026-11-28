@@ -7,6 +7,7 @@ import {
   PURGE_MARK,
   SKEW_MS,
   HostingError,
+  carryOutPurges,
   claim,
   cdnKeeps,
   copiesOf,
@@ -22,6 +23,7 @@ import {
   type CdnStore,
   type Claim,
   type HostingCall,
+  type PurgeRequests,
   type Step,
 } from "../src/cdnPurge";
 import { PUBLISHED_KEPT, PUBLISHED_ORIGINAL, sendPicture, type SmallCopies } from "../src/pictures";
@@ -369,6 +371,66 @@ describe("a takedown's request", () => {
     assert.equal(await onPurgeRequest(T, [], deps), "refused");
     assert.equal(cdnKeeps(box.state), false);
     assert.equal(deps.logs[0]?.message, "CDN purge refused");
+  });
+});
+
+describe("the requests waiting for POST /api/cdn-purge", () => {
+  const requestsOf = (waiting: { id: string; at: number; paths: unknown }[]) => {
+    const done: string[] = [];
+    const requests: PurgeRequests = {
+      pending: async () => waiting.filter((one) => !done.includes(one.id)),
+      carriedOut: async (ids) => void done.push(...ids),
+    };
+    return { requests, done };
+  };
+  const depsOf = (
+    clock: { now: number },
+    store: CdnStore,
+    call: HostingCall,
+    removed: string[],
+  ) => ({
+    store,
+    call,
+    copies: { remove: async (path: string) => void removed.push(path) },
+    now: () => clock.now,
+    sleep: async (ms: number) => {
+      clock.now += ms;
+    },
+    log: () => undefined,
+  });
+
+  it("are carried out together, by the newest takedown's time, and then not again", async () => {
+    const clock = { now: T + 5_000 };
+    const { store, box } = memoryStore(clock);
+    const hosting = fakeHosting();
+    const removed: string[] = [];
+    const { requests, done } = requestsOf([
+      { id: "a", at: T, paths: ["published/list-1/p1"] },
+      { id: "b", at: T + 1_000, paths: ["published/list-2/p2"] },
+    ]);
+    const deps = depsOf(clock, store, hosting.call, removed);
+    assert.deepEqual(await carryOutPurges(requests, deps), { waiting: 2, result: "run" });
+    assert.equal(box.state.wantedAt, T + 1_000);
+    assert.equal(hosting.releases.length, 2);
+    assert.deepEqual(done, ["a", "b"]);
+    assert.equal(removed.length, 4);
+    // Asked again, or by anybody: nothing waits, nothing is purged.
+    assert.deepEqual(await carryOutPurges(requests, deps), { waiting: 0, result: "none" });
+    assert.equal(hosting.releases.length, 2);
+  });
+
+  it("stay waiting when Hosting refuses", async () => {
+    const clock = { now: T };
+    const { store } = memoryStore(clock);
+    const refuse: HostingCall = async () => {
+      throw new HostingError(403, "denied");
+    };
+    const { requests, done } = requestsOf([{ id: "a", at: T, paths: [] }]);
+    assert.deepEqual(await carryOutPurges(requests, depsOf(clock, store, refuse, [])), {
+      waiting: 1,
+      result: "refused",
+    });
+    assert.deepEqual(done, []);
   });
 });
 

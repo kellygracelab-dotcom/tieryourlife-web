@@ -1286,6 +1286,26 @@ describe("the pages a link opens", () => {
     assert.ok(PAGE_SCRIPT_POLICY.endsWith("; report-uri /api/csp-report"));
   });
 
+  // 28.11: the Proxy asks for a takedown's CDN purge after it writes the request.
+  it("carries out waiting CDN purges on a POST with no token, never on a read, never kept", async () => {
+    const { deps } = setup();
+    let asked = 0;
+    const purging: WebDeps = {
+      ...deps,
+      appCheck: async () => false,
+      purge: async () => {
+        asked++;
+        return { waiting: 1, result: "run" };
+      },
+    };
+    const answer = await call(purging, "POST", "/api/cdn-purge");
+    assert.equal(answer.status, 200);
+    assert.deepEqual(answer.body, { waiting: 1, result: "run" });
+    assert.equal(answer.headers["Cache-Control"], "no-store");
+    assert.equal((await call(purging, "GET", "/api/cdn-purge")).status, 405);
+    assert.equal(asked, 1);
+  });
+
   it("names the same policies as hosting does, and every script the shell runs inline", () => {
     // Compiled to functions/lib-test/test: the repository is three folders up.
     const root = join(__dirname, "..", "..", "..");

@@ -1,7 +1,6 @@
 import { applicationDefault } from "firebase-admin/app";
-import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import type { Firestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { region } from "firebase-functions/v1";
 import { smallCopyPath, storedCopies, type SmallCopies } from "./pictures";
 import { CARD_WIDTHS } from "./publicMedia";
 
@@ -318,7 +317,10 @@ export const hostingApi: HostingCall = async <T>(method: string, path: string, b
 /**
  * Where the shared Proxy asks for a purge (Backend, 28.11.2026): one
  * document per takedown, written after its files are deleted:
- * `{at: serverTimestamp, listId, reason: "takedown", paths: [deleted files]}`.
+ * `{at: serverTimestamp, listId, reason: "takedown", paths: [deleted files]}`,
+ * then POST /api/cdn-purge. (A trigger of its own on the document could not
+ * be created by the site's deploy, 28.11; the site's function needs nothing
+ * new.)
  * Only a takedown must be gone within a minute; a list withdrawn, an account
  * erased or a copy no list names any more may stay on the CDN its day.
  */
@@ -414,22 +416,79 @@ const readAt = (value: unknown, fallback: number): number => {
   return typeof millis === "number" && Number.isFinite(millis) ? millis : fallback;
 };
 
-export const cdnPurge = region("europe-west1")
-  .runWith({ timeoutSeconds: 300 })
-  .firestore.document(`${PURGE_REQUESTS}/{id}`)
-  .onCreate(async (snapshot) => {
-    // The emulators have no Hosting to purge.
-    if (process.env.FUNCTIONS_EMULATOR === "true") return;
-    const deletedAt = readAt(snapshot.get("at"), readAt(snapshot.createTime, Date.now()));
-    await onPurgeRequest(deletedAt, snapshot.get("paths"), {
-      store: firestoreCdnStore(getFirestore()),
-      call: hostingApi,
-      copies: storedCopies(() => getStorage().bucket()),
-      now: Date.now,
-      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-      log: (entry) => console.log(JSON.stringify(entry)),
-    });
+/** What the waiting requests need from Firestore, small enough to fake in a test. */
+export interface PurgeRequests {
+  /** The newest requests not yet carried out: when, and the files deleted. */
+  pending(): Promise<{ id: string; at: number; paths: unknown }[]>;
+  carriedOut(ids: readonly string[], at: number): Promise<void>;
+}
+
+const WAITING_READ = 50;
+
+export function firestorePurgeRequests(db: Firestore): PurgeRequests {
+  const requests = db.collection(PURGE_REQUESTS);
+  return {
+    pending: async () => {
+      const page = await requests.orderBy("at", "desc").limit(WAITING_READ).get();
+      return page.docs
+        .filter((doc) => doc.get("doneAt") === undefined)
+        .map((doc) => ({
+          id: doc.id,
+          at: readAt(doc.get("at"), readAt(doc.createTime, Date.now())),
+          paths: doc.get("paths"),
+        }));
+    },
+    carriedOut: async (ids, at) => {
+      const batch = db.batch();
+      for (const id of ids) batch.update(requests.doc(id), { doneAt: at });
+      await batch.commit();
+    },
+  };
+}
+
+export interface PurgeAnswer {
+  waiting: number;
+  result: Claim | "refused" | "none";
+}
+
+/**
+ * POST /api/cdn-purge, which the Proxy calls after it writes a request: the
+ * requests not yet carried out are carried out together. Asked by anybody,
+ * it does nothing unless the Proxy has written one, which nobody else can.
+ * A purge that fails leaves them waiting for the next call.
+ */
+export async function carryOutPurges(
+  requests: PurgeRequests,
+  deps: PurgeDeps,
+): Promise<PurgeAnswer> {
+  const waiting = await requests.pending();
+  if (waiting.length === 0) return { waiting: 0, result: "none" };
+  const deletedAt = Math.max(...waiting.map((one) => one.at));
+  const result = await onPurgeRequest(
+    deletedAt,
+    waiting.flatMap((one) => (Array.isArray(one.paths) ? (one.paths as unknown[]) : [])),
+    deps,
+  );
+  if (result !== "refused") {
+    await requests.carriedOut(
+      waiting.map((one) => one.id),
+      deps.now(),
+    );
+  }
+  return { waiting: waiting.length, result };
+}
+
+/** The same with Firestore, Hosting and the bucket as they are. */
+export function purgeNow(db: Firestore): Promise<PurgeAnswer> {
+  return carryOutPurges(firestorePurgeRequests(db), {
+    store: firestoreCdnStore(db),
+    call: hostingApi,
+    copies: storedCopies(() => getStorage().bucket()),
+    now: Date.now,
+    sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    log: (entry) => console.log(JSON.stringify(entry)),
   });
+}
 
 // ---- What the pictures' answers read --------------------------------------
 

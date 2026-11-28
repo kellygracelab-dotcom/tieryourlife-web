@@ -2,7 +2,7 @@ import { randomBytes, randomInt } from "node:crypto";
 import { FieldValue, getFirestore, Timestamp, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import { onRequest } from "firebase-functions/v2/https";
-import { publishedKept } from "./cdnPurge";
+import { publishedKept, purgeNow, type PurgeAnswer } from "./cdnPurge";
 import type { Response } from "express";
 import { requireAppCheck, requireFreshAppCheck } from "./appCheck";
 import { payloadOf, reportLimiter, violationsOf, type Violation } from "./cspReport";
@@ -120,6 +120,8 @@ export interface WebDeps {
   homeFirst?: (db: Firestore, nowMs: number) => Promise<HomeFirst>;
   /** A published list's collage pictures: fetched safely, or read from the bucket's published/. */
   collage?: CollageDeps;
+  /** Carries out the takedowns' CDN purges waiting in Firestore (cdnPurge.ts). */
+  purge?: (db: Firestore) => Promise<PurgeAnswer>;
   /** Whether a published picture may be kept long on the CDN (cdnPurge.ts); config/webCdn when left out. */
   publishedKept?: () => Promise<boolean>;
 }
@@ -175,7 +177,9 @@ const production: WebDeps = {
 export const web = onRequest(
   {
     region: "europe-west1",
-    timeoutSeconds: 30,
+    // A takedown's CDN purge (POST /api/cdn-purge) takes 10-20 s, a minute
+    // when Hosting has to be asked again; every other answer is far shorter.
+    timeoutSeconds: 120,
     // Drawing a share card holds the fonts, the layout engine and a few posters at once.
     memory: "512MiB",
     // A whole processor, so one instance answers many requests at once: with
@@ -277,6 +281,14 @@ export async function route(
         if (room) write(violation);
       }
       return void response.status(204).end();
+    }
+
+    // A takedown's CDN purge, asked by the Proxy after it writes the request
+    // (cdnPurge.ts): only requests it wrote are carried out.
+    if (resource === "cdn-purge" && rest === undefined) {
+      if (request.method !== "POST") return methodNotAllowed(response);
+      const answer = await (deps.purge ?? purgeNow)(deps.db());
+      return void response.status(200).json(answer);
     }
 
     // Community's first screen, before a browser has its App Check token: what
